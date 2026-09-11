@@ -58,6 +58,7 @@ const mastery = ref({
     effect: "1",
     cost: "1 Manufacture Staff",
     affordable: false,
+    visible: false,
 });
 let animationFrame;
 
@@ -88,6 +89,7 @@ function updateDisplay() {
     mastery.value.effect = formatDecimal(HANDLES.masterySpeedEffect, 0);
     mastery.value.cost = `${formatDecimal(HANDLES.masteryCost, 0)} Manufacture Staff`;
     mastery.value.affordable = namedWasm.canIncreaseMastery();
+    mastery.value.visible = namedWasm.isMasteryVisible();
     animationFrame = requestAnimationFrame(updateDisplay);
 }
 

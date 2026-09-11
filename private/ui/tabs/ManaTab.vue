@@ -37,7 +37,7 @@ defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-maste
                 @cast="$emit('buy', upgrade.index)"
             />
         </div>
-        <div class="mastery-controls">
+        <div v-show="mastery.visible" class="mastery-controls">
             <div class="mastery-summary">Mastery Level: {{ mastery.level }} (×{{ mastery.effect }})</div>
             <button
                 class="increase-mastery"

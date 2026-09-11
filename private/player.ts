@@ -249,6 +249,10 @@ export function canIncreaseMastery(): bool {
     return gte(player.count_manufactureStaff, player.masteryCost);
 }
 
+export function isMasteryVisible(): bool {
+    return gt(player.masteryOwned, 0) || gt(player.bought_manufactureStaff, 0);
+}
+
 export function refreshMasteryDerivedState(): void {
     addInto(player.masteryLevel, player.masteryOwned, 1);
     powInto(player.masteryCost, 3, player.masteryOwned);
@@ -256,6 +260,7 @@ export function refreshMasteryDerivedState(): void {
 }
 
 function resetTierOne(): void {
+    writeNumber(player.mana, 10);
     for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
         writeNumber(tierOneAmountHandle(index), 0);
         writeNumber(tierOneBoughtHandle(index), 0);
