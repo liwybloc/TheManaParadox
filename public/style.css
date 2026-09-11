@@ -39,6 +39,65 @@ body.effects-disabled #sky {
   display: none;
 }
 
+.notification-stack {
+  position: fixed;
+  z-index: 1000;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: min(380px, calc(100vw - 28px));
+  gap: 7px;
+  pointer-events: none;
+}
+.game-notification {
+  position: relative;
+  min-height: 48px;
+  overflow: hidden;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--notification-color);
+  color: #fff;
+  background: #17131d;
+  box-shadow: 0 3px 12px #000a;
+}
+.game-notification strong {
+  display: block;
+  overflow: hidden;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notification-timer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--notification-color);
+  transform-origin: left;
+  animation: notification-countdown var(--notification-duration) linear forwards;
+}
+.notification-enter-active,
+.notification-leave-active {
+  transition: opacity 180ms linear, transform 180ms ease-out;
+}
+.notification-move {
+  transition: transform 180ms ease-out;
+}
+.notification-leave-active {
+  position: absolute;
+  right: 0;
+  width: 100%;
+}
+.notification-enter-from,
+.notification-leave-to {
+  opacity: 0;
+  transform: translateX(calc(100% + 20px));
+}
+@keyframes notification-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
 .game-shell {
   position: relative;
   width: min(1000px, calc(100% - 24px));
@@ -249,7 +308,8 @@ body.effects-disabled #sky {
   width: 80%;
   margin: 14px auto 0;
 }
-.mastery-summary {
+.mastery-summary,
+.matrix-summary {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -259,7 +319,8 @@ body.effects-disabled #sky {
   font-weight: 700;
   text-align: center;
 }
-.increase-mastery {
+.increase-mastery,
+.increase-matrix {
   min-height: 76px;
   padding: 10px;
   border: 1px solid #9b6d45;
@@ -270,31 +331,41 @@ body.effects-disabled #sky {
 }
 .increase-mastery strong,
 .increase-mastery span,
-.increase-mastery small {
+.increase-mastery small,
+.increase-matrix strong,
+.increase-matrix span,
+.increase-matrix small {
   display: block;
 }
-.increase-mastery strong {
+.increase-mastery strong,
+.increase-matrix strong {
   color: #e6bb8d;
   font-size: 16px;
 }
-.increase-mastery span {
+.increase-mastery span,
+.increase-matrix span {
   margin: 6px 0;
 }
-.increase-mastery small {
+.increase-mastery small,
+.increase-matrix small {
   color: #b8a18d;
 }
-.increase-mastery:hover:not(:disabled) {
+.increase-mastery:hover:not(:disabled),
+.increase-matrix:hover:not(:disabled) {
   border-color: #c18b59;
   background: #38291d;
 }
-.increase-mastery:active:not(:disabled) {
+.increase-mastery:active:not(:disabled),
+.increase-matrix:active:not(:disabled) {
   background: #211810;
 }
-.increase-mastery:focus-visible {
+.increase-mastery:focus-visible,
+.increase-matrix:focus-visible {
   outline: 2px solid #e6bb8d;
   outline-offset: 2px;
 }
-.increase-mastery:disabled {
+.increase-mastery:disabled,
+.increase-matrix:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }
@@ -410,6 +481,116 @@ body.effects-disabled #sky {
   color: #c9a4ff;
 }
 
+.statistics-list {
+  padding-top: 34px;
+  text-align: center;
+}
+.statistics-list p {
+  margin: 0 0 12px;
+  color: #aaaaba;
+  font-size: 16px;
+}
+.statistics-list strong {
+  color: #c9a4ff;
+}
+.achievement-list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  padding-top: 20px;
+}
+.achievement-entry {
+  position: relative;
+  min-height: 92px;
+  padding: 12px 8px 8px;
+  border: 2px solid #9c4040;
+  color: #aaaab4;
+  background: #241313;
+  text-align: center;
+}
+.achievement-entry::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: #5b101066;
+  content: "";
+  pointer-events: none;
+}
+.achievement-entry.unlocked::after {
+  background: #0c672c4d;
+}
+.achievement-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.achievement-number {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  left: 8px;
+  color: #dc7777;
+  font-size: 13px;
+  font-weight: 700;
+}
+.achievement-details strong {
+  position: relative;
+  z-index: 2;
+  display: block;
+  padding: 0 22px;
+  color: #eee;
+  text-align: center;
+  text-shadow: 0 1px 3px #000, 0 1px 6px #000;
+}
+.achievement-entry.unlocked {
+  border-color: #3f9b5f;
+  color: #effff3;
+  background: #173321;
+}
+.achievement-entry.unlocked .achievement-number {
+  color: #79d596;
+}
+.achievement-tooltip {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  display: none;
+  width: max-content;
+  max-width: 260px;
+  padding: 9px 11px;
+  border: 1px solid #656574;
+  color: #d8d8df;
+  background: #101017;
+  box-shadow: 0 3px 10px #000a;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: left;
+  transform: translateX(-50%);
+}
+.achievement-tooltip strong,
+.achievement-tooltip span {
+  display: block;
+}
+.achievement-tooltip strong {
+  margin-bottom: 4px;
+  color: #fff;
+}
+.achievement-tooltip .achievement-reward {
+  margin-top: 6px;
+  color: #79d596;
+}
+.achievement-entry:hover .achievement-tooltip,
+.achievement-entry:focus-visible .achievement-tooltip {
+  display: block;
+}
+.achievement-entry:focus-visible {
+  outline: 2px solid #c49cff;
+  outline-offset: 2px;
+}
+
 .option-list {
   max-width: 650px;
   margin: auto;
@@ -427,6 +608,33 @@ body.effects-disabled #sky {
 }
 .option-list label:last-child {
   border-bottom: 0;
+}
+.option-list > button {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 1px solid #353541;
+  color: #d8d8df;
+  background: #15151e;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: left;
+}
+.option-list > button:last-child {
+  border-bottom: 0;
+}
+.option-list > button:hover {
+  color: #fff;
+  background: #242432;
+}
+.option-list > button:active {
+  background: #101017;
+}
+.option-list > button:focus-visible {
+  outline: 2px solid #c49cff;
+  outline-offset: -2px;
 }
 .option-list strong,
 .option-list small {
@@ -487,6 +695,9 @@ footer {
     grid-column: 1 / -1;
   }
   .upgrade-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .achievement-list {
     grid-template-columns: 1fr 1fr;
   }
 }

@@ -839,4 +839,75 @@ export function compare(left: i32, right: i32): i32 {
     if (leftSign < rightSign) return -1;
     return compareAbsolute(readLayer(left), readMagnitude(left), readLayer(right), readMagnitude(right)) * <i32>leftSign;
 }
+
+function boundaryLayer(boundary: i32): f64 {
+    switch (boundary) {
+        case 0: return 1;
+        case 1: return 2;
+        case 2: return 2;
+        default: return NaN;
+    }
+}
+
+function boundaryMagnitude(boundary: i32): f64 {
+    switch (boundary) {
+        case 0: return 308.25471555991675;
+        case 1: return 15.954242509439325;
+        case 2: return 308.25471555991675;
+        default: return NaN;
+    }
+}
+
+export function passesLayerBoundary(value: i32, boundary: i32): bool {
+    const sign = readSign(value);
+
+    if (sign === 0 || isNaN(sign)) {
+        return false;
+    }
+
+    const layer = boundaryLayer(boundary);
+    const magnitude = boundaryMagnitude(boundary);
+
+    if (isNaN(layer) || isNaN(magnitude)) {
+        return false;
+    }
+
+    return compareAbsolute(
+        readLayer(value),
+        readMagnitude(value),
+        layer,
+        magnitude
+    ) > 0;
+}
+
+export function reachesLayerBoundary(value: i32, boundary: i32): bool {
+    const sign = readSign(value);
+    if (sign <= 0 || isNaN(sign)) return false;
+    const layer = boundaryLayer(boundary);
+    const magnitude = boundaryMagnitude(boundary);
+    if (isNaN(layer) || isNaN(magnitude)) return false;
+    return compareAbsolute(readLayer(value), readMagnitude(value), layer, magnitude) >= 0;
+}
+
+/**
+ * clamps and writes into the value
+ */
+export function clampToBoundary(value: i32, boundary: i32): i32 {
+    if (!passesLayerBoundary(value, boundary)) {
+        return value;
+    }
+
+    const layer = boundaryLayer(boundary);
+    const magnitude = boundaryMagnitude(boundary);
+
+    writeDecimal(
+        value,
+        readSign(value),
+        layer,
+        magnitude
+    );
+
+    return value;
+}
+
 /** [/WASM] */

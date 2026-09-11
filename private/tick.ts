@@ -1,5 +1,5 @@
-import { addUS, gt, lte, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
-import { HANDLES } from "./player.js";
+import { gt, lte, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
+import { addPlayerTime, checkAchievements, gainCurrency, HANDLES, resetCastSpeed } from "./player.js";
 
 /** [WASM] */
 
@@ -125,6 +125,7 @@ export function speedMultiplierFor(entity: i32): f64 {
 
 function tickProduction(deltaMilliseconds: f64): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
+    addPlayerTime(secondsHandle);
     applyCastSpeed();
     for (let entity: i32 = 0; entity < productionEntityCount; entity++) {
         multiplyInto(productionHandle, entityAmountHandle[entity], secondsHandle);
@@ -132,7 +133,7 @@ function tickProduction(deltaMilliseconds: f64): void {
         multiplyInto(productionHandle, productionHandle, entityBaseMultiplierHandle[entity]);
         writeNumber(modifierHandle, productionMultiplierFor(entity) * speedMultiplierFor(entity));
         multiplyInto(productionHandle, productionHandle, modifierHandle);
-        addUS(entityDestinationHandle[entity], productionHandle);
+        gainCurrency(entityDestinationHandle[entity], productionHandle);
     }
 }
 
@@ -143,9 +144,7 @@ function applyCastSpeed(): void {
         return;
     }
     if (lte(castSpeedTimerHandle, secondsHandle)) {
-        writeNumber(castSpeedTimerHandle, 0);
-        writeNumber(castSpeedMagnitudeHandle, 1);
-        writeNumber(castSpeedCostHandle, 1000);
+        resetCastSpeed();
     } else {
         subUS(castSpeedTimerHandle, secondsHandle);
     }
@@ -227,6 +226,7 @@ function calculateModifier(scope: i32, target: i32, type: i32): f64 {
 
 export function tick(deltaMilliseconds: f64): void {
     tickProduction(deltaMilliseconds);
+    checkAchievements();
 }
 
 /** [/WASM] */
@@ -277,9 +277,11 @@ registerProductionEntity(
 );
 
 const UPDATE_RATE = 33;
-function runTick(timePassed = UPDATE_RATE): void {
+function runTick(timePassed = UPDATE_RATE, isSimulating = false): void {
     const start = performance.now();
     tick(timePassed);
-    setTimeout(runTick, Math.max(0, UPDATE_RATE - (performance.now() - start)));
+    if(!isSimulating) {
+        setTimeout(runTick, Math.max(0, UPDATE_RATE - (performance.now() - start)));
+    }
 }
 runTick();

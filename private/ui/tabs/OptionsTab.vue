@@ -1,6 +1,6 @@
 <script setup>
 defineProps({ activeSubtab: { type: String, required: true } });
-const emit = defineEmits(["stars-visible"]);
+const emit = defineEmits(["stars-visible", "export-save", "import-save"]);
 </script>
 
 <template>
@@ -8,8 +8,8 @@ const emit = defineEmits(["stars-visible"]);
         <div v-if="activeSubtab === 'general'">
             <div class="section-title"><h1>General Options</h1><p>Configure saving and number display.</p></div>
             <div class="option-list">
-                <label><span><strong>Autosave</strong><small>Save progress automatically.</small></span><input type="checkbox" checked /></label>
-                <label><span><strong>Compact numbers</strong><small>Abbreviate large values.</small></span><input type="checkbox" /></label>
+                <button type="button" @click="emit('export-save')">Export Save</button>
+                <button type="button" @click="emit('import-save')">Import Save</button>
             </div>
         </div>
         <div v-else-if="activeSubtab === 'visuals'">

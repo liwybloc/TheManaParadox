@@ -6,8 +6,9 @@ defineProps({
     castSpeed: { type: Object, required: true },
     castMode: { type: String, required: true },
     mastery: { type: Object, required: true },
+    matrix: { type: Object, required: true },
 });
-defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery"]);
+defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix"]);
 </script>
 
 <template>
@@ -48,6 +49,19 @@ defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-maste
                 <strong>Increase Mastery</strong>
                 <span>×2 Speed Magnitude</span>
                 <small>Cost: {{ mastery.cost }}</small>
+            </button>
+        </div>
+        <div v-show="matrix.visible" class="mastery-controls">
+            <div class="matrix-summary">Crystal Matrices: {{ matrix.level }} (×{{ matrix.effect }})</div>
+            <button
+                class="increase-matrix"
+                type="button"
+                :disabled="!matrix.affordable"
+                @click="$emit('increase-matrix')"
+            >
+                <strong>Conjure Crystal Matrix</strong>
+                <span>+{{ matrix.power }} Speed Power</span>
+                <small>Cost: {{ matrix.cost }}</small>
             </button>
         </div>
     </section>

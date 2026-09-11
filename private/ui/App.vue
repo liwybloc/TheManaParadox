@@ -1,11 +1,16 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { HANDLES } from "@game/player.js";
+import { exportSave, importSave, saveGame } from "@game/save.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
 import TabNavigation from "./components/TabNavigation.vue";
 import ManaTab from "./tabs/ManaTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
+import StatisticsTab from "./tabs/StatisticsTab.vue";
+import AchievementsTab from "./tabs/AchievementsTab.vue";
+import NotificationStack from "./components/NotificationStack.vue";
+import { showNotification } from "./notifications.js";
 
 const tabs = [
     {
@@ -13,6 +18,16 @@ const tabs = [
         label: "Mana",
         icon: "✦",
         subtabs: [{ id: "basic-spells", label: "Basic Spells" }],
+    },
+    {
+        id: "achievements",
+        label: "Achievements",
+        icon: "★",
+    },
+    {
+        id: "statistics",
+        label: "Statistics",
+        icon: "▤",
     },
     {
         id: "options",
@@ -25,7 +40,7 @@ const tabs = [
     },
 ];
 const activeTab = ref("mana");
-const activeSubtabs = ref({ mana: "basic-spells", options: "general" });
+const activeSubtabs = ref({ mana: "basic-spells", achievements: "", statistics: "", options: "general" });
 const mana = ref("0");
 const tierOneDefinitions = [
     { name: "Mana Conduit", handle: HANDLES.count_manaConduit },
@@ -60,7 +75,32 @@ const mastery = ref({
     affordable: false,
     visible: false,
 });
+const matrix = ref({
+    level: "0",
+    effect: "2.0",
+    power: "0.5",
+    cost: "10 Manufacture Staff",
+    affordable: false,
+    visible: false,
+});
+const statistics = ref({
+    timePlayed: "0:00:00",
+    manaProduced: "0.00",
+});
+const achievements = ref([
+    { id: "achievement_buymanaconduit", number: 1, title: "Something feels.. familiar", description: "Purchase a Mana Conduit.", reward: "+1% mana production", unlocked: false },
+    { id: "achievement_buyconduitconjugation", number: 2, title: "Meta Production", description: "Purchase a Conduit Conjugation.", reward: "+2% mana production", unlocked: false },
+    { id: "achievement_buyconjugationcreation", number: 3, title: "The promised achievement", description: "Purchase a Conjugation Creation.", reward: "+3% mana production", unlocked: false },
+    { id: "achievement_buycreationmanufactory", number: 4, title: "Industrial age", description: "Purchase a Creation Manufactory.", reward: "+4% mana production", unlocked: false },
+    { id: "achievement_buymanufacturestaff", number: 5, title: "The true best friend", description: "Purchase a Manufacture Staff.", reward: "+5% mana production", unlocked: false },
+    { id: "achievement_playtwohours", number: 6, title: "Thanks!", description: "Play for 2 hours.", reward: "Mana is increased based on time played", unlocked: false },
+    { id: "achievement_upgrademastery", number: 7, title: "Grandmastery", description: "Upgrade your mastery level.", unlocked: false },
+    { id: "achievement_havesixstaff", number: 8, title: "The 6th...", description: "Have exactly 6 Manufacture Staff.", unlocked: false },
+    { id: "achievement_produce1e50mana", number: 9, title: "Yet not the AI", description: "Produce 1e50 mana.", reward: "Reset with 500 mana", unlocked: false },
+    { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Cast Speed time.", reward: "Cast Speed time is increased by 5 seconds per purchase", unlocked: false },
+]);
 let animationFrame;
+let achievementsInitialized = false;
 
 const activeSubtab = computed(() => activeSubtabs.value[activeTab.value]);
 
@@ -90,10 +130,29 @@ function updateDisplay() {
     mastery.value.cost = `${formatDecimal(HANDLES.masteryCost, 0)} Manufacture Staff`;
     mastery.value.affordable = namedWasm.canIncreaseMastery();
     mastery.value.visible = namedWasm.isMasteryVisible();
+    matrix.value.level = formatDecimal(HANDLES.matrixOwned, 0);
+    matrix.value.effect = formatDecimal(HANDLES.matrixSpeedPower, 1);
+    matrix.value.power = formatDecimal(HANDLES.matrixPower, 1);
+    matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} Manufacture Staff`;
+    matrix.value.affordable = namedWasm.canIncreaseMatrix();
+    matrix.value.visible = namedWasm.isMatrixVisible();
+    statistics.value.timePlayed = formatTotalTime(HANDLES.statistics_totalTimePlayed);
+    statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced);
+    achievements.value[5].reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
+    for (let index = 0; index < achievements.value.length; index++) {
+        const achievement = achievements.value[index];
+        const unlocked = namedWasm.hasTierOneAchievement(index);
+        if (achievementsInitialized && unlocked && !achievement.unlocked) {
+            showNotification(`Achievement: ${achievement.title}`, { color: "#c49cff" });
+        }
+        achievement.unlocked = unlocked;
+    }
+    achievementsInitialized = true;
     animationFrame = requestAnimationFrame(updateDisplay);
 }
 
 function formatDecimal(handle, decimals = 2) {
+    if (namedWasm.isAtInfinityBoundary(handle)) return "Infinity";
     const value = namedWasm.readString(handle);
 
     if (value.includes("e")) {
@@ -120,8 +179,46 @@ function formatDuration(handle) {
     return `${minutes}:${String(wholeSeconds % 60).padStart(2, "0")}`;
 }
 
+function formatTotalTime(handle) {
+    const seconds = namedWasm.toNumber(handle);
+    if (!Number.isFinite(seconds)) return `${formatDecimal(handle)} seconds`;
+    const totalSeconds = Math.max(0, Math.floor(seconds));
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor(totalSeconds % 86400 / 3600);
+    const minutes = Math.floor(totalSeconds % 3600 / 60);
+    const remainingSeconds = totalSeconds % 60;
+    const clock = [hours, minutes, remainingSeconds]
+        .map((value) => String(value).padStart(2, "0"))
+        .join(":");
+    return days > 0 ? `${days}d ${clock}` : clock;
+}
+
 function setStarsVisible(visible) {
     document.body.classList.toggle("effects-disabled", !visible);
+}
+
+async function exportGameSave() {
+    const saveData = exportSave();
+    try {
+        await navigator.clipboard.writeText(saveData);
+        window.alert("Save copied to clipboard.");
+    } catch {
+        window.prompt("Copy your save:", saveData);
+    }
+}
+
+function importGameSave() {
+    const saveData = window.prompt("Paste your save:");
+    if (saveData === null || saveData.trim() === "") return;
+    try {
+        achievementsInitialized = false;
+        importSave(saveData.trim());
+        saveGame();
+        window.alert("Save imported successfully.");
+    } catch (error) {
+        console.error("Failed to import The Mana Paradox save", error);
+        window.alert(error instanceof Error ? error.message : "Invalid save data.");
+    }
 }
 
 function buyTierOne(index) {
@@ -146,6 +243,10 @@ function increaseMastery() {
     namedWasm.increaseMastery();
 }
 
+function increaseMatrix() {
+    namedWasm.increaseMatrix();
+}
+
 onMounted(() => {
     animationFrame = requestAnimationFrame(updateDisplay);
 });
@@ -155,6 +256,7 @@ onBeforeUnmount(() => cancelAnimationFrame(animationFrame));
 
 <template>
     <div class="game-shell">
+        <NotificationStack />
         <GameHeader :mana="mana" />
         <TabNavigation
             :tabs="tabs"
@@ -170,16 +272,28 @@ onBeforeUnmount(() => cancelAnimationFrame(animationFrame));
                 :cast-speed="castSpeedSpell"
                 :cast-mode="castMax ? 'Cast Max' : 'Cast One'"
                 :mastery="mastery"
+                :matrix="matrix"
                 @buy="buyTierOne"
                 @buy-all="buyAllTierOne"
                 @toggle-cast-mode="toggleCastMode"
                 @cast-speed="castSpeed"
                 @increase-mastery="increaseMastery"
+                @increase-matrix="increaseMatrix"
+            />
+            <StatisticsTab
+                v-else-if="activeTab === 'statistics'"
+                :statistics="statistics"
+            />
+            <AchievementsTab
+                v-else-if="activeTab === 'achievements'"
+                :achievements="achievements"
             />
             <OptionsTab
                 v-else-if="activeTab === 'options'"
                 :active-subtab="activeSubtab"
                 @stars-visible="setStarsVisible"
+                @export-save="exportGameSave"
+                @import-save="importGameSave"
             />
         </main>
         <footer>The Mana Paradox</footer>

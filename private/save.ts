@@ -1,12 +1,24 @@
 import { getLayer, getMagnitude, getSign, writeDecimal } from "./break_eternity.js";
-import { HANDLES, refreshMasteryDerivedState, refreshTierOneDerivedState } from "./player.js";
+import { clampManaToInfinityBoundary, HANDLES, hasTierOneAchievement as hasAchievement, refreshMasteryDerivedState, refreshMatrixDerivedState, refreshTierOneDerivedState, setTierOneAchievement } from "./player.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "003";
+const CURRENT_SAVE_VERSION = "002";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
+export const development = true;
+
+export interface SaveValue<T> {
+    value: T;
+}
+
+export interface SaveField {
+    readonly byteLength: number;
+    write(view: DataView, offset: number): void;
+    read(view: DataView, offset: number): void;
+    reset(): void;
+}
 
 const savedHandles001: readonly i32[] = [
     HANDLES.mana,
@@ -22,23 +34,35 @@ const savedHandles001: readonly i32[] = [
     HANDLES.bought_manufactureStaff,
 ];
 
-const savedHandles002: readonly i32[] = [
-    ...savedHandles001,
-    HANDLES.castSpeedTimer,
-    HANDLES.castSpeedMagnitude,
-    HANDLES.castSpeedCost,
-];
+const savedFields001: readonly SaveField[] = savedHandles001.map((handle, index) =>
+    decimalSaveField(handle, index === 0 ? [1, 0, 10] : [0, 0, 0]),
+);
 
-const savedHandles003: readonly i32[] = [
-    ...savedHandles002,
-    HANDLES.masteryOwned,
+const savedFields002: readonly SaveField[] = [
+    ...savedFields001,
+    decimalSaveField(HANDLES.castSpeedTimer, [0, 0, 0]),
+    decimalSaveField(HANDLES.castSpeedMagnitude, [1, 0, 1]),
+    decimalSaveField(HANDLES.castSpeedCost, [1, 0, 1000]),
+    decimalSaveField(HANDLES.masteryOwned, [0, 0, 0]),
+    decimalSaveField(HANDLES.matrixOwned, [0, 0, 0]),
+    decimalSaveField(HANDLES.matrixPower, [1, 0, 0.5]),
+    decimalSaveField(HANDLES.statistics_totalManaProduced, [0, 0, 0]),
+    decimalSaveField(HANDLES.statistics_totalTimePlayed, [0, 0, 0]),
+    decimalSaveField(HANDLES.infinity_break_index, [0, 0, 0]),
+    
+    ...Array.from({ length: 10 }, (_, index) => index).map((index) => booleanSaveField(
+        () => hasAchievement(index),
+        (unlocked) => setTierOneAchievement(index, unlocked),
+    )),
 ];
 
 export function exportSave(): string {
-    const bytes = new Uint8Array(savedHandles003.length * DECIMAL_BYTES);
+    const bytes = new Uint8Array(totalByteLength(savedFields002));
     const view = new DataView(bytes.buffer);
-    for (let index = 0; index < savedHandles003.length; index++) {
-        writeDecimalRecord(view, index * DECIMAL_BYTES, savedHandles003[index]!);
+    let offset = 0;
+    for (const field of savedFields002) {
+        field.write(view, offset);
+        offset += field.byteLength;
     }
     return `${SAVE_PREFIX}${CURRENT_SAVE_VERSION}${bytesToBase64(bytes)}${SAVE_SUFFIX}`;
 }
@@ -51,44 +75,82 @@ export function importSave(saveData: string): void {
     const encoded = saveData.slice(SAVE_PREFIX.length + 3, -SAVE_SUFFIX.length);
     switch (version) {
         case "001":
-            importHandles(encoded, savedHandles001);
-            resetCastSpeed();
-            resetMastery();
+            importFields(encoded, savedFields001);
             break;
         case "002":
-            importHandles(encoded, savedHandles002);
-            resetMastery();
-            break;
-        case "003":
-            importHandles(encoded, savedHandles003);
+            importFields(encoded, savedFields002);
             break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
     refreshTierOneDerivedState();
     refreshMasteryDerivedState();
+    refreshMatrixDerivedState();
+    clampManaToInfinityBoundary();
 }
 
-function importHandles(encoded: string, handles: readonly i32[]): void {
+function importFields(encoded: string, fields: readonly SaveField[]): void {
     const bytes = base64ToBytes(encoded);
-    const expectedLength = handles.length * DECIMAL_BYTES;
-    if (bytes.length !== expectedLength) {
+    const expectedLength = totalByteLength(fields);
+    if (!development && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
+    for (const field of savedFields002) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    for (let index = 0; index < handles.length; index++) {
-        readDecimalRecord(view, index * DECIMAL_BYTES, handles[index]!);
+    let offset = 0;
+    for (const field of fields) {
+        if (offset + field.byteLength > bytes.length) break;
+        field.read(view, offset);
+        offset += field.byteLength;
     }
 }
 
-function resetCastSpeed(): void {
-    writeDecimal(HANDLES.castSpeedTimer, 0, 0, 0);
-    writeDecimal(HANDLES.castSpeedMagnitude, 1, 0, 1);
-    writeDecimal(HANDLES.castSpeedCost, 1, 0, 1000);
+function totalByteLength(fields: readonly SaveField[]): number {
+    return fields.reduce((total, field) => total + field.byteLength, 0);
 }
 
-function resetMastery(): void {
-    writeDecimal(HANDLES.masteryOwned, 0, 0, 0);
+export function decimalSaveField(handle: i32, defaultValue: readonly [number, number, number]): SaveField {
+    return {
+        byteLength: DECIMAL_BYTES,
+        write: (view, offset) => writeDecimalRecord(view, offset, handle),
+        read: (view, offset) => readDecimalRecord(view, offset, handle),
+        reset: () => writeDecimal(handle, defaultValue[0], defaultValue[1], defaultValue[2]),
+    };
+}
+
+export function booleanSaveField(
+    getValue: () => boolean,
+    setValue: (value: boolean) => void,
+    defaultValue = false,
+): SaveField {
+    return {
+        byteLength: 1,
+        write: (view, offset) => view.setUint8(offset, getValue() ? 1 : 0),
+        read: (view, offset) => {
+            const value = view.getUint8(offset);
+            if (value > 1) throw new Error(`Invalid saved boolean ${value}`);
+            setValue(value === 1);
+        },
+        reset: () => setValue(defaultValue),
+    };
+}
+
+export function int32SaveField(state: SaveValue<number>, defaultValue = 0): SaveField {
+    return {
+        byteLength: 4,
+        write: (view, offset) => view.setInt32(offset, state.value, true),
+        read: (view, offset) => { state.value = view.getInt32(offset, true); },
+        reset: () => { state.value = defaultValue; },
+    };
+}
+
+export function numberSaveField(state: SaveValue<number>, defaultValue = 0): SaveField {
+    return {
+        byteLength: 8,
+        write: (view, offset) => view.setFloat64(offset, state.value, true),
+        read: (view, offset) => { state.value = view.getFloat64(offset, true); },
+        reset: () => { state.value = defaultValue; },
+    };
 }
 
 export function saveGame(): void {
