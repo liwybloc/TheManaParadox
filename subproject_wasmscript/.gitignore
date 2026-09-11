@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.test-dist/
+coverage/
+*.tsbuildinfo
+examples/
+.prettierignore
+.prettierrc.json
+.vscode/

@@ -1,0 +1,20 @@
+{
+    "name": "the-mana-paradox",
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "webpack --mode production",
+        "serve": "node serve.js",
+        "watch": "webpack --watch --mode development"
+    },
+    "devDependencies": {
+        "@vue/compiler-sfc": "^3.5.42",
+        "assemblyscript": "^0.28.8",
+        "typescript": "^5.9.2",
+        "vue": "^3.5.42",
+        "vue-loader": "^17.4.2",
+        "wasm-script": "file:./subproject_wasmscript",
+        "webpack": "^5.101.3",
+        "webpack-cli": "^6.0.1"
+    }
+}

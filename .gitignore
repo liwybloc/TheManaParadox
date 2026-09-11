@@ -1,0 +1,4 @@
+.wasmscript/
+generated/
+public/js/
+node_modules/

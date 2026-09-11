@@ -1,0 +1,39 @@
+{
+    "name": "wasm-script",
+    "version": "0.1.0",
+    "description": "Build-time TypeScript-to-WebAssembly preprocessing and call-site transformation.",
+    "type": "module",
+    "bin": {
+        "wasmscript": "./dist/cli.js"
+    },
+    "exports": {
+        ".": {
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js"
+        }
+    },
+    "files": [
+        "dist/*.d.ts",
+        "dist/*.js",
+        "dist/*.js.map"
+    ],
+    "scripts": {
+        "build": "tsc -p tsconfig.build.json",
+        "example:physics": "npm run build && node dist/cli.js --project examples/physics-engine/tsconfig.json && node examples/physics-engine/server.mjs",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "test": "npm run build && tsc -p tsconfig.test.json && node --test .test-dist/tests/*.test.js",
+        "typecheck": "tsc -p tsconfig.build.json --noEmit"
+    },
+    "engines": {
+        "node": ">=20"
+    },
+    "dependencies": {
+        "assemblyscript": "^0.28.8",
+        "typescript": "^5.9.2"
+    },
+    "devDependencies": {
+        "@types/node": "^24.3.1",
+        "prettier": "^3.9.6"
+    }
+}

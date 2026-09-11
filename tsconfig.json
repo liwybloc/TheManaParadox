@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "lib": ["ES2022", "DOM"],
+        "module": "ESNext",
+        "moduleResolution": "Bundler",
+        "baseUrl": ".",
+        "paths": {
+            "@ui/*": ["private/ui/*"]
+        },
+        "outDir": ".wasmscript",
+        "rootDir": ".",
+        "sourceMap": true,
+        "strict": true,
+        "target": "ES2022"
+    },
+    "include": ["private/**/*.ts", "private/**/*.d.ts", "generated/**/*.ts"],
+    "wasmscript": {
+        "generatedDirectory": "generated",
+        "wasmFileName": "mana-paradox.wasm"
+    }
+}

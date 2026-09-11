@@ -1,0 +1,54 @@
+<script setup>
+import UpgradeRow from "../components/UpgradeRow.vue";
+
+defineProps({
+    upgrades: { type: Array, required: true },
+    castSpeed: { type: Object, required: true },
+    castMode: { type: String, required: true },
+    mastery: { type: Object, required: true },
+});
+defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery"]);
+</script>
+
+<template>
+    <section class="tab-panel">
+        <div class="cast-controls">
+            <button class="cast-all" type="button" @click="$emit('buy-all')">Cast All</button>
+            <button class="cast-mode" type="button" @click="$emit('toggle-cast-mode')">{{ castMode }}</button>
+        </div>
+        <button
+            class="cast-speed"
+            type="button"
+            :disabled="!castSpeed.affordable"
+            @click="$emit('cast-speed')"
+        >
+            <strong>Cast Speed</strong>
+            <span>{{ castSpeed.timer }} · {{ castSpeed.magnitude }}</span>
+            <small>Cost: {{ castSpeed.cost }}</small>
+        </button>
+        <div class="upgrade-list">
+            <UpgradeRow
+                v-for="upgrade in upgrades"
+                v-show="upgrade.visible"
+                :key="upgrade.id"
+                v-bind="upgrade"
+                :cast-label="castMode === 'Cast Max' ? 'Cast all' : 'Cast one'"
+                :locked="!upgrade.affordable"
+                @cast="$emit('buy', upgrade.index)"
+            />
+        </div>
+        <div class="mastery-controls">
+            <div class="mastery-summary">Mastery Level: {{ mastery.level }} (×{{ mastery.effect }})</div>
+            <button
+                class="increase-mastery"
+                type="button"
+                :disabled="!mastery.affordable"
+                @click="$emit('increase-mastery')"
+            >
+                <strong>Increase Mastery</strong>
+                <span>×2 Speed Magnitude</span>
+                <small>Cost: {{ mastery.cost }}</small>
+            </button>
+        </div>
+    </section>
+</template>
