@@ -16,7 +16,7 @@ export default {
         clean: true,
         filename: 'bundle.js',
         path: path.resolve(projectDir, 'public/js'),
-        publicPath: '/js/',
+        publicPath: './',
     },
     module: {
         rules: [{ test: /\.vue$/, loader: 'vue-loader' }],

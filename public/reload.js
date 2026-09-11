@@ -1,18 +1,22 @@
-let currentBuild;
+if(window.location.href.includes("localhost")) {
 
-async function checkForBuild() {
-    try {
-        const response = await fetch('/__build-version', { cache: 'no-store' });
-        if (!response.ok) return;
+    let currentBuild;
 
-        const nextBuild = await response.text();
-        if (currentBuild !== undefined && nextBuild !== currentBuild) {
-            window.location.reload();
-            return;
-        }
-        currentBuild = nextBuild;
-    } catch { }
+    async function checkForBuild() {
+        try {
+            const response = await fetch('/__build-version', { cache: 'no-store' });
+            if (!response.ok) return;
+
+            const nextBuild = await response.text();
+            if (currentBuild !== undefined && nextBuild !== currentBuild) {
+                window.location.reload();
+                return;
+            }
+            currentBuild = nextBuild;
+        } catch { }
+    }
+
+    void checkForBuild();
+    setInterval(checkForBuild, 1000);
+
 }
-
-void checkForBuild();
-setInterval(checkForBuild, 1000);
