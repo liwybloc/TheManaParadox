@@ -322,7 +322,7 @@ function condense() {
 }
 
 function buyCondensedUpgrade(index) {
-    namedWasm.buyCondensedUpgrade(index);
+    if (namedWasm.buyCondensedUpgrade(index)) namedWasm.refreshMasteryDerivedState();
 }
 
 function bolsterStaff() {

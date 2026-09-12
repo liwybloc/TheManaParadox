@@ -23,4 +23,5 @@ import { refreshTierOneDerivedState } from "./tier_one.js";
         throw new Error(`Condensed upgrade index must be an integer from 0 to ${CONDENSED_UPGRADE_COUNT - 1}`);
     }
     setCondensedUpgrade(index, owned);
+    refreshMasteryDerivedState();
 };

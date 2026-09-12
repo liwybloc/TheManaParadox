@@ -35,7 +35,7 @@ const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
 
     { slot: 15, title: "First Cast Speed is free", cost: [1, 0, 20] },
     { slot: 16, title: "Courage duration is increased by 100%", cost: [1, 0, 20] },
-    { slot: 17, title: "Mana is increased based on condensed manan\n(Currently: {condensedManaBuff})", cost: [1, 0, 20] },
+    { slot: 17, title: "Mana is increased based on condensed mana\n(Currently: {condensedManaBuff})", cost: [1, 0, 20] },
     { slot: 18, title: "Courage cooldown is decreased by 25%", cost: [1, 0, 20] },
     { slot: 19, title: "Mastery magnitude effect is increased based on Crystal Matrix effect", cost: [1, 0, 20] },
 

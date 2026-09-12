@@ -1,5 +1,6 @@
 import { addInto, addUS, gt, gte, multiplyInto, mulUS, powInto, powUS, roundInto, subUS, writeNumber } from "./break_eternity.js";
 import { checkCastSpeedAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
+import { hasCondensedUpgrade } from "./condensed.js";
 import type { Player } from "./player.js";
 import { resetBolster, resetTierOneAmounts } from "./tier_one.js";
 
@@ -48,7 +49,11 @@ export function refreshMasteryDerivedState(): void {
     addInto(player.masteryLevel, player.masteryOwned, 1);
     powInto(player.masteryCost, 3, player.masteryOwned);
     roundInto(player.masteryCost, player.masteryCost);
-    powInto(player.masterySpeedEffect, 2, player.masteryOwned);
+    if (hasCondensedUpgrade(15)) {
+        powInto(player.masterySpeedEffect, player.matrixSpeedPower, player.masteryOwned);
+    } else {
+        powInto(player.masterySpeedEffect, 2, player.masteryOwned);
+    }
 }
 
 export function increaseMatrix(): bool {
