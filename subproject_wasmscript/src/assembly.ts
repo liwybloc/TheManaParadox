@@ -14,7 +14,7 @@ export async function compileAssembly(
     const result = await asc.compileString(source, {
         optimizeLevel: 3,
         shrinkLevel: 1,
-        runtime: "stub",
+        runtime: "incremental",
     });
 
     if (result.error || !result.binary) {

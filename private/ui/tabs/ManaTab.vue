@@ -7,8 +7,9 @@ defineProps({
     castMode: { type: String, required: true },
     mastery: { type: Object, required: true },
     matrix: { type: Object, required: true },
+    bolster: { type: Object, required: true },
 });
-defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix"]);
+defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix", "bolster"]);
 </script>
 
 <template>
@@ -36,8 +37,20 @@ defineEmits(["buy", "buy-all", "toggle-cast-mode", "cast-speed", "increase-maste
                 :cast-label="castMode === 'Cast Max' ? 'Cast all' : 'Cast one'"
                 :locked="!upgrade.affordable"
                 @cast="$emit('buy', upgrade.index)"
+                @empower="$emit('empower', upgrade.index)"
             />
         </div>
+        <button
+            v-show="bolster.visible"
+            class="bolster-staff"
+            type="button"
+            :disabled="!bolster.affordable"
+            @click="$emit('bolster')"
+        >
+            <strong>Bolster</strong>
+            <span>{{ bolster.affordable ? `${bolster.effect} after Bolster (${bolster.relIncrease})` : `Requires ${bolster.requirement} Mana Conduits` }}</span>
+            <small>{{ bolster.multiplier }} Total Production</small>
+        </button>
         <div v-show="mastery.visible" class="mastery-controls">
             <div class="mastery-summary">Mastery Level: {{ mastery.level }} (×{{ mastery.effect }})</div>
             <button

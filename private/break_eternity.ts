@@ -4,7 +4,7 @@ const MAX_SIGNIFICANT_DIGITS: f64 = 17;
 const EXP_LIMIT: f64 = 9e15;
 const LAYER_DOWN: f64 = 15.954589770191003;
 const FIRST_NEG_LAYER: f64 = 1 / EXP_LIMIT;
-const CONSTANT_COUNT: i32 = 51;
+const CONSTANT_COUNT: i32 = 101;
 const DECIMAL_TRANSFER_CAPACITY: i32 = 256;
 const DECIMAL_COMPONENT_COUNT: i32 = 3;
 
@@ -691,6 +691,27 @@ export function floorInto(result: i32, value: i32): void {
         return;
     }
     writeNumber(result, Math.floor(sign * magnitude));
+}
+
+export function roundInto(result: i32, value: i32): void {
+    const sign = readSign(value);
+    const layer = readLayer(value);
+    const magnitude = readMagnitude(value);
+    if (isNaN(sign) || isNaN(layer) || isNaN(magnitude)) {
+        writeNaN(result);
+        return;
+    }
+    if (layer !== 0) {
+        writeDecimal(result, sign, layer, magnitude);
+        return;
+    }
+    writeNumber(result, Math.round(sign * magnitude));
+}
+
+export function round(value: i32): i32 {
+    const result = allocateDecimal();
+    roundInto(result, value);
+    return result;
 }
 
 export function readString(handle: i32): string {

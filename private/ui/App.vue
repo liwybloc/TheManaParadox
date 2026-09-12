@@ -1,15 +1,19 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { HANDLES } from "@game/player.js";
-import { exportSave, importSave, saveGame } from "@game/save.js";
+import { SCRATCH_HANDLES } from "@game/scratch.js";
+import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/save.js";
+import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/tick.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
+import GoalProgressBar from "./components/GoalProgressBar.vue";
 import TabNavigation from "./components/TabNavigation.vue";
 import ManaTab from "./tabs/ManaTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
 import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
 import NotificationStack from "./components/NotificationStack.vue";
+import TimeSimulation from "./components/TimeSimulation.vue";
 import { showNotification } from "./notifications.js";
 
 const tabs = [
@@ -42,6 +46,8 @@ const tabs = [
 const activeTab = ref("mana");
 const activeSubtabs = ref({ mana: "basic-spells", achievements: "", statistics: "", options: "general" });
 const mana = ref("0");
+const nextGoal = ref("Condense");
+const nextGoalProgress = ref(0);
 const tierOneDefinitions = [
     { name: "Mana Conduit", handle: HANDLES.count_manaConduit },
     { name: "Conduit Conjugation", handle: HANDLES.count_conduitConjugation },
@@ -59,7 +65,12 @@ const tierOneUpgrades = ref(tierOneDefinitions.map((upgrade, index) => ({
     visible: index === 0,
     affordable: false,
     costHandle: namedWasm.tierOneCostHandle(index),
-    multiplierHandle: namedWasm.tierOneMultiplierHandle(index),
+    empowermentCostHandle: namedWasm.tierOneEmpowermentCostHandle(index),
+    empowermentHandle: namedWasm.tierOneEmpowermentHandle(index),
+    empowered: "0",
+    empowerCost: "0",
+    empowerVisible: false,
+    affordabilityProgress: 0,
 })));
 const castSpeedSpell = ref({
     timer: "0:00",
@@ -83,6 +94,17 @@ const matrix = ref({
     affordable: false,
     visible: false,
 });
+const bolster = ref({
+    visible: false,
+    affordable: false,
+    effect: "×1.01",
+    multiplier: "×1.00",
+    requirement: "1.00e45",
+});
+const resetConfirmationVisible = ref(false);
+const updateRate = ref(getUpdateRate());
+const timeSimulation = ref({ active: false, totalSeconds: 0, simulatedSeconds: 0, progress: 0, speed: 1 });
+let unsubscribeFromTimeSimulation;
 const statistics = ref({
     timePlayed: "0:00:00",
     manaProduced: "0.00",
@@ -93,11 +115,16 @@ const achievements = ref([
     { id: "achievement_buyconjugationcreation", number: 3, title: "The promised achievement", description: "Purchase a Conjugation Creation.", reward: "+3% mana production", unlocked: false },
     { id: "achievement_buycreationmanufactory", number: 4, title: "Industrial age", description: "Purchase a Creation Manufactory.", reward: "+4% mana production", unlocked: false },
     { id: "achievement_buymanufacturestaff", number: 5, title: "The true best friend", description: "Purchase a Manufacture Staff.", reward: "+5% mana production", unlocked: false },
-    { id: "achievement_playtwohours", number: 6, title: "Thanks!", description: "Play for 2 hours.", reward: "Mana is increased based on time played", unlocked: false },
-    { id: "achievement_upgrademastery", number: 7, title: "Grandmastery", description: "Upgrade your mastery level.", unlocked: false },
-    { id: "achievement_havesixstaff", number: 8, title: "The 6th...", description: "Have exactly 6 Manufacture Staff.", unlocked: false },
-    { id: "achievement_produce1e50mana", number: 9, title: "Yet not the AI", description: "Produce 1e50 mana.", reward: "Reset with 500 mana", unlocked: false },
+    { id: "achievement_playtwohours", number: 6, title: "Thanks!", description: "Play for 1 hour.", reward: "Mana is increased based on time played", unlocked: false },
+    { id: "achievement_upgrademastery", number: 7, title: "Grandmastery", description: "Upgrade your mastery to level 5.", unlocked: false },
+    { id: "achievement_havesixstaff", number: 8, title: "Double the Sith", description: "Have at least 12 Manufacture Staff.", reward: "Unlock Staff Bolstering", unlocked: false },
+    { id: "achievement_produce1e50mana", number: 9, title: "Yet not the AI", description: "Produce 1.00e50 mana.", reward: "Reset with 500 mana", unlocked: false },
     { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Cast Speed time.", reward: "Cast Speed time is increased by 5 seconds per purchase", unlocked: false },
+    { id: "achievement_centennial", number: 11, title: "Centennial", description: "Reach 1.00e100 Mana.", reward: "Increase per-purchase multiplier by +0.1×", unlocked: false },
+    { id: "achievement_circularhabits", number: 12, title: "Circular Habits", description: "Reach the limit of your mana circle.", unlocked: false },
+    { id: "achievement_difficulty", number: 13, title: "I think this is called difficulty", description: "Reach the limit of your mana circle without any Crystal Matrices.", unlocked: false },
+    { id: "achievement_realnews", number: 14, title: "REAL NEWS!", description: "View 50 different ticker messages.", unlocked: false },
+    { id: "achievement_clicker", number: 15, title: "Clicker!", description: "Click over 1,000 times.", reward: "Carpel tunnel", unlocked: false },
 ]);
 let animationFrame;
 let achievementsInitialized = false;
@@ -114,12 +141,17 @@ function selectSubtab(id) {
 
 function updateDisplay() {
     mana.value = formatDecimal(HANDLES.mana);
+    nextGoalProgress.value = namedWasm.manaCondenseProgress();
     for (const upgrade of tierOneUpgrades.value) {
         upgrade.amount = formatDecimal(upgrade.handle, 0);
         upgrade.cost = `${formatDecimal(upgrade.costHandle)} mana`;
-        upgrade.multiplier = `×${formatDecimal(upgrade.multiplierHandle)}`;
+        upgrade.multiplier = `×${formatDecimal(namedWasm.tierOneDisplayMultiplierHandle(upgrade.index))}`;
         upgrade.visible = namedWasm.isTierOneVisible(upgrade.index);
         upgrade.affordable = namedWasm.canBuyTierOne(upgrade.index);
+        upgrade.empowerCost = formatDecimal(upgrade.empowermentCostHandle);
+        upgrade.empowered = formatDecimal(upgrade.empowermentHandle, 0);
+        upgrade.empowerVisible = namedWasm.canEmpowerTierOne(upgrade.index);
+        upgrade.affordabilityProgress = namedWasm.tierOneAffordabilityProgress(upgrade.index);
     }
     castSpeedSpell.value.timer = formatDuration(HANDLES.castSpeedTimer);
     castSpeedSpell.value.magnitude = `×${formatDecimal(HANDLES.castSpeedMagnitude)}`;
@@ -136,6 +168,12 @@ function updateDisplay() {
     matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} Manufacture Staff`;
     matrix.value.affordable = namedWasm.canIncreaseMatrix();
     matrix.value.visible = namedWasm.isMatrixVisible();
+    bolster.value.affordable = namedWasm.canBolster();
+    bolster.value.visible = namedWasm.hasTierOneAchievement(7);
+    bolster.value.effect = `×${formatDecimal(HANDLES.bolsterEffect)}`;
+    bolster.value.relIncrease = `×${formatDecimal(SCRATCH_HANDLES.bolsterRelativeIncrease)}`;
+    bolster.value.multiplier = `x${formatDecimal(HANDLES.bolsterMultiplier)}`;
+    bolster.value.requirement = formatDecimal(HANDLES.bolsterRequirement);
     statistics.value.timePlayed = formatTotalTime(HANDLES.statistics_totalTimePlayed);
     statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced);
     achievements.value[5].reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
@@ -197,6 +235,10 @@ function setStarsVisible(visible) {
     document.body.classList.toggle("effects-disabled", !visible);
 }
 
+function updateTickRate(value) {
+    updateRate.value = setUpdateRate(value);
+}
+
 async function exportGameSave() {
     const saveData = exportSave();
     try {
@@ -226,6 +268,10 @@ function buyTierOne(index) {
     else namedWasm.buyTierOne(index);
 }
 
+function empowerTierOne(index) {
+    namedWasm.empowerTierOne(index);
+}
+
 function buyAllTierOne() {
     if (castMax.value) namedWasm.buyMaxAllTierOne();
     else namedWasm.buyAllTierOne();
@@ -247,16 +293,52 @@ function increaseMatrix() {
     namedWasm.increaseMatrix();
 }
 
+function bolsterStaff() {
+    namedWasm.bolster();
+}
+
+function resetGame() {
+    resetConfirmationVisible.value = true;
+}
+
+function cancelResetGame() {
+    resetConfirmationVisible.value = false;
+}
+
+function confirmResetGame() {
+    resetGameData();
+    achievementsInitialized = false;
+    castMax.value = false;
+    resetConfirmationVisible.value = false;
+}
+
+function recordClick() {
+    namedWasm.recordClick();
+}
+
 onMounted(() => {
+    document.addEventListener("click", recordClick);
+    unsubscribeFromTimeSimulation = subscribeToTimeSimulation((state) => {
+        timeSimulation.value = state;
+    });
     animationFrame = requestAnimationFrame(updateDisplay);
 });
 
-onBeforeUnmount(() => cancelAnimationFrame(animationFrame));
+onBeforeUnmount(() => {
+    document.removeEventListener("click", recordClick);
+    unsubscribeFromTimeSimulation?.();
+    cancelAnimationFrame(animationFrame);
+});
 </script>
 
 <template>
     <div class="game-shell">
         <NotificationStack />
+        <TimeSimulation
+            :simulation="timeSimulation"
+            @speed-up="speedUpTimeSimulation"
+            @skip="skipTimeSimulation"
+        />
         <GameHeader :mana="mana" />
         <TabNavigation
             :tabs="tabs"
@@ -273,12 +355,15 @@ onBeforeUnmount(() => cancelAnimationFrame(animationFrame));
                 :cast-mode="castMax ? 'Cast Max' : 'Cast One'"
                 :mastery="mastery"
                 :matrix="matrix"
+                :bolster="bolster"
                 @buy="buyTierOne"
+                @empower="empowerTierOne"
                 @buy-all="buyAllTierOne"
                 @toggle-cast-mode="toggleCastMode"
                 @cast-speed="castSpeed"
                 @increase-mastery="increaseMastery"
                 @increase-matrix="increaseMatrix"
+                @bolster="bolsterStaff"
             />
             <StatisticsTab
                 v-else-if="activeTab === 'statistics'"
@@ -291,11 +376,25 @@ onBeforeUnmount(() => cancelAnimationFrame(animationFrame));
             <OptionsTab
                 v-else-if="activeTab === 'options'"
                 :active-subtab="activeSubtab"
+                :update-rate="updateRate"
                 @stars-visible="setStarsVisible"
                 @export-save="exportGameSave"
                 @import-save="importGameSave"
+                @reset-game="resetGame"
+                @update-rate="updateTickRate"
             />
         </main>
-        <footer>The Mana Paradox</footer>
+        <div v-if="resetConfirmationVisible" class="confirmation-overlay" role="presentation" @click.self="cancelResetGame">
+            <section class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-game-title">
+                <h2 id="reset-game-title">Are you sure?</h2>
+                <p>This will permanently reset your game.</p>
+                <div class="confirmation-actions">
+                    <button type="button" class="confirm-reset" @click="confirmResetGame">Yes</button>
+                    <button type="button" @click="cancelResetGame">No</button>
+                </div>
+            </section>
+        </div>
+        <footer>The Mana Paradox v0.0.3</footer>
+        <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

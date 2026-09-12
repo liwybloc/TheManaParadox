@@ -1,13 +1,18 @@
 import { getLayer, getMagnitude, getSign, writeDecimal } from "./break_eternity.js";
-import { clampManaToInfinityBoundary, HANDLES, hasTierOneAchievement as hasAchievement, refreshMasteryDerivedState, refreshMatrixDerivedState, refreshTierOneDerivedState, setTierOneAchievement } from "./player.js";
+import { hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setTierOneAchievement } from "./achievements.js";
+import { clampManaToInfinityBoundary } from "./currencies.js";
+import { HANDLES } from "./player.js";
+import { refreshMasteryDerivedState, refreshMatrixDerivedState } from "./progression.js";
+import { refreshTierOneDerivedState } from "./tier_one.js";
+import { simulateTime } from "./tick.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "002";
+const CURRENT_SAVE_VERSION = "003";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
-export const development = true;
+export const development = window.location.href.includes("localhost");
 
 export interface SaveValue<T> {
     value: T;
@@ -19,6 +24,8 @@ export interface SaveField {
     read(view: DataView, offset: number): void;
     reset(): void;
 }
+
+const lastSaveTimestamp: SaveValue<number> = { value: 0 };
 
 const savedHandles001: readonly i32[] = [
     HANDLES.mana,
@@ -38,6 +45,16 @@ const savedFields001: readonly SaveField[] = savedHandles001.map((handle, index)
     decimalSaveField(handle, index === 0 ? [1, 0, 10] : [0, 0, 0]),
 );
 
+function achievementSaveFields(length: number, offset: number): readonly SaveField[] {
+    return Array.from({ length }, (_, localIndex) => {
+        const achievementIndex = localIndex + offset;
+        return booleanSaveField(
+            () => hasAchievement(achievementIndex),
+            (unlocked) => setTierOneAchievement(achievementIndex, unlocked),
+        );
+    });
+}
+
 const savedFields002: readonly SaveField[] = [
     ...savedFields001,
     decimalSaveField(HANDLES.castSpeedTimer, [0, 0, 0]),
@@ -49,18 +66,28 @@ const savedFields002: readonly SaveField[] = [
     decimalSaveField(HANDLES.statistics_totalManaProduced, [0, 0, 0]),
     decimalSaveField(HANDLES.statistics_totalTimePlayed, [0, 0, 0]),
     decimalSaveField(HANDLES.infinity_break_index, [0, 0, 0]),
-    
-    ...Array.from({ length: 10 }, (_, index) => index).map((index) => booleanSaveField(
-        () => hasAchievement(index),
-        (unlocked) => setTierOneAchievement(index, unlocked),
-    )),
+    ...achievementSaveFields(10, 0),
+];
+
+const savedFields003: readonly SaveField[] = [
+    ...savedFields002,
+    decimalSaveField(HANDLES.empowerment_manaConduit, [0, 0, 0]),
+    decimalSaveField(HANDLES.empowerment_conduitConjugation, [0, 0, 0]),
+    decimalSaveField(HANDLES.empowerment_conjugationCreation, [0, 0, 0]),
+    decimalSaveField(HANDLES.empowerment_creationManufactory, [0, 0, 0]),
+    decimalSaveField(HANDLES.legacy_000, [0, 0, 0]),
+    decimalSaveField(HANDLES.bolsterMultiplier, [1, 0, 1]),
+    ...achievementSaveFields(5, 10),
+    decimalSaveField(HANDLES.statistics_totalClicks, [0, 0, 0]),
+    numberSaveField(lastSaveTimestamp, 0),
 ];
 
 export function exportSave(): string {
-    const bytes = new Uint8Array(totalByteLength(savedFields002));
+    lastSaveTimestamp.value = Date.now();
+    const bytes = new Uint8Array(totalByteLength(savedFields003));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields002) {
+    for (const field of savedFields003) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -80,6 +107,9 @@ export function importSave(saveData: string): void {
         case "002":
             importFields(encoded, savedFields002);
             break;
+        case "003":
+            importFields(encoded, savedFields003);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
@@ -87,6 +117,13 @@ export function importSave(saveData: string): void {
     refreshMasteryDerivedState();
     refreshMatrixDerivedState();
     clampManaToInfinityBoundary();
+    simulateOfflineTime();
+}
+
+function simulateOfflineTime(): void {
+    const now = Date.now();
+    if (lastSaveTimestamp.value <= 0 || lastSaveTimestamp.value >= now) return;
+    void simulateTime((now - lastSaveTimestamp.value) / 1000, false);
 }
 
 function importFields(encoded: string, fields: readonly SaveField[]): void {
@@ -95,7 +132,7 @@ function importFields(encoded: string, fields: readonly SaveField[]): void {
     if (!development && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields002) field.reset();
+    for (const field of savedFields003) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -159,6 +196,17 @@ export function saveGame(): void {
     } catch (error) {
         console.error("Failed to save The Mana Paradox", error);
     }
+}
+
+export function resetGame(): void {
+    for (const field of savedFields003) field.reset();
+    refreshAchievementRewards();
+    refreshTierOneDerivedState();
+    refreshMasteryDerivedState();
+    refreshMatrixDerivedState();
+    clampManaToInfinityBoundary();
+    localStorage.removeItem(STORAGE_KEY);
+    saveGame();
 }
 
 export function loadGame(): boolean {

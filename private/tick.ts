@@ -1,5 +1,16 @@
 import { gt, lte, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
-import { addPlayerTime, checkAchievements, gainCurrency, HANDLES, resetCastSpeed } from "./player.js";
+import { consumeTierOneRewardsChanged } from "./achievements.js";
+import { addPlayerTime, gainCurrency } from "./currencies.js";
+import { HANDLES } from "./player.js";
+import { resetCastSpeed } from "./progression.js";
+import { SCRATCH_HANDLES } from "./scratch.js";
+import { refreshTierOneDerivedState } from "./tier_one.js";
+import { PerformanceStats } from "./performance-stats.js";
+
+// Hello Scarlet, what do you want?
+// what do you want... do you want pets?
+// oh you want food? you motherfucker...
+// this is not newsticker suggestions
 
 /** [WASM] */
 
@@ -123,9 +134,9 @@ export function speedMultiplierFor(entity: i32): f64 {
     return globalSpeedMultiplier * groupSpeedMultiplier[entityGroup[entity]] * entitySpeedMultiplier[entity];
 }
 
-function tickProduction(deltaMilliseconds: f64): void {
+function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
-    addPlayerTime(secondsHandle);
+    if (countTimePlayed) addPlayerTime(secondsHandle);
     applyCastSpeed();
     for (let entity: i32 = 0; entity < productionEntityCount; entity++) {
         multiplyInto(productionHandle, entityAmountHandle[entity], secondsHandle);
@@ -224,17 +235,27 @@ function calculateModifier(scope: i32, target: i32, type: i32): f64 {
     return result;
 }
 
-export function tick(deltaMilliseconds: f64): void {
-    tickProduction(deltaMilliseconds);
-    checkAchievements();
+export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
+    tickProduction(deltaMilliseconds, countTimePlayed);
+    if (consumeTierOneRewardsChanged()) refreshTierOneDerivedState();
+}
+
+export function simulateTicks(durationMilliseconds: f64, stepMilliseconds: f64, countTimePlayed: bool): void {
+    if (durationMilliseconds <= 0 || stepMilliseconds <= 0) return;
+    let remainingMilliseconds = durationMilliseconds;
+    while (remainingMilliseconds > 0) {
+        const tickMilliseconds = Math.min(stepMilliseconds, remainingMilliseconds);
+        tick(tickMilliseconds, countTimePlayed);
+        remainingMilliseconds -= tickMilliseconds;
+    }
 }
 
 /** [/WASM] */
 
 initializeTick(
-    HANDLES.scratch_tierOneSeconds,
-    HANDLES.scratch_tierOneProduction,
-    HANDLES.scratch_productionModifier,
+    SCRATCH_HANDLES.tierOneSeconds,
+    SCRATCH_HANDLES.tierOneProduction,
+    SCRATCH_HANDLES.productionModifier,
     HANDLES.castSpeedTimer,
     HANDLES.castSpeedMagnitude,
     HANDLES.castSpeedCost,
@@ -276,12 +297,143 @@ registerProductionEntity(
     0,
 );
 
-const UPDATE_RATE = 33;
-function runTick(timePassed = UPDATE_RATE, isSimulating = false): void {
-    const start = performance.now();
-    tick(timePassed);
-    if(!isSimulating) {
-        setTimeout(runTick, Math.max(0, UPDATE_RATE - (performance.now() - start)));
+const UPDATE_RATE_STORAGE_KEY = "updateRate";
+const MIN_UPDATE_RATE = 10;
+const MAX_UPDATE_RATE = 200;
+const DEFAULT_UPDATE_RATE = 33;
+let updateRate = loadUpdateRate();
+const BASE_SIMULATION_BATCH_SIZE = 5000;
+const MAX_SIMULATION_BATCH_SIZE = 250_000;
+const simulationListeners = new Set<(state: TimeSimulationState) => void>();
+let simulationActive = false;
+let simulationBatchSize = BASE_SIMULATION_BATCH_SIZE;
+let simulationSkipRequested = false;
+let simulationTotalMilliseconds = 0;
+let simulationCompletedMilliseconds = 0;
+
+export interface TimeSimulationState {
+    readonly active: boolean;
+    readonly totalSeconds: number;
+    readonly simulatedSeconds: number;
+    readonly progress: number;
+    readonly speed: number;
+}
+
+export function getUpdateRate(): number {
+    return updateRate;
+}
+
+export function setUpdateRate(value: number): number {
+    updateRate = Math.max(MIN_UPDATE_RATE, Math.min(MAX_UPDATE_RATE, Math.round(value)));
+    try {
+        localStorage.setItem(UPDATE_RATE_STORAGE_KEY, String(updateRate));
+    } catch (error) {
+        console.error("Failed to save update rate", error);
+    }
+    return updateRate;
+}
+
+export function subscribeToTimeSimulation(listener: (state: TimeSimulationState) => void): () => void {
+    simulationListeners.add(listener);
+    listener(currentSimulationState());
+    return () => simulationListeners.delete(listener);
+}
+
+export async function simulateTime(seconds: number, countTimePlayed = true): Promise<void> {
+    if (simulationActive) return;
+    const finiteSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    if (finiteSeconds === 0) return;
+
+    simulationActive = true;
+    simulationBatchSize = BASE_SIMULATION_BATCH_SIZE;
+    simulationSkipRequested = false;
+    simulationTotalMilliseconds = finiteSeconds * 1000;
+    simulationCompletedMilliseconds = 0;
+    notifySimulationListeners();
+
+    try {
+        while (simulationCompletedMilliseconds < simulationTotalMilliseconds) {
+            const remainingMilliseconds = simulationTotalMilliseconds - simulationCompletedMilliseconds;
+            if (simulationSkipRequested) {
+                tick(remainingMilliseconds, countTimePlayed);
+                simulationCompletedMilliseconds = simulationTotalMilliseconds;
+                notifySimulationListeners();
+                break;
+            }
+
+            const remainingTicks = Math.ceil(remainingMilliseconds / updateRate);
+            const batchTicks = Math.min(remainingTicks, simulationBatchSize);
+            const batchMilliseconds = Math.min(remainingMilliseconds, batchTicks * updateRate);
+            simulateTicks(batchMilliseconds, updateRate, countTimePlayed);
+            simulationCompletedMilliseconds += batchMilliseconds;
+            notifySimulationListeners();
+            await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+    } finally {
+        simulationActive = false;
+        notifySimulationListeners();
     }
 }
+
+export function speedUpTimeSimulation(): void {
+    if (!simulationActive) return;
+    simulationBatchSize = Math.min(MAX_SIMULATION_BATCH_SIZE, simulationBatchSize * 5);
+    notifySimulationListeners();
+}
+
+export function skipTimeSimulation(): void {
+    if (simulationActive) simulationSkipRequested = true;
+}
+
+function currentSimulationState(): TimeSimulationState {
+    return {
+        active: simulationActive,
+        totalSeconds: simulationTotalMilliseconds / 1000,
+        simulatedSeconds: simulationCompletedMilliseconds / 1000,
+        progress: simulationTotalMilliseconds === 0
+            ? 0
+            : Math.min(1, simulationCompletedMilliseconds / simulationTotalMilliseconds),
+        speed: simulationBatchSize / BASE_SIMULATION_BATCH_SIZE,
+    };
+}
+
+function notifySimulationListeners(): void {
+    const state = currentSimulationState();
+    for (const listener of simulationListeners) listener(state);
+}
+
+function loadUpdateRate(): number {
+    try {
+        const storedValue = localStorage.getItem(UPDATE_RATE_STORAGE_KEY);
+        if (storedValue === null) return DEFAULT_UPDATE_RATE;
+        const savedValue = Number(storedValue);
+        if (Number.isFinite(savedValue)) {
+            return Math.max(MIN_UPDATE_RATE, Math.min(MAX_UPDATE_RATE, Math.round(savedValue)));
+        }
+    } catch (error) {
+        console.error("Failed to load update rate", error);
+    }
+    return DEFAULT_UPDATE_RATE;
+}
+
+let lastTickTimestamp = performance.now();
+
+function runTick(): void {
+    PerformanceStats.begin("tick");
+    const start = performance.now();
+    const elapsedMilliseconds = Math.max(0, start - lastTickTimestamp);
+    lastTickTimestamp = start;
+    if (!simulationActive) {
+        if (elapsedMilliseconds > 500) {
+            void simulateTime(elapsedMilliseconds / 1000, true);
+        } else {
+            tick(elapsedMilliseconds, true);
+        }
+    }
+    const deltaTime = performance.now() - start;
+    setTimeout(runTick, Math.max(0, updateRate - deltaTime));
+    PerformanceStats.end("tick");
+}
+
 runTick();
+(globalThis as any).simulateTime = simulateTime;
