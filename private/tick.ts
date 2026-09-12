@@ -1,4 +1,4 @@
-import { gt, lte, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
+import { gt, lte, mulUS, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
 import { consumeTierOneRewardsChanged } from "./achievements.js";
 import { updateCourage } from "./courage.js";
 import { addPlayerTime, gainCurrency } from "./currencies.js";
@@ -145,19 +145,17 @@ function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
     applyCastSpeed();
     for (let entity: i32 = 0; entity < productionEntityCount; entity++) {
         multiplyInto(productionHandle, entityAmountHandle[entity], secondsHandle);
-        multiplyInto(productionHandle, productionHandle, entityBaseProductionHandle[entity]);
-        multiplyInto(productionHandle, productionHandle, entityBaseMultiplierHandle[entity]);
+        mulUS(mulUS(productionHandle, entityBaseProductionHandle[entity]), entityBaseMultiplierHandle[entity]);
         writeNumber(modifierHandle, productionMultiplierFor(entity) * speedMultiplierFor(entity));
-        multiplyInto(productionHandle, productionHandle, modifierHandle);
-        if (courageActive) multiplyInto(productionHandle, productionHandle, courageMultiplierHandle);
+        mulUS(productionHandle, modifierHandle);
+        if (courageActive) mulUS(productionHandle, courageMultiplierHandle);
         gainCurrency(entityDestinationHandle[entity], productionHandle);
     }
 }
 
 function applyCastSpeed(): void {
     if (!gt(castSpeedTimerHandle, 0)) {
-        writeNumber(castSpeedMagnitudeHandle, 1);
-        writeNumber(castSpeedCostHandle, 1000);
+        resetCastSpeed();
         return;
     }
     if (lte(castSpeedTimerHandle, secondsHandle)) {
@@ -165,7 +163,7 @@ function applyCastSpeed(): void {
     } else {
         subUS(castSpeedTimerHandle, secondsHandle);
     }
-    multiplyInto(secondsHandle, secondsHandle, castSpeedMagnitudeHandle);
+    mulUS(secondsHandle, castSpeedMagnitudeHandle);
 }
 
 function initializeModifierCaches(): void {

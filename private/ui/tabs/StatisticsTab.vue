@@ -15,6 +15,7 @@ defineProps({
             <h2>Condense</h2>
             <p>Total condenses: <strong>{{ statistics.condenses }}</strong></p>
             <p>Total condensed mana: <strong>{{ statistics.condensedManaProduced }}</strong></p>
+            <p>Fastest condense time: <strong>{{ statistics.fastestCondense }}</strong></p>
             <p>Time spent this condense: <strong>{{ statistics.timeThisCondense }}</strong></p>
         </header>
     </section>

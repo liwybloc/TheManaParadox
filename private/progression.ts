@@ -1,10 +1,12 @@
-import { addInto, addUS, gt, gte, multiplyInto, mulUS, powInto, powUS, roundInto, subUS, writeNumber } from "./break_eternity.js";
+import { addInto, addUS, divInto, divUS, gt, gte, multiplyInto, mulUS, powInto, powUS, roundInto, subUS, writeDecimal, writeNumber } from "./break_eternity.js";
 import { checkCastSpeedAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasCondensedUpgrade } from "./condensed.js";
 import type { Player } from "./player.js";
+import type { Scratch } from "./scratch.js";
 import { resetBolster, resetTierOneAmounts } from "./tier_one.js";
 
 declare const player: Player;
+declare const scratch: Scratch;
 
 /** [WASM] */
 
@@ -17,7 +19,12 @@ export function castSpeed(): bool {
         mulUS(player.castSpeedMagnitude, player.matrixSpeedPower);
     }
     addUS(player.castSpeedTimer, hasTierOneAchievement(9) ? 20 : 15);
-    powUS(player.castSpeedCost, 2);
+    if (hasCondensedUpgrade(11) && !gt(player.castSpeedCost, 0)) {
+        writeNumber(player.castSpeedCost, 1000);
+    } else {
+        writeNumber(scratch.productionModifier, hasCondensedUpgrade(8) ? 1.9 : 2);
+        powUS(player.castSpeedCost, scratch.productionModifier);
+    }
     checkCastSpeedAchievements();
     return true;
 }
@@ -30,6 +37,8 @@ export function increaseMastery(): bool {
     if (!canIncreaseMastery()) return false;
     const speedIsActive = gt(player.castSpeedTimer, 0);
     addUS(player.masteryOwned, 1);
+    refreshMasteryDerivedState();
+    refreshMatrixDerivedState();
     refreshMasteryDerivedState();
     if (gte(player.masteryLevel, 5)) unlockTierOneAchievement(6);
     if (speedIsActive) mulUS(player.castSpeedMagnitude, 2);
@@ -78,15 +87,29 @@ export function refreshMatrixDerivedState(): void {
     mulUS(player.matrixCost, 10);
     multiplyInto(player.matrixSpeedPower, player.matrixOwned, player.matrixPower);
     addUS(player.matrixSpeedPower, 2);
+    if (hasCondensedUpgrade(1)) {
+        writeNumber(scratch.productionModifier, 0.5);
+        addUS(player.matrixSpeedPower, scratch.productionModifier);
+    }
+    if (hasCondensedUpgrade(17)) {
+        addInto(scratch.productionModifier, player.masteryLevel, 0);
+        writeNumber(scratch.tierOneSeconds, 50);
+        // cast speed power bonus = Mastery level / 50.
+        divUS(scratch.productionModifier, scratch.tierOneSeconds);
+        addUS(player.matrixSpeedPower, scratch.productionModifier);
+    }
 }
 
 export function resetMastery(): void {
-    writeNumber(player.masteryOwned, 0);
+    writeNumber(player.masteryOwned, hasCondensedUpgrade(10) ? 1 : 0);
+    refreshMasteryDerivedState();
+    refreshMatrixDerivedState();
     refreshMasteryDerivedState();
 }
 
 function resetTierOne(): void {
-    writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
+    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 20);
+    else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     resetTierOneAmounts();
     resetBolster();
     resetCastSpeed();
@@ -95,10 +118,26 @@ function resetTierOne(): void {
 export function resetCastSpeed(): void {
     writeNumber(player.castSpeedTimer, 0);
     writeNumber(player.castSpeedMagnitude, 1);
-    writeNumber(player.castSpeedCost, 1000);
+    writeNumber(player.castSpeedCost, hasCondensedUpgrade(11) ? 0 : 1000);
+}
+
+export function applyCondensedResetStartingValues(): void {
+    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 20);
+    else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
+    applyCondensedMasteryMinimum();
+}
+
+export function applyCondensedMasteryMinimum(): void {
+    if (hasCondensedUpgrade(10) && !gt(player.masteryOwned, 0)) {
+        writeNumber(player.masteryOwned, 1);
+        refreshMasteryDerivedState();
+        refreshMatrixDerivedState();
+        refreshMasteryDerivedState();
+    }
 }
 
 /** [/WASM] */
 
 refreshMasteryDerivedState();
 refreshMatrixDerivedState();
+refreshMasteryDerivedState();

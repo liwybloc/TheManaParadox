@@ -2,6 +2,7 @@ import {
     addUS,
     copyInto,
     divInto,
+    divUS,
     floorInto,
     gt,
     gte,
@@ -19,6 +20,7 @@ import {
     writeNumber,
 } from "./break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
+import { hasCondensedUpgrade } from "./condensed.js";
 import type { Player } from "./player.js";
 import type { Scratch } from "./scratch.js";
 
@@ -57,9 +59,10 @@ export function refreshBolsterRequirement(): void {
     log10Into(scratch.tierOneExponent, scratch.tierOneExponent);
     writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
     log10Into(scratch.productionModifier, scratch.productionModifier);
-    divInto(scratch.tierOneExponent, scratch.tierOneExponent, scratch.productionModifier);
-    mulUS(scratch.tierOneExponent, BOLSTER_EXPONENT_INTERVAL);
-    addUS(scratch.tierOneExponent, BOLSTER_START_EXPONENT);
+    addUS(
+        mulUS(divUS(scratch.tierOneExponent, scratch.productionModifier), BOLSTER_EXPONENT_INTERVAL),
+        BOLSTER_START_EXPONENT,
+    );
     powInto(player.bolsterRequirement, 10, scratch.tierOneExponent);
     writeNumber(scratch.tierOneExponent, BOLSTER_REQUIREMENT_MARGIN);
     mulUS(player.bolsterRequirement, scratch.tierOneExponent);
@@ -71,8 +74,7 @@ export function refreshBolsterEffect(): void {
         return;
     }
     log10Into(scratch.tierOneExponent, player.count_manaConduit);
-    subUS(scratch.tierOneExponent, BOLSTER_START_EXPONENT);
-    divInto(scratch.tierOneExponent, scratch.tierOneExponent, BOLSTER_EXPONENT_INTERVAL);
+    divUS(subUS(scratch.tierOneExponent, BOLSTER_START_EXPONENT), BOLSTER_EXPONENT_INTERVAL);
     writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
     powInto(player.bolsterEffect, scratch.productionModifier, scratch.tierOneExponent);
     mulUS(player.bolsterEffect, BOLSTER_BASE_MULTIPLIER);
@@ -142,7 +144,8 @@ export function tierOneEmpowermentHandle(index: i32): i32 {
 }
 
 function refreshEmpowermentCost(index: i32): void {
-    powInto(scratch.tierOneExponent, 2, tierOneEmpowermentHandle(index));
+    writeNumber(scratch.productionModifier, hasCondensedUpgrade(9) ? 1.9 : 2);
+    powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneEmpowermentHandle(index));
     mulUS(scratch.tierOneExponent, tierOneEmpowermentBaseExponent(index));
     powInto(tierOneEmpowermentCostHandle(index), 10, scratch.tierOneExponent);
 }
@@ -200,10 +203,9 @@ export function buyMaxTierOne(index: i32): bool {
     powInto(scratch.tierOneSeconds, 10, scalingExponent);
     subInto(scratch.productionModifier, scratch.tierOneSeconds, 1);
     multiplyInto(scratch.tierOneProduction, player.mana, scratch.productionModifier);
-    divInto(scratch.tierOneProduction, scratch.tierOneProduction, cost);
-    addUS(scratch.tierOneProduction, 1);
+    addUS(divUS(scratch.tierOneProduction, cost), 1);
     log10Into(scratch.tierOneProduction, scratch.tierOneProduction);
-    divInto(scratch.tierOneProduction, scratch.tierOneProduction, scalingExponent);
+    divUS(scratch.tierOneProduction, scalingExponent);
     floorInto(scratch.tierOneExponent, scratch.tierOneProduction);
 
     calculateTierOneBulkCost(cost);
@@ -226,9 +228,7 @@ export function buyMaxAllTierOne(): void {
 
 function calculateTierOneBulkCost(cost: i32): void {
     powInto(scratch.tierOneProduction, scratch.tierOneSeconds, scratch.tierOneExponent);
-    subUS(scratch.tierOneProduction, 1);
-    multiplyInto(scratch.tierOneProduction, scratch.tierOneProduction, cost);
-    divInto(scratch.tierOneProduction, scratch.tierOneProduction, scratch.productionModifier);
+    divUS(mulUS(subUS(scratch.tierOneProduction, 1), cost), scratch.productionModifier);
 }
 
 export function canBuyTierOne(index: i32): bool {
@@ -255,7 +255,7 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
     log10Into(scratch.tierOneProduction, player.mana);
     subUS(scratch.tierOneProduction, scratch.productionModifier);
     subUS(scratch.tierOneExponent, scratch.productionModifier);
-    divInto(scratch.tierOneProduction, scratch.tierOneProduction, scratch.tierOneExponent);
+    divUS(scratch.tierOneProduction, scratch.tierOneExponent);
     const progress = toNumber(scratch.tierOneProduction);
     return Math.max(0, Math.min(1, progress));
 }
@@ -326,12 +326,26 @@ function refreshTierOneCost(index: i32): void {
 }
 
 function refreshTierOneMultiplier(index: i32): void {
-    powInto(tierOneMultiplierHandle(index), player.multiplier_tierOnePerPurchase, tierOneBoughtHandle(index));
+    writeNumber(scratch.productionModifier, 0);
+    addUS(scratch.productionModifier, player.multiplier_tierOnePerPurchase);
+    if (index === 0 && hasCondensedUpgrade(0)) {
+        writeNumber(scratch.tierOneExponent, 0.1);
+        addUS(scratch.productionModifier, scratch.tierOneExponent);
+    }
+    powInto(tierOneMultiplierHandle(index), scratch.productionModifier, tierOneBoughtHandle(index));
     if (index < TIER_ONE_COUNT - 1) {
-        powInto(scratch.tierOneExponent, 10, tierOneEmpowermentHandle(index));
+        writeNumber(scratch.productionModifier, hasCondensedUpgrade(16) ? 50 : 10);
+        powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneEmpowermentHandle(index));
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
     }
     mulUS(tierOneMultiplierHandle(index), player.bolsterMultiplier);
+    if ((index === 0 && hasCondensedUpgrade(2))
+        || (index === 1 && hasCondensedUpgrade(3))
+        || (index === 2 && hasCondensedUpgrade(6))
+        || (index === 3 && hasCondensedUpgrade(5))
+        || (index === 4 && hasCondensedUpgrade(4))) {
+        mulUS(tierOneMultiplierHandle(index), 5);
+    }
     if (hasTierOneAchievement(15)) {
         writeNumber(scratch.tierOneExponent, 1 + <f64>(index + 1) / 100);
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);

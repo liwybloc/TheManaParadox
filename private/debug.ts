@@ -24,4 +24,7 @@ import { refreshTierOneDerivedState } from "./tier_one.js";
     }
     setCondensedUpgrade(index, owned);
     refreshMasteryDerivedState();
+    refreshMatrixDerivedState();
+    refreshMasteryDerivedState();
+    refreshTierOneDerivedState();
 };

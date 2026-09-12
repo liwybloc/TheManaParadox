@@ -8,6 +8,7 @@ export interface PlayerHandles {
     statistics_condensedManaProduced: i32;
     statistics_condenses: i32;
     statistics_timeThisCondense: i32;
+    statistics_fastestCondense: i32;
     infinity_break_index: i32;
     multiplier_currencyGlobal: i32;
     multiplier_timePlayedAchievement: i32;
@@ -96,6 +97,7 @@ export const HANDLES: PlayerHandles = {
     statistics_condensedManaProduced: createZero(),
     statistics_condenses: createZero(),
     statistics_timeThisCondense: createZero(),
+    statistics_fastestCondense: createZero(),
     infinity_break_index: createZero(),
     multiplier_currencyGlobal: createDecimal(1, 0, 1),
     multiplier_timePlayedAchievement: createDecimal(1, 0, 1),
@@ -161,6 +163,7 @@ export const player: Player = {
     statistics_condensedManaProduced: 0,
     statistics_condenses: 0,
     statistics_timeThisCondense: 0,
+    statistics_fastestCondense: 0,
     infinity_break_index: 0,
     multiplier_currencyGlobal: 0,
     multiplier_timePlayedAchievement: 0,
@@ -264,10 +267,12 @@ export function initializeCondensedStatisticHandles(
     condensedManaProduced: i32,
     condenses: i32,
     timeThisCondense: i32,
+    fastestCondense: i32,
 ): void {
     player.statistics_condensedManaProduced = condensedManaProduced;
     player.statistics_condenses = condenses;
     player.statistics_timeThisCondense = timeThisCondense;
+    player.statistics_fastestCondense = fastestCondense;
 }
 
 export function initializeTierOneHandles(
@@ -363,6 +368,7 @@ initializeCondensedStatisticHandles(
     HANDLES.statistics_condensedManaProduced,
     HANDLES.statistics_condenses,
     HANDLES.statistics_timeThisCondense,
+    HANDLES.statistics_fastestCondense,
 );
 initializeTierOneHandles(
     HANDLES.count_manaConduit, HANDLES.count_conduitConjugation, HANDLES.count_conjugationCreation,

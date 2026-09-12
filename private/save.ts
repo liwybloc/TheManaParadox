@@ -4,13 +4,13 @@ import { clampManaToInfinityBoundary } from "./currencies.js";
 import { isCourageUnlocked, setCourageUnlocked } from "./courage.js";
 import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCondensedUpgrade, setHasCondensed } from "./condensed.js";
 import { HANDLES } from "./player.js";
-import { refreshMasteryDerivedState, refreshMatrixDerivedState } from "./progression.js";
+import { applyCondensedResetStartingValues, refreshMasteryDerivedState, refreshMatrixDerivedState } from "./progression.js";
 import { refreshTierOneDerivedState } from "./tier_one.js";
 import { simulateTime } from "./tick.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "005";
+const CURRENT_SAVE_VERSION = "006";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -70,41 +70,45 @@ const totalClicksField = decimalSaveField(HANDLES.statistics_totalClicks, [0, 0,
 const condensedGainMultiplierBoughtField = decimalSaveField(CONDENSED_HANDLES.gainMultiplierBought, [0, 0, 0]);
 const totalCondensesField = decimalSaveField(HANDLES.statistics_condenses, [0, 0, 0]);
 const totalCondensedManaField = decimalSaveField(HANDLES.statistics_condensedManaProduced, [0, 0, 0]);
-const condensePreservedFields = new Set([
-    ...achievementFields002,
-    ...achievementFields003,
-    ...achievementFields004,
-    totalManaProducedField,
-    totalTimePlayedField,
-    totalClicksField,
-    totalCondensesField,
-    totalCondensedManaField,
-    ...condensedUpgradeFields,
-    condensedGainMultiplierBoughtField,
-]);
-
-const savedFields002: readonly SaveField[] = [
-    ...savedFields001,
-    decimalSaveField(HANDLES.castSpeedTimer, [0, 0, 0]),
-    decimalSaveField(HANDLES.castSpeedMagnitude, [1, 0, 1]),
-    decimalSaveField(HANDLES.castSpeedCost, [1, 0, 1000]),
-    decimalSaveField(HANDLES.masteryOwned, [0, 0, 0]),
-    decimalSaveField(HANDLES.matrixOwned, [0, 0, 0]),
-    decimalSaveField(HANDLES.matrixPower, [1, 0, 0.5]),
-    totalManaProducedField,
-    totalTimePlayedField,
-    decimalSaveField(HANDLES.infinity_break_index, [0, 0, 0]),
-    ...achievementFields002,
-];
-
-const savedFields003: readonly SaveField[] = [
-    ...savedFields002,
+const castSpeedTimerField = decimalSaveField(HANDLES.castSpeedTimer, [0, 0, 0]);
+const castSpeedMagnitudeField = decimalSaveField(HANDLES.castSpeedMagnitude, [1, 0, 1]);
+const castSpeedCostField = decimalSaveField(HANDLES.castSpeedCost, [1, 0, 1000]);
+const masteryOwnedField = decimalSaveField(HANDLES.masteryOwned, [0, 0, 0]);
+const matrixOwnedField = decimalSaveField(HANDLES.matrixOwned, [0, 0, 0]);
+const matrixPowerField = decimalSaveField(HANDLES.matrixPower, [1, 0, 0.5]);
+const infinityBreakIndexField = decimalSaveField(HANDLES.infinity_break_index, [0, 0, 0]);
+const empowermentFields = [
     decimalSaveField(HANDLES.empowerment_manaConduit, [0, 0, 0]),
     decimalSaveField(HANDLES.empowerment_conduitConjugation, [0, 0, 0]),
     decimalSaveField(HANDLES.empowerment_conjugationCreation, [0, 0, 0]),
     decimalSaveField(HANDLES.empowerment_creationManufactory, [0, 0, 0]),
     decimalSaveField(HANDLES.legacy_000, [0, 0, 0]),
-    decimalSaveField(HANDLES.bolsterMultiplier, [1, 0, 1]),
+];
+const bolsterMultiplierField = decimalSaveField(HANDLES.bolsterMultiplier, [1, 0, 1]);
+const courageUnlockedField = booleanSaveField(isCourageUnlocked, setCourageUnlocked);
+const courageTimerField = decimalSaveField(HANDLES.courageTimer, [0, 0, 0]);
+const courageCooldownField = decimalSaveField(HANDLES.courageCooldown, [0, 0, 0]);
+const timeThisCondenseField = decimalSaveField(HANDLES.statistics_timeThisCondense, [0, 0, 0]);
+const fastestCondenseField = decimalSaveField(HANDLES.statistics_fastestCondense, [0, 0, 0]);
+
+const savedFields002: readonly SaveField[] = [
+    ...savedFields001,
+    castSpeedTimerField,
+    castSpeedMagnitudeField,
+    castSpeedCostField,
+    masteryOwnedField,
+    matrixOwnedField,
+    matrixPowerField,
+    totalManaProducedField,
+    totalTimePlayedField,
+    infinityBreakIndexField,
+    ...achievementFields002,
+];
+
+const savedFields003: readonly SaveField[] = [
+    ...savedFields002,
+    ...empowermentFields,
+    bolsterMultiplierField,
     ...achievementFields003,
     totalClicksField,
     numberSaveField(lastSaveTimestamp, 0),
@@ -112,9 +116,9 @@ const savedFields003: readonly SaveField[] = [
 
 const savedFields004: readonly SaveField[] = [
     ...savedFields003,
-    booleanSaveField(isCourageUnlocked, setCourageUnlocked),
-    decimalSaveField(HANDLES.courageTimer, [0, 0, 0]),
-    decimalSaveField(HANDLES.courageCooldown, [0, 0, 0]),
+    courageUnlockedField,
+    courageTimerField,
+    courageCooldownField,
     decimalSaveField(HANDLES.condensedMana, [0, 0, 0]),
     booleanSaveField(hasCondensed, setHasCondensed),
     ...condensedUpgradeFields,
@@ -123,18 +127,40 @@ const savedFields004: readonly SaveField[] = [
 
 const savedFields005: readonly SaveField[] = [
     ...savedFields004,
-    decimalSaveField(HANDLES.statistics_timeThisCondense, [0, 0, 0]),
+    timeThisCondenseField,
     totalCondensesField,
     totalCondensedManaField,
     ...achievementFields004,
 ];
 
+const savedFields006: readonly SaveField[] = [
+    ...savedFields005,
+    fastestCondenseField,
+];
+
+const condenseResetFields: readonly SaveField[] = [
+    ...savedFields001,
+    castSpeedTimerField,
+    castSpeedMagnitudeField,
+    castSpeedCostField,
+    masteryOwnedField,
+    matrixOwnedField,
+    matrixPowerField,
+    infinityBreakIndexField,
+    ...empowermentFields,
+    bolsterMultiplierField,
+    courageUnlockedField,
+    courageTimerField,
+    courageCooldownField,
+    timeThisCondenseField,
+];
+
 export function exportSave(): string {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields005));
+    const bytes = new Uint8Array(totalByteLength(savedFields006));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields005) {
+    for (const field of savedFields006) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -163,13 +189,17 @@ export function importSave(saveData: string): void {
         case "005":
             importFields(encoded, savedFields005);
             break;
+        case "006":
+            importFields(encoded, savedFields006);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
-    refreshTierOneDerivedState();
+    refreshCondensedUpgradeState();
     refreshMasteryDerivedState();
     refreshMatrixDerivedState();
-    refreshCondensedUpgradeState();
+    refreshMasteryDerivedState();
+    refreshTierOneDerivedState();
     clampManaToInfinityBoundary();
     simulateOfflineTime();
 }
@@ -188,7 +218,7 @@ function importFields(encoded: string, fields: readonly SaveField[]): void {
     if (!development && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields005) field.reset();
+    for (const field of savedFields006) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -255,26 +285,27 @@ export function saveGame(): void {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields005) field.reset();
+    for (const field of savedFields006) field.reset();
     refreshAchievementRewards();
-    refreshTierOneDerivedState();
+    refreshCondensedUpgradeState();
     refreshMasteryDerivedState();
     refreshMatrixDerivedState();
-    refreshCondensedUpgradeState();
+    refreshMasteryDerivedState();
+    refreshTierOneDerivedState();
     clampManaToInfinityBoundary();
     localStorage.removeItem(STORAGE_KEY);
     saveGame();
 }
 
 export function resetForCondense(): void {
-    for (const field of savedFields005) {
-        if (!condensePreservedFields.has(field)) field.reset();
-    }
+    for (const field of condenseResetFields) field.reset();
     refreshAchievementRewards();
-    refreshTierOneDerivedState();
+    refreshCondensedUpgradeState();
     refreshMasteryDerivedState();
     refreshMatrixDerivedState();
-    refreshCondensedUpgradeState();
+    refreshMasteryDerivedState();
+    refreshTierOneDerivedState();
+    applyCondensedResetStartingValues();
     clampManaToInfinityBoundary();
 }
 

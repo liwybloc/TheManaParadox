@@ -1,10 +1,3 @@
-v0.0.4
-- added twinkling and slowly moving background stars
-- buffed bolster again
-- added courage
-- added a progress bar showing progress toward condensation
-- added condensation and condensed mana
-- added the condensed tab with condensed upgrades
-- added 5 more achievements and new achievement rewards
-- fixed several achievement unlock conditions and progress displays
-- more statistics
+v0.0.5
+- balancing changes
+- optimizations and bug fixes

@@ -18,7 +18,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_difficulty", number: 13, title: "I think this is called difficulty", description: "Reach the limit of your mana circle without any Crystal Matrices." },
     { id: "achievement_realnews", number: 14, title: "REAL NEWS!", description: "View 50 different ticker messages." },
     { id: "achievement_clicker", number: 15, title: "Clicker!", description: "Click over 1,000 times.", reward: "Carpel tunnel" },
-    { id: "achievement_lightning", number: 16, title: "Lightning", description: "Condense in under an hour.", reward: "Each tier 1 producer gains a production bonus based on its tier, from +1% to +5%." },
+    { id: "achievement_lightning", number: 16, title: "Lightning", description: "Condense in under 30 minutes.", reward: "Each tier 1 producer gains a production bonus based on its tier, from +1% to +5%." },
     { id: "achievement_pleasedosleep", number: 17, title: "Please do sleep", description: "Be offline for more than an hour." },
     { id: "achievement_noendgame", number: 18, title: "I don't believe in the Endgame", description: "Condense without bolstering.", reward: "Bolstering is 5× stronger" },
     { id: "achievement_supercondensed", number: 19, title: "Super-Condensed", description: "Condense 50 times." },

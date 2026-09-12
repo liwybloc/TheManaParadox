@@ -92,7 +92,7 @@ defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "inc
             </span>
             <strong>Courage</strong>
             <span>I must work up the courage.. to get stronger!</span>
-            <small v-if="courage.active">×10 all production · {{ courage.timer }}</small>
+            <small v-if="courage.active">×{{ courage.multiplier }} all production · {{ courage.timer }}</small>
             <small v-else-if="!courage.available">Cooldown: {{ courage.cooldown }}</small>
             <small v-else>Ready</small>
         </button>

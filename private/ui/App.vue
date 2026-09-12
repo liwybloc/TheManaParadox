@@ -94,6 +94,7 @@ const courage = ref({
     available: true,
     timer: "0:00",
     cooldown: "0:00",
+    multiplier: "10.00",
 });
 const bolster = ref({
     visible: false,
@@ -112,6 +113,7 @@ const statistics = ref({
     condenses: "0",
     condensedManaProduced: "0.00",
     timeThisCondense: "00:00:00",
+    fastestCondense: "00:00:00",
     hasCondensed: false,
 });
 const achievements = ref(ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: false })));
@@ -130,6 +132,7 @@ function selectSubtab(id) {
 }
 
 function updateDisplay() {
+    namedWasm.refreshCondensedUpgradeState();
     mana.value = formatDecimal(HANDLES.mana);
     canCondense.value = namedWasm.canCondense();
     condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
@@ -178,6 +181,7 @@ function updateDisplay() {
     courage.value.available = namedWasm.toNumber(HANDLES.courageCooldown) <= 0;
     courage.value.timer = formatDuration(HANDLES.courageTimer);
     courage.value.cooldown = formatDuration(HANDLES.courageCooldown);
+    courage.value.multiplier = formatDecimal(HANDLES.courageMultiplier);
     bolster.value.affordable = namedWasm.canBolster();
     bolster.value.visible = namedWasm.hasTierOneAchievement(7);
     bolster.value.effect = `×${formatDecimal(HANDLES.bolsterEffect)}`;
@@ -189,6 +193,7 @@ function updateDisplay() {
     statistics.value.condensedManaProduced = formatDecimal(HANDLES.statistics_condensedManaProduced);
     statistics.value.condenses = formatDecimal(HANDLES.statistics_condenses, 0);
     statistics.value.timeThisCondense = formatTotalTime(HANDLES.statistics_timeThisCondense);
+    statistics.value.fastestCondense = formatTotalTime(HANDLES.statistics_fastestCondense);
     statistics.value.hasCondensed = namedWasm.hasCondensed();
     achievements.value[5].reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
     for (let index = 0; index < achievements.value.length; index++) {
@@ -322,7 +327,13 @@ function condense() {
 }
 
 function buyCondensedUpgrade(index) {
-    if (namedWasm.buyCondensedUpgrade(index)) namedWasm.refreshMasteryDerivedState();
+    if (!namedWasm.buyCondensedUpgrade(index)) return;
+    namedWasm.applyCondensedMasteryMinimum();
+    namedWasm.refreshMasteryDerivedState();
+    namedWasm.refreshMatrixDerivedState();
+    namedWasm.refreshMasteryDerivedState();
+    namedWasm.refreshTierOneDerivedState();
+    if (index === 11) namedWasm.resetCastSpeed();
 }
 
 function bolsterStaff() {
