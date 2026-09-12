@@ -39,6 +39,8 @@ const BOLSTER_START_EXPONENT: i32 = 45;
 const BOLSTER_EXPONENT_INTERVAL: i32 = 10;
 const BOLSTER_REQUIREMENT_MARGIN: f64 = 1.01;
 const BOLSTER_MINIMUM_EFFECT: f64 = 1;
+const CONDENSED_PRODUCER_MULTIPLIER: i32 = 2;
+const CONDENSED_STAFF_MULTIPLIER: i32 = 5;
 
 export function refreshTierOneDerivedState(): void {
     for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
@@ -339,12 +341,13 @@ function refreshTierOneMultiplier(index: i32): void {
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
     }
     mulUS(tierOneMultiplierHandle(index), player.bolsterMultiplier);
-    if ((index === 0 && hasCondensedUpgrade(2))
+    if (index === 4 && hasCondensedUpgrade(4)) {
+        mulUS(tierOneMultiplierHandle(index), CONDENSED_STAFF_MULTIPLIER);
+    } else if ((index === 0 && hasCondensedUpgrade(2))
         || (index === 1 && hasCondensedUpgrade(3))
         || (index === 2 && hasCondensedUpgrade(6))
-        || (index === 3 && hasCondensedUpgrade(5))
-        || (index === 4 && hasCondensedUpgrade(4))) {
-        mulUS(tierOneMultiplierHandle(index), 5);
+        || (index === 3 && hasCondensedUpgrade(5))) {
+        mulUS(tierOneMultiplierHandle(index), CONDENSED_PRODUCER_MULTIPLIER);
     }
     if (hasTierOneAchievement(15)) {
         writeNumber(scratch.tierOneExponent, 1 + <f64>(index + 1) / 100);

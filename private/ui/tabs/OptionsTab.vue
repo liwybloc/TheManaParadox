@@ -3,7 +3,7 @@ defineProps({
     activeSubtab: { type: String, required: true },
     updateRate: { type: Number, required: true },
 });
-const emit = defineEmits(["stars-visible", "export-save", "import-save", "reset-game", "update-rate"]);
+const emit = defineEmits(["edit-keybinds", "stars-visible", "export-save", "import-save", "reset-game", "update-rate"]);
 </script>
 
 <template>
@@ -22,9 +22,11 @@ const emit = defineEmits(["stars-visible", "export-save", "import-save", "reset-
                         @input="emit('update-rate', Number($event.currentTarget.value))"
                     />
                 </label>
-                <button type="button" @click="emit('export-save')">Export Save</button>
-                <button type="button" @click="emit('import-save')">Import Save</button>
-                <button type="button" @click="emit('reset-game')" >Reset Game </button>
+
+                <button type="button" @click="emit('edit-keybinds')">Edit Keybinds</button>
+                <button type="button" @click="emit('export-save')"  >Export Save  </button>
+                <button type="button" @click="emit('import-save')"  >Import Save  </button>
+                <button type="button" @click="emit('reset-game')"   >Reset Game   </button>
             </div>
         </div>
         <div v-else-if="activeSubtab === 'visuals'">

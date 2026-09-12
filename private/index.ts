@@ -13,6 +13,7 @@ import "./progression.js";
 import "./debug.js";
 import "./save.js";
 import "./tick.js";
+import "./keybinds.js";
 
 (globalThis as any).cheatSomeCookies = namedWasm.cheatSomeCookies;
 

@@ -5,7 +5,8 @@ import { SCRATCH_HANDLES } from "@game/scratch.js";
 import { ACHIEVEMENTS } from "@game/achievements.js";
 import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/condensed.js";
 import { TABS } from "@game/tabs.js";
-import { exportSave, importSave, resetForCondense, resetGame as resetGameData, saveGame } from "@game/save.js";
+import { castAll, condense, increaseMastery as increaseMasteryAction, increaseMatrix as increaseMatrixAction, subscribeToCondense } from "@game/actions.js";
+import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/save.js";
 import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/tick.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
@@ -18,6 +19,7 @@ import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
 import NotificationStack from "./components/NotificationStack.vue";
 import TimeSimulation from "./components/TimeSimulation.vue";
+import KeybindMenu from "./components/KeybindMenu.vue";
 import { showNotification } from "./notifications.js";
 
 const activeTab = ref("mana");
@@ -104,9 +106,11 @@ const bolster = ref({
     requirement: "1.00e45",
 });
 const resetConfirmationVisible = ref(false);
+const changeKeybindsVisible = ref(false);
 const updateRate = ref(getUpdateRate());
 const timeSimulation = ref({ active: false, totalSeconds: 0, simulatedSeconds: 0, progress: 0, speed: 1 });
 let unsubscribeFromTimeSimulation;
+let unsubscribeFromCondense;
 const statistics = ref({
     timePlayed: "00:00:00",
     manaProduced: "0.00",
@@ -292,8 +296,7 @@ function empowerTierOne(index) {
 }
 
 function buyAllTierOne() {
-    if (castMax.value) namedWasm.buyMaxAllTierOne();
-    else namedWasm.buyAllTierOne();
+    castAll();
 }
 
 function toggleCastMode() {
@@ -305,25 +308,20 @@ function castSpeed() {
 }
 
 function increaseMastery() {
-    namedWasm.increaseMastery();
+    increaseMasteryAction();
 }
 
 function increaseMatrix() {
-    namedWasm.increaseMatrix();
+    increaseMatrixAction();
 }
 
 function activateCourage() {
     namedWasm.activateCourage();
 }
 
-function condense() {
-    if (!namedWasm.calculateCondenseGain()) return;
-    resetForCondense();
-    namedWasm.completeCondense();
-    saveGame();
+function handleCondensed() {
     achievementsInitialized = false;
     castMax.value = false;
-    activeTab.value = "condensed";
 }
 
 function buyCondensedUpgrade(index) {
@@ -344,6 +342,10 @@ function resetGame() {
     resetConfirmationVisible.value = true;
 }
 
+function editKeybinds() {
+    changeKeybindsVisible.value = true;
+}
+
 function cancelResetGame() {
     resetConfirmationVisible.value = false;
 }
@@ -361,6 +363,7 @@ function recordClick() {
 
 onMounted(() => {
     document.addEventListener("click", recordClick);
+    unsubscribeFromCondense = subscribeToCondense(handleCondensed);
     unsubscribeFromTimeSimulation = subscribeToTimeSimulation((state) => {
         timeSimulation.value = state;
     });
@@ -369,6 +372,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
     document.removeEventListener("click", recordClick);
+    unsubscribeFromCondense?.();
     unsubscribeFromTimeSimulation?.();
     cancelAnimationFrame(animationFrame);
 });
@@ -445,6 +449,7 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'options'"
                 :active-subtab="activeSubtab"
                 :update-rate="updateRate"
+                @edit-keybinds="editKeybinds"
                 @stars-visible="setStarsVisible"
                 @export-save="exportGameSave"
                 @import-save="importGameSave"
@@ -462,6 +467,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
         </div>
+        <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
         <footer>The Mana Paradox v0.0.4</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>

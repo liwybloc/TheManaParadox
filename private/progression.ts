@@ -10,6 +10,8 @@ declare const scratch: Scratch;
 
 /** [WASM] */
 
+const CONDENSED_CAST_SPEED_POWER_BONUS: f64 = 0.25;
+
 export function castSpeed(): bool {
     if (!canCastSpeed()) return false;
     subUS(player.mana, player.castSpeedCost);
@@ -31,6 +33,10 @@ export function castSpeed(): bool {
 
 export function canCastSpeed(): bool {
     return gte(player.mana, player.castSpeedCost);
+}
+
+export function castSpeedMax(): void {
+    while (castSpeed()) {}
 }
 
 export function increaseMastery(): bool {
@@ -88,7 +94,7 @@ export function refreshMatrixDerivedState(): void {
     multiplyInto(player.matrixSpeedPower, player.matrixOwned, player.matrixPower);
     addUS(player.matrixSpeedPower, 2);
     if (hasCondensedUpgrade(1)) {
-        writeNumber(scratch.productionModifier, 0.5);
+        writeNumber(scratch.productionModifier, CONDENSED_CAST_SPEED_POWER_BONUS);
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
     if (hasCondensedUpgrade(17)) {

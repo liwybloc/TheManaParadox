@@ -12,6 +12,7 @@ import { PerformanceStats } from "./performance-stats.js";
 // what do you want... do you want pets?
 // oh you want food? you motherfucker...
 // this is not newsticker suggestions
+// shame on your dog
 
 /** [WASM] */
 
