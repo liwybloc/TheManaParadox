@@ -1,6 +1,8 @@
 import { getLayer, getMagnitude, getSign, writeDecimal } from "./break_eternity.js";
-import { hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setTierOneAchievement } from "./achievements.js";
+import { checkOfflineAchievement, hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setTierOneAchievement } from "./achievements.js";
 import { clampManaToInfinityBoundary } from "./currencies.js";
+import { isCourageUnlocked, setCourageUnlocked } from "./courage.js";
+import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCondensedUpgrade, setHasCondensed } from "./condensed.js";
 import { HANDLES } from "./player.js";
 import { refreshMasteryDerivedState, refreshMatrixDerivedState } from "./progression.js";
 import { refreshTierOneDerivedState } from "./tier_one.js";
@@ -8,7 +10,7 @@ import { simulateTime } from "./tick.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "003";
+const CURRENT_SAVE_VERSION = "005";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -55,6 +57,32 @@ function achievementSaveFields(length: number, offset: number): readonly SaveFie
     });
 }
 
+const achievementFields002 = achievementSaveFields(10, 0);
+const achievementFields003 = achievementSaveFields(5, 10);
+const achievementFields004 = achievementSaveFields(5, 15);
+const condensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT - 1 }, (_, index) => booleanSaveField(
+    () => hasCondensedUpgrade(index),
+    (purchased) => setCondensedUpgrade(index, purchased),
+));
+const totalManaProducedField = decimalSaveField(HANDLES.statistics_totalManaProduced, [0, 0, 0]);
+const totalTimePlayedField = decimalSaveField(HANDLES.statistics_totalTimePlayed, [0, 0, 0]);
+const totalClicksField = decimalSaveField(HANDLES.statistics_totalClicks, [0, 0, 0]);
+const condensedGainMultiplierBoughtField = decimalSaveField(CONDENSED_HANDLES.gainMultiplierBought, [0, 0, 0]);
+const totalCondensesField = decimalSaveField(HANDLES.statistics_condenses, [0, 0, 0]);
+const totalCondensedManaField = decimalSaveField(HANDLES.statistics_condensedManaProduced, [0, 0, 0]);
+const condensePreservedFields = new Set([
+    ...achievementFields002,
+    ...achievementFields003,
+    ...achievementFields004,
+    totalManaProducedField,
+    totalTimePlayedField,
+    totalClicksField,
+    totalCondensesField,
+    totalCondensedManaField,
+    ...condensedUpgradeFields,
+    condensedGainMultiplierBoughtField,
+]);
+
 const savedFields002: readonly SaveField[] = [
     ...savedFields001,
     decimalSaveField(HANDLES.castSpeedTimer, [0, 0, 0]),
@@ -63,10 +91,10 @@ const savedFields002: readonly SaveField[] = [
     decimalSaveField(HANDLES.masteryOwned, [0, 0, 0]),
     decimalSaveField(HANDLES.matrixOwned, [0, 0, 0]),
     decimalSaveField(HANDLES.matrixPower, [1, 0, 0.5]),
-    decimalSaveField(HANDLES.statistics_totalManaProduced, [0, 0, 0]),
-    decimalSaveField(HANDLES.statistics_totalTimePlayed, [0, 0, 0]),
+    totalManaProducedField,
+    totalTimePlayedField,
     decimalSaveField(HANDLES.infinity_break_index, [0, 0, 0]),
-    ...achievementSaveFields(10, 0),
+    ...achievementFields002,
 ];
 
 const savedFields003: readonly SaveField[] = [
@@ -77,17 +105,36 @@ const savedFields003: readonly SaveField[] = [
     decimalSaveField(HANDLES.empowerment_creationManufactory, [0, 0, 0]),
     decimalSaveField(HANDLES.legacy_000, [0, 0, 0]),
     decimalSaveField(HANDLES.bolsterMultiplier, [1, 0, 1]),
-    ...achievementSaveFields(5, 10),
-    decimalSaveField(HANDLES.statistics_totalClicks, [0, 0, 0]),
+    ...achievementFields003,
+    totalClicksField,
     numberSaveField(lastSaveTimestamp, 0),
+];
+
+const savedFields004: readonly SaveField[] = [
+    ...savedFields003,
+    booleanSaveField(isCourageUnlocked, setCourageUnlocked),
+    decimalSaveField(HANDLES.courageTimer, [0, 0, 0]),
+    decimalSaveField(HANDLES.courageCooldown, [0, 0, 0]),
+    decimalSaveField(HANDLES.condensedMana, [0, 0, 0]),
+    booleanSaveField(hasCondensed, setHasCondensed),
+    ...condensedUpgradeFields,
+    condensedGainMultiplierBoughtField,
+];
+
+const savedFields005: readonly SaveField[] = [
+    ...savedFields004,
+    decimalSaveField(HANDLES.statistics_timeThisCondense, [0, 0, 0]),
+    totalCondensesField,
+    totalCondensedManaField,
+    ...achievementFields004,
 ];
 
 export function exportSave(): string {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields003));
+    const bytes = new Uint8Array(totalByteLength(savedFields005));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields003) {
+    for (const field of savedFields005) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -110,12 +157,19 @@ export function importSave(saveData: string): void {
         case "003":
             importFields(encoded, savedFields003);
             break;
+        case "004":
+            importFields(encoded, savedFields004);
+            break;
+        case "005":
+            importFields(encoded, savedFields005);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
     refreshTierOneDerivedState();
     refreshMasteryDerivedState();
     refreshMatrixDerivedState();
+    refreshCondensedUpgradeState();
     clampManaToInfinityBoundary();
     simulateOfflineTime();
 }
@@ -123,7 +177,9 @@ export function importSave(saveData: string): void {
 function simulateOfflineTime(): void {
     const now = Date.now();
     if (lastSaveTimestamp.value <= 0 || lastSaveTimestamp.value >= now) return;
-    void simulateTime((now - lastSaveTimestamp.value) / 1000, false);
+    const offlineSeconds = (now - lastSaveTimestamp.value) / 1000;
+    checkOfflineAchievement(offlineSeconds);
+    void simulateTime(offlineSeconds, false);
 }
 
 function importFields(encoded: string, fields: readonly SaveField[]): void {
@@ -132,7 +188,7 @@ function importFields(encoded: string, fields: readonly SaveField[]): void {
     if (!development && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields003) field.reset();
+    for (const field of savedFields005) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -199,14 +255,27 @@ export function saveGame(): void {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields003) field.reset();
+    for (const field of savedFields005) field.reset();
     refreshAchievementRewards();
     refreshTierOneDerivedState();
     refreshMasteryDerivedState();
     refreshMatrixDerivedState();
+    refreshCondensedUpgradeState();
     clampManaToInfinityBoundary();
     localStorage.removeItem(STORAGE_KEY);
     saveGame();
+}
+
+export function resetForCondense(): void {
+    for (const field of savedFields005) {
+        if (!condensePreservedFields.has(field)) field.reset();
+    }
+    refreshAchievementRewards();
+    refreshTierOneDerivedState();
+    refreshMasteryDerivedState();
+    refreshMatrixDerivedState();
+    refreshCondensedUpgradeState();
+    clampManaToInfinityBoundary();
 }
 
 export function loadGame(): boolean {

@@ -2,13 +2,17 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { HANDLES } from "@game/player.js";
 import { SCRATCH_HANDLES } from "@game/scratch.js";
-import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/save.js";
+import { ACHIEVEMENTS } from "@game/achievements.js";
+import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/condensed.js";
+import { TABS } from "@game/tabs.js";
+import { exportSave, importSave, resetForCondense, resetGame as resetGameData, saveGame } from "@game/save.js";
 import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/tick.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
 import GoalProgressBar from "./components/GoalProgressBar.vue";
 import TabNavigation from "./components/TabNavigation.vue";
 import ManaTab from "./tabs/ManaTab.vue";
+import CondensedTab from "./tabs/CondensedTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
 import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
@@ -16,36 +20,26 @@ import NotificationStack from "./components/NotificationStack.vue";
 import TimeSimulation from "./components/TimeSimulation.vue";
 import { showNotification } from "./notifications.js";
 
-const tabs = [
-    {
-        id: "mana",
-        label: "Mana",
-        icon: "✦",
-        subtabs: [{ id: "basic-spells", label: "Basic Spells" }],
-    },
-    {
-        id: "achievements",
-        label: "Achievements",
-        icon: "★",
-    },
-    {
-        id: "statistics",
-        label: "Statistics",
-        icon: "▤",
-    },
-    {
-        id: "options",
-        label: "Options",
-        icon: "⚙",
-        subtabs: [
-            { id: "general", label: "General" },
-            { id: "visuals", label: "Visuals" },
-        ],
-    },
-];
 const activeTab = ref("mana");
-const activeSubtabs = ref({ mana: "basic-spells", achievements: "", statistics: "", options: "general" });
+const activeSubtabs = ref(Object.fromEntries(TABS.map((tab) => [tab.id, tab.subtabs?.[0]?.id ?? ""])));
 const mana = ref("0");
+const canCondense = ref(false);
+const brokenInfinity = ref(false);
+const condenseManaGained = ref("0");
+const condensedMana = ref("0");
+const condensedUnlocked = ref(false);
+const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
+    ...upgrade,
+    index,
+    cost: "0",
+    amount: "0",
+    effect: "1",
+    purchased: false,
+    affordable: false,
+})));
+const condensedUpgradePlaceholders = ref(Object.fromEntries(
+    Object.keys(CONDENSED_UPGRADE_PLACEHOLDERS).map((key) => [key, ""]),
+));
 const nextGoal = ref("Condense");
 const nextGoalProgress = ref(0);
 const tierOneDefinitions = [
@@ -94,6 +88,13 @@ const matrix = ref({
     affordable: false,
     visible: false,
 });
+const courage = ref({
+    visible: false,
+    active: false,
+    available: true,
+    timer: "0:00",
+    cooldown: "0:00",
+});
 const bolster = ref({
     visible: false,
     affordable: false,
@@ -106,30 +107,19 @@ const updateRate = ref(getUpdateRate());
 const timeSimulation = ref({ active: false, totalSeconds: 0, simulatedSeconds: 0, progress: 0, speed: 1 });
 let unsubscribeFromTimeSimulation;
 const statistics = ref({
-    timePlayed: "0:00:00",
+    timePlayed: "00:00:00",
     manaProduced: "0.00",
+    condenses: "0",
+    condensedManaProduced: "0.00",
+    timeThisCondense: "00:00:00",
+    hasCondensed: false,
 });
-const achievements = ref([
-    { id: "achievement_buymanaconduit", number: 1, title: "Something feels.. familiar", description: "Purchase a Mana Conduit.", reward: "+1% mana production", unlocked: false },
-    { id: "achievement_buyconduitconjugation", number: 2, title: "Meta Production", description: "Purchase a Conduit Conjugation.", reward: "+2% mana production", unlocked: false },
-    { id: "achievement_buyconjugationcreation", number: 3, title: "The promised achievement", description: "Purchase a Conjugation Creation.", reward: "+3% mana production", unlocked: false },
-    { id: "achievement_buycreationmanufactory", number: 4, title: "Industrial age", description: "Purchase a Creation Manufactory.", reward: "+4% mana production", unlocked: false },
-    { id: "achievement_buymanufacturestaff", number: 5, title: "The true best friend", description: "Purchase a Manufacture Staff.", reward: "+5% mana production", unlocked: false },
-    { id: "achievement_playtwohours", number: 6, title: "Thanks!", description: "Play for 1 hour.", reward: "Mana is increased based on time played", unlocked: false },
-    { id: "achievement_upgrademastery", number: 7, title: "Grandmastery", description: "Upgrade your mastery to level 5.", unlocked: false },
-    { id: "achievement_havesixstaff", number: 8, title: "Double the Sith", description: "Have at least 12 Manufacture Staff.", reward: "Unlock Staff Bolstering", unlocked: false },
-    { id: "achievement_produce1e50mana", number: 9, title: "Yet not the AI", description: "Produce 1.00e50 mana.", reward: "Reset with 500 mana", unlocked: false },
-    { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Cast Speed time.", reward: "Cast Speed time is increased by 5 seconds per purchase", unlocked: false },
-    { id: "achievement_centennial", number: 11, title: "Centennial", description: "Reach 1.00e100 Mana.", reward: "Increase per-purchase multiplier by +0.1×", unlocked: false },
-    { id: "achievement_circularhabits", number: 12, title: "Circular Habits", description: "Reach the limit of your mana circle.", unlocked: false },
-    { id: "achievement_difficulty", number: 13, title: "I think this is called difficulty", description: "Reach the limit of your mana circle without any Crystal Matrices.", unlocked: false },
-    { id: "achievement_realnews", number: 14, title: "REAL NEWS!", description: "View 50 different ticker messages.", unlocked: false },
-    { id: "achievement_clicker", number: 15, title: "Clicker!", description: "Click over 1,000 times.", reward: "Carpel tunnel", unlocked: false },
-]);
+const achievements = ref(ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: false })));
 let animationFrame;
 let achievementsInitialized = false;
 
 const activeSubtab = computed(() => activeSubtabs.value[activeTab.value]);
+const visibleTabs = computed(() => TABS.filter((tab) => !tab.requiresCondensed || condensedUnlocked.value));
 
 function selectTab(id) {
     activeTab.value = id;
@@ -141,6 +131,21 @@ function selectSubtab(id) {
 
 function updateDisplay() {
     mana.value = formatDecimal(HANDLES.mana);
+    canCondense.value = namedWasm.canCondense();
+    condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
+    condensedUnlocked.value = namedWasm.hasCondensed();
+    for (const upgrade of condensedUpgrades.value) {
+        upgrade.cost = formatDecimal(upgrade.costHandle, 0);
+        upgrade.purchased = namedWasm.hasCondensedUpgrade(upgrade.index);
+        upgrade.affordable = namedWasm.canBuyCondensedUpgrade(upgrade.index);
+        if (upgrade.repeatable) {
+            upgrade.amount = formatDecimal(upgrade.amountHandle, 0);
+            upgrade.effect = formatDecimal(upgrade.effectHandle);
+        }
+    }
+    for (const [key, placeholder] of Object.entries(CONDENSED_UPGRADE_PLACEHOLDERS)) {
+        condensedUpgradePlaceholders.value[key] = `${placeholder.prefix}${formatDecimal(placeholder.handle)}`;
+    }
     nextGoalProgress.value = namedWasm.manaCondenseProgress();
     for (const upgrade of tierOneUpgrades.value) {
         upgrade.amount = formatDecimal(upgrade.handle, 0);
@@ -168,14 +173,23 @@ function updateDisplay() {
     matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} Manufacture Staff`;
     matrix.value.affordable = namedWasm.canIncreaseMatrix();
     matrix.value.visible = namedWasm.isMatrixVisible();
+    courage.value.visible = namedWasm.isCourageVisible();
+    courage.value.active = namedWasm.isCourageActive();
+    courage.value.available = namedWasm.toNumber(HANDLES.courageCooldown) <= 0;
+    courage.value.timer = formatDuration(HANDLES.courageTimer);
+    courage.value.cooldown = formatDuration(HANDLES.courageCooldown);
     bolster.value.affordable = namedWasm.canBolster();
     bolster.value.visible = namedWasm.hasTierOneAchievement(7);
     bolster.value.effect = `×${formatDecimal(HANDLES.bolsterEffect)}`;
     bolster.value.relIncrease = `×${formatDecimal(SCRATCH_HANDLES.bolsterRelativeIncrease)}`;
-    bolster.value.multiplier = `x${formatDecimal(HANDLES.bolsterMultiplier)}`;
+    bolster.value.multiplier = `×${formatDecimal(HANDLES.bolsterMultiplier)}`;
     bolster.value.requirement = formatDecimal(HANDLES.bolsterRequirement);
     statistics.value.timePlayed = formatTotalTime(HANDLES.statistics_totalTimePlayed);
     statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced);
+    statistics.value.condensedManaProduced = formatDecimal(HANDLES.statistics_condensedManaProduced);
+    statistics.value.condenses = formatDecimal(HANDLES.statistics_condenses, 0);
+    statistics.value.timeThisCondense = formatTotalTime(HANDLES.statistics_timeThisCondense);
+    statistics.value.hasCondensed = namedWasm.hasCondensed();
     achievements.value[5].reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
     for (let index = 0; index < achievements.value.length; index++) {
         const achievement = achievements.value[index];
@@ -190,7 +204,7 @@ function updateDisplay() {
 }
 
 function formatDecimal(handle, decimals = 2) {
-    if (namedWasm.isAtInfinityBoundary(handle)) return "Infinity";
+    if (namedWasm.isAtInfinityBoundary(handle)) return "Infinite";
     const value = namedWasm.readString(handle);
 
     if (value.includes("e")) {
@@ -293,6 +307,24 @@ function increaseMatrix() {
     namedWasm.increaseMatrix();
 }
 
+function activateCourage() {
+    namedWasm.activateCourage();
+}
+
+function condense() {
+    if (!namedWasm.calculateCondenseGain()) return;
+    resetForCondense();
+    namedWasm.completeCondense();
+    saveGame();
+    achievementsInitialized = false;
+    castMax.value = false;
+    activeTab.value = "condensed";
+}
+
+function buyCondensedUpgrade(index) {
+    namedWasm.buyCondensedUpgrade(index);
+}
+
 function bolsterStaff() {
     namedWasm.bolster();
 }
@@ -340,8 +372,23 @@ onBeforeUnmount(() => {
             @skip="skipTimeSimulation"
         />
         <GameHeader :mana="mana" />
+        <button
+            v-if="canCondense || brokenInfinity"
+            class="condense-button"
+            type="button"
+            :disabled="!canCondense"
+            @click="condense"
+        >
+            <strong>Condense</strong>
+            <small v-if="brokenInfinity && canCondense"><br>for {{ condenseManaGained }} condensed mana</small>
+        </button>
+        <div v-if="condensedUnlocked" class="condensed-mana-display">
+            <span>You have</span>
+            <strong>{{ condensedMana }}</strong>
+            <span>condensed mana</span>
+        </div>
         <TabNavigation
-            :tabs="tabs"
+            :tabs="visibleTabs"
             :active-tab="activeTab"
             :active-subtab="activeSubtab"
             @select-tab="selectTab"
@@ -355,6 +402,7 @@ onBeforeUnmount(() => {
                 :cast-mode="castMax ? 'Cast Max' : 'Cast One'"
                 :mastery="mastery"
                 :matrix="matrix"
+                :courage="courage"
                 :bolster="bolster"
                 @buy="buyTierOne"
                 @empower="empowerTierOne"
@@ -363,11 +411,20 @@ onBeforeUnmount(() => {
                 @cast-speed="castSpeed"
                 @increase-mastery="increaseMastery"
                 @increase-matrix="increaseMatrix"
+                @activate-courage="activateCourage"
                 @bolster="bolsterStaff"
             />
             <StatisticsTab
                 v-else-if="activeTab === 'statistics'"
                 :statistics="statistics"
+            />
+            <CondensedTab
+                v-else-if="activeTab === 'condensed'"
+                :active-subtab="activeSubtab"
+                :condensed-mana="condensedMana"
+                :upgrades="condensedUpgrades"
+                :placeholders="condensedUpgradePlaceholders"
+                @buy="buyCondensedUpgrade"
             />
             <AchievementsTab
                 v-else-if="activeTab === 'achievements'"
@@ -394,7 +451,7 @@ onBeforeUnmount(() => {
                 </div>
             </section>
         </div>
-        <footer>The Mana Paradox v0.0.3</footer>
+        <footer>The Mana Paradox v0.0.4</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

@@ -9,6 +9,8 @@ import {
     lte,
     multiplyInto,
     mulUS,
+    passesLayerBoundary,
+    pow10Into,
     powInto,
     subInto,
     subUS,
@@ -30,7 +32,7 @@ export const TIER_ONE_COUNT: i32 = 5;
 // Effect = baseMultiplier * growthBase ^ ((log10(conduits) - startExponent) / exponentInterval)
 // Next requirement = requirementMargin * 10 ^ (startExponent + exponentInterval * log_growthBase(currentEffect / baseMultiplier))
 const BOLSTER_BASE_MULTIPLIER: i32 = 16;
-const BOLSTER_GROWTH_BASE: f64 = 3;
+const BOLSTER_GROWTH_BASE: f64 = 3.25;
 const BOLSTER_START_EXPONENT: i32 = 45;
 const BOLSTER_EXPONENT_INTERVAL: i32 = 10;
 const BOLSTER_REQUIREMENT_MARGIN: f64 = 1.01;
@@ -74,6 +76,7 @@ export function refreshBolsterEffect(): void {
     writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
     powInto(player.bolsterEffect, scratch.productionModifier, scratch.tierOneExponent);
     mulUS(player.bolsterEffect, BOLSTER_BASE_MULTIPLIER);
+    if (hasTierOneAchievement(17)) mulUS(player.bolsterEffect, 5);
     if (toNumber(player.bolsterEffect) < BOLSTER_MINIMUM_EFFECT) {
         writeNumber(player.bolsterEffect, BOLSTER_MINIMUM_EFFECT);
     }
@@ -110,6 +113,7 @@ export function empowerTierOne(index: i32): bool {
     if (!canEmpowerTierOne(index)) return false;
     writeNumber(tierOneAmountHandle(index), 0);
     addUS(tierOneEmpowermentHandle(index), 1);
+    if (gte(tierOneEmpowermentHandle(index), 2)) unlockTierOneAchievement(19);
     refreshEmpowermentCost(index);
     refreshTierOneMultiplier(index);
     return true;
@@ -236,6 +240,8 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
     const cost = tierOneCostHandle(index);
     if (gte(player.mana, cost)) return 1;
     if (!gt(player.mana, 1)) return 0;
+    const infinityBoundary = <i32>toNumber(player.infinity_break_index);
+    if (passesLayerBoundary(cost, infinityBoundary)) return 0;
 
     const scalingExponent = index + 1;
     multiplyInto(scratch.tierOneExponent, tierOneBoughtHandle(index), scalingExponent);
@@ -326,9 +332,12 @@ function refreshTierOneMultiplier(index: i32): void {
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
     }
     mulUS(tierOneMultiplierHandle(index), player.bolsterMultiplier);
+    if (hasTierOneAchievement(15)) {
+        writeNumber(scratch.tierOneExponent, 1 + <f64>(index + 1) / 100);
+        mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
+    }
 }
 
 /** [/WASM] */
 
 refreshTierOneDerivedState();
-

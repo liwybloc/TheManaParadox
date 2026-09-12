@@ -1,0 +1,284 @@
+.statistics-list {
+  display: grid;
+  gap: 14px;
+  width: min(620px, 100%);
+  margin: 0 auto;
+  padding-top: 34px;
+  text-align: center;
+}
+.stat-header {
+  padding: 14px 18px 8px;
+  border: 1px solid #41414d;
+  background: #15151e;
+}
+.stat-header h2 {
+  margin: 0 0 12px;
+  color: #c9a4ff;
+  font-size: 17px;
+}
+.stat-header p {
+  margin: 0 0 9px;
+  color: #aaaaba;
+  font-size: 14px;
+}
+.stat-header strong {
+  color: #e0ccff;
+}
+.condensed-upgrade-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  width: min(720px, 100%);
+  margin: 0 auto;
+}
+.condensed-upgrade-grid button,
+.condensed-upgrade-grid > span {
+  min-height: 86px;
+}
+.condensed-upgrade-grid button {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border: 1px solid #655072;
+  color: #bdb2c7;
+  background: #18131d;
+  cursor: pointer;
+  text-align: center;
+}
+.condensed-upgrade-grid strong,
+.condensed-upgrade-grid span,
+.condensed-upgrade-grid small {
+  display: block;
+}
+.condensed-upgrade-grid strong {
+  color: #d2bfdf;
+  font-size: 12px;
+}
+.condensed-upgrade-grid small {
+  margin-top: auto;
+  color: #8f8199;
+  font-size: 9px;
+}
+.condensed-upgrade-grid span {
+  margin-top: 5px;
+  color: #a89aaf;
+  font-size: 10px;
+}
+.condensed-upgrade-grid button:hover:not(:disabled) {
+  border-color: #ae7ad0;
+  background: #24192c;
+}
+.condensed-upgrade-grid button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+.condensed-upgrade-grid button.purchased {
+  border-color: #8960a3;
+  background: #2a1c32;
+  opacity: 0.82;
+}
+.condensed-upgrade-grid button.repeatable {
+  border-color: #438dcc;
+  color: #eaf7ff;
+  background: #142433;
+  box-shadow: inset 0 0 9px #289be52e;
+}
+.condensed-upgrade-grid button.repeatable strong {
+  color: #8fdcff;
+}
+.condensed-upgrade-grid button.repeatable span,
+.condensed-upgrade-grid button.repeatable small {
+  color: #91bcd2;
+}
+.condensed-upgrade-grid button.repeatable:hover:not(:disabled) {
+  border-color: #7bc8ff;
+  background: #193149;
+}
+.stat-header {
+  font-size: 30px;
+  margin-bottom: 15px;
+}
+.basic-header {
+  color: #ffffff;
+}
+.condense-header {
+  color: #438dcc;
+}
+.stat-header p {
+  margin: 0 0 12px;
+  color: #aaaaba;
+  font-size: 16px;
+}
+.stat-header strong {
+  color: #c9a4ff;
+}
+.achievement-list {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 7px;
+  padding-top: 20px;
+}
+.achievement-entry {
+  position: relative;
+  min-height: 92px;
+  padding: 12px 8px 8px;
+  border: 2px solid #9c4040;
+  color: #aaaab4;
+  background: #241313;
+  text-align: center;
+}
+.achievement-entry::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: #5b101066;
+  content: "";
+  pointer-events: none;
+}
+.achievement-entry.unlocked::after {
+  background: #0c672c4d;
+}
+.achievement-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.achievement-number {
+  position: absolute;
+  z-index: 2;
+  top: 7px;
+  left: 8px;
+  color: #dc7777;
+  font-size: 13px;
+  font-weight: 700;
+}
+.achievement-details strong {
+  position: relative;
+  z-index: 2;
+  display: block;
+  padding: 0 22px;
+  color: #eee;
+  text-align: center;
+  text-shadow: 0 1px 3px #000, 0 1px 6px #000;
+}
+.achievement-entry.unlocked {
+  border-color: #3f9b5f;
+  color: #effff3;
+  background: #173321;
+}
+.achievement-entry.unlocked .achievement-number {
+  color: #79d596;
+}
+.achievement-tooltip {
+  position: absolute;
+  z-index: 10;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  display: none;
+  width: max-content;
+  max-width: 260px;
+  padding: 9px 11px;
+  border: 1px solid #656574;
+  color: #d8d8df;
+  background: #101017;
+  box-shadow: 0 3px 10px #000a;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: left;
+  transform: translateX(-50%);
+}
+.achievement-tooltip strong,
+.achievement-tooltip span {
+  display: block;
+}
+.achievement-tooltip strong {
+  margin-bottom: 4px;
+  color: #fff;
+}
+.achievement-tooltip .achievement-reward {
+  margin-top: 6px;
+  color: #79d596;
+}
+.achievement-entry:hover .achievement-tooltip,
+.achievement-entry:focus-visible .achievement-tooltip {
+  display: block;
+}
+.achievement-entry:focus-visible {
+  outline: 2px solid #c49cff;
+  outline-offset: 2px;
+}
+
+.option-list {
+  max-width: 650px;
+  margin: auto;
+  border: 1px solid #41414d;
+}
+.option-list label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 64px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #353541;
+  background: #15151e;
+}
+.option-list label:last-child {
+  border-bottom: 0;
+}
+.option-list > button {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 10px 16px;
+  border: 0;
+  border-bottom: 1px solid #353541;
+  color: #d8d8df;
+  background: #15151e;
+  cursor: pointer;
+  font-weight: 700;
+  text-align: left;
+}
+.option-list > button:last-child {
+  border-bottom: 0;
+}
+.option-list > button:hover {
+  color: #fff;
+  background: #242432;
+}
+.option-list > button:active {
+  background: #101017;
+}
+.option-list > button:focus-visible {
+  outline: 2px solid #c49cff;
+  outline-offset: -2px;
+}
+.option-list strong,
+.option-list small {
+  display: block;
+}
+.option-list strong {
+  font-size: 14px;
+}
+.option-list small {
+  margin-top: 4px;
+  color: #8d8d99;
+}
+.option-list input {
+  width: 18px;
+  height: 18px;
+  accent-color: #8859bd;
+}
+.option-list input[type="range"] {
+  width: min(320px, 55%);
+  height: auto;
+}
+footer {
+  padding: 30px 0 10px;
+  color: #555562;
+  font-size: 10px;
+  text-align: center;
+  text-transform: uppercase;
+}

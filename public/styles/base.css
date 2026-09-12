@@ -1,0 +1,125 @@
+:root {
+  color-scheme: dark;
+  font-family: Arial, Helvetica, sans-serif;
+  color: #eeeeee;
+  background: #090a12;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding-bottom: 30px;
+  background: #090a12;
+}
+button,
+input {
+  font: inherit;
+}
+[hidden] {
+  display: none !important;
+}
+
+#sky {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.28;
+}
+.star {
+  position: absolute;
+  width: var(--star-size);
+  height: var(--star-size);
+  border-radius: 50%;
+  background: #fff;
+  animation:
+    star-twinkle var(--twinkle-duration) ease-in-out var(--twinkle-delay) infinite alternate,
+    star-drift var(--drift-duration) ease-in-out var(--drift-delay) infinite alternate;
+}
+@keyframes star-drift {
+  from {
+    transform: translate(0, 0);
+  }
+  to {
+    transform: translate(var(--drift-x), var(--drift-y));
+  }
+}
+@keyframes star-twinkle {
+  from {
+    opacity: var(--twinkle-minimum);
+  }
+  to {
+    opacity: 1;
+  }
+}
+body.effects-disabled #sky {
+  display: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .star {
+    animation: none;
+  }
+}
+
+.notification-stack {
+  position: fixed;
+  z-index: 1000;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: min(380px, calc(100vw - 28px));
+  gap: 7px;
+  pointer-events: none;
+}
+.game-notification {
+  position: relative;
+  min-height: 48px;
+  overflow: hidden;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--notification-color);
+  color: #fff;
+  background: #17131d;
+  box-shadow: 0 3px 12px #000a;
+}
+.game-notification strong {
+  display: block;
+  overflow: hidden;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.notification-timer {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: var(--notification-color);
+  transform-origin: left;
+  animation: notification-countdown var(--notification-duration) linear forwards;
+}
+.notification-enter-active,
+.notification-leave-active {
+  transition: opacity 180ms linear, transform 180ms ease-out;
+}
+.notification-move {
+  transition: transform 180ms ease-out;
+}
+.notification-leave-active {
+  position: absolute;
+  right: 0;
+  width: 100%;
+}
+.notification-enter-from,
+.notification-leave-to {
+  opacity: 0;
+  transform: translateX(calc(100% + 20px));
+}
+@keyframes notification-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+

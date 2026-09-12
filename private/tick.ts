@@ -1,5 +1,6 @@
 import { gt, lte, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
 import { consumeTierOneRewardsChanged } from "./achievements.js";
+import { updateCourage } from "./courage.js";
 import { addPlayerTime, gainCurrency } from "./currencies.js";
 import { HANDLES } from "./player.js";
 import { resetCastSpeed } from "./progression.js";
@@ -39,6 +40,7 @@ let modifierHandle: i32 = 0;
 let castSpeedTimerHandle: i32 = 0;
 let castSpeedMagnitudeHandle: i32 = 0;
 let castSpeedCostHandle: i32 = 0;
+let courageMultiplierHandle: i32 = 0;
 
 const modifierScope = new StaticArray<i32>(MAX_MODIFIERS);
 const modifierTarget = new StaticArray<i32>(MAX_MODIFIERS);
@@ -64,6 +66,7 @@ export function initializeTick(
     speedTimerHandle: i32,
     speedMagnitudeHandle: i32,
     speedCostHandle: i32,
+    courageMultiplier: i32,
 ): void {
     secondsHandle = tickSecondsHandle;
     productionHandle = tickProductionHandle;
@@ -71,6 +74,7 @@ export function initializeTick(
     castSpeedTimerHandle = speedTimerHandle;
     castSpeedMagnitudeHandle = speedMagnitudeHandle;
     castSpeedCostHandle = speedCostHandle;
+    courageMultiplierHandle = courageMultiplier;
     initializeModifierCaches();
 }
 
@@ -137,6 +141,7 @@ export function speedMultiplierFor(entity: i32): f64 {
 function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
     if (countTimePlayed) addPlayerTime(secondsHandle);
+    const courageActive = updateCourage(secondsHandle);
     applyCastSpeed();
     for (let entity: i32 = 0; entity < productionEntityCount; entity++) {
         multiplyInto(productionHandle, entityAmountHandle[entity], secondsHandle);
@@ -144,6 +149,7 @@ function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
         multiplyInto(productionHandle, productionHandle, entityBaseMultiplierHandle[entity]);
         writeNumber(modifierHandle, productionMultiplierFor(entity) * speedMultiplierFor(entity));
         multiplyInto(productionHandle, productionHandle, modifierHandle);
+        if (courageActive) multiplyInto(productionHandle, productionHandle, courageMultiplierHandle);
         gainCurrency(entityDestinationHandle[entity], productionHandle);
     }
 }
@@ -259,6 +265,7 @@ initializeTick(
     HANDLES.castSpeedTimer,
     HANDLES.castSpeedMagnitude,
     HANDLES.castSpeedCost,
+    HANDLES.courageMultiplier,
 );
 
 registerProductionEntity(

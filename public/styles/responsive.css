@@ -1,0 +1,72 @@
+@media (max-width: 700px) {
+  .game-header {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 10px 0 16px;
+  }
+  .title-block,
+  .resource-display {
+    grid-column: 1;
+    justify-self: center;
+    text-align: center;
+  }
+  .primary-tabs {
+    width: 100%;
+  }
+  .tab-button {
+    min-width: 0;
+    flex: 1;
+    padding: 9px 5px;
+  }
+  .tab-icon {
+    display: none;
+  }
+  .cast-all,
+  .cast-mode {
+    min-width: 0;
+    width: 46%;
+  }
+  .bolster-staff {
+    width: 46%;
+  }
+  .condense-button {
+    width: 46%;
+  }
+  .condensed-mana-display {
+    position: static;
+    width: max-content;
+    margin: 8px auto 0;
+  }
+  .condensed-upgrade-grid {
+    gap: 5px;
+  }
+  .condensed-upgrade-grid button,
+  .condensed-upgrade-grid > span {
+    min-height: 72px;
+  }
+  .courage-button {
+    width: 46%;
+  }
+  .upgrade-row {
+    grid-template-columns: 1fr 90px;
+  }
+  .upgrade-actions {
+    grid-column: 1 / -1;
+  }
+  .upgrade-actions button {
+    flex: 1;
+    width: auto;
+  }
+  .upgrade-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .achievement-list {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .upgrade-grid {
+    grid-template-columns: 1fr;
+  }
+}

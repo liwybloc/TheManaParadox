@@ -6,6 +6,8 @@ import "./player.js";
 import "./scratch.js";
 import "./achievements.js";
 import "./currencies.js";
+import "./courage.js";
+import "./condensed.js";
 import "./tier_one.js";
 import "./progression.js";
 import "./debug.js";

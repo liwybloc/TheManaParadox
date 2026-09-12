@@ -7,9 +7,10 @@ defineProps({
     castMode: { type: String, required: true },
     mastery: { type: Object, required: true },
     matrix: { type: Object, required: true },
+    courage: { type: Object, required: true },
     bolster: { type: Object, required: true },
 });
-defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix", "bolster"]);
+defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix", "activate-courage", "bolster"]);
 </script>
 
 <template>
@@ -77,5 +78,23 @@ defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "inc
                 <small>Cost: {{ matrix.cost }}</small>
             </button>
         </div>
+        <button
+            v-show="courage.visible"
+            class="courage-button"
+            :class="{ 'is-active': courage.active }"
+            type="button"
+            :disabled="!courage.available"
+            @click="$emit('activate-courage')"
+        >
+            <span v-if="courage.active" class="courage-aura" aria-hidden="true"></span>
+            <span v-if="courage.active" class="courage-sparks" aria-hidden="true">
+                <i v-for="spark in 7" :key="spark"></i>
+            </span>
+            <strong>Courage</strong>
+            <span>I must work up the courage.. to get stronger!</span>
+            <small v-if="courage.active">×10 all production · {{ courage.timer }}</small>
+            <small v-else-if="!courage.available">Cooldown: {{ courage.cooldown }}</small>
+            <small v-else>Ready</small>
+        </button>
     </section>
 </template>

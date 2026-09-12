@@ -48,6 +48,7 @@ export function manaCondenseProgress(): f64 {
 
 export function addPlayerTime(amount: i32): void {
     addUS(player.statistics_totalTimePlayed, amount);
+    addUS(player.statistics_timeThisCondense, amount);
     checkTimeAchievements();
 }
 

@@ -77,6 +77,10 @@ function assertTransferCount(count: i32): void {
     }
 }
 
+export function createZero(): i32 {
+    return createDecimal(0, 0, 0);
+}
+
 export function createDecimal(sign: f64, layer: f64, magnitude: f64): i32 {
     const result = allocateDecimal();
     normalizeInto(result, sign, layer, magnitude);

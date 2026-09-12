@@ -15,6 +15,7 @@ export async function compileAssembly(
         optimizeLevel: 3,
         shrinkLevel: 1,
         runtime: "incremental",
+        maximumMemory: 64,
     });
 
     if (result.error || !result.binary) {

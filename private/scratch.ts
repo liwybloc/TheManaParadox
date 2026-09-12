@@ -1,4 +1,4 @@
-import { createDecimal } from "./break_eternity.js";
+import { createDecimal, createZero } from "./break_eternity.js";
 
 export interface Scratch {
     currencyGain: i32;
@@ -8,16 +8,18 @@ export interface Scratch {
     productionModifier: i32;
     bolsterRelativeIncrease: i32;
     tierOneDisplayMultiplier: i32;
+    condenseGain: i32;
 }
 
 export const SCRATCH_HANDLES: Scratch = {
-    currencyGain: createDecimal(0, 0, 0),
-    tierOneSeconds: createDecimal(0, 0, 0),
-    tierOneProduction: createDecimal(0, 0, 0),
-    tierOneExponent: createDecimal(0, 0, 0),
-    productionModifier: createDecimal(0, 0, 0),
-    bolsterRelativeIncrease: createDecimal(0, 0, 0),
+    currencyGain: createZero(),
+    tierOneSeconds: createZero(),
+    tierOneProduction: createZero(),
+    tierOneExponent: createZero(),
+    productionModifier: createZero(),
+    bolsterRelativeIncrease: createZero(),
     tierOneDisplayMultiplier: createDecimal(1, 0, 1),
+    condenseGain: createZero(),
 };
 
 /** [WASM] */
@@ -30,6 +32,7 @@ export const scratch: Scratch = {
     productionModifier: 0,
     bolsterRelativeIncrease: 0,
     tierOneDisplayMultiplier: 0,
+    condenseGain: 0,
 };
 
 export function initializeScratch(
@@ -40,6 +43,7 @@ export function initializeScratch(
     productionModifier: i32,
     bolsterRelativeIncrease: i32,
     tierOneDisplayMultiplier: i32,
+    condenseGain: i32,
 ): void {
     scratch.currencyGain = currencyGain;
     scratch.tierOneSeconds = tierOneSeconds;
@@ -48,6 +52,7 @@ export function initializeScratch(
     scratch.productionModifier = productionModifier;
     scratch.bolsterRelativeIncrease = bolsterRelativeIncrease;
     scratch.tierOneDisplayMultiplier = tierOneDisplayMultiplier;
+    scratch.condenseGain = condenseGain;
 }
 
 /** [/WASM] */
@@ -60,4 +65,5 @@ initializeScratch(
     SCRATCH_HANDLES.productionModifier,
     SCRATCH_HANDLES.bolsterRelativeIncrease,
     SCRATCH_HANDLES.tierOneDisplayMultiplier,
+    SCRATCH_HANDLES.condenseGain,
 );

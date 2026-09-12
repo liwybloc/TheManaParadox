@@ -29,8 +29,8 @@ export function increaseMastery(): bool {
     if (!canIncreaseMastery()) return false;
     const speedIsActive = gt(player.castSpeedTimer, 0);
     addUS(player.masteryOwned, 1);
-    if(gte(player.masteryOwned, 5)) unlockTierOneAchievement(6);
     refreshMasteryDerivedState();
+    if (gte(player.masteryLevel, 5)) unlockTierOneAchievement(6);
     if (speedIsActive) mulUS(player.castSpeedMagnitude, 2);
     resetTierOne();
     return true;

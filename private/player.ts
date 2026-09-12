@@ -1,10 +1,13 @@
-import { createDecimal } from "./break_eternity.js";
+import { createDecimal, createZero } from "./break_eternity.js";
 
 export interface PlayerHandles {
     mana: i32;
     statistics_totalManaProduced: i32;
     statistics_totalTimePlayed: i32;
     statistics_totalClicks: i32;
+    statistics_condensedManaProduced: i32;
+    statistics_condenses: i32;
+    statistics_timeThisCondense: i32;
     infinity_break_index: i32;
     multiplier_currencyGlobal: i32;
     multiplier_timePlayedAchievement: i32;
@@ -54,6 +57,10 @@ export interface PlayerHandles {
     bolsterMultiplier: i32;
     bolsterEffect: i32;
     bolsterRequirement: i32;
+    courageTimer: i32;
+    courageCooldown: i32;
+    courageMultiplier: i32;
+    condensedMana: i32;
 }
 
 export interface Player extends PlayerHandles {
@@ -72,62 +79,76 @@ export interface Player extends PlayerHandles {
     achievement_difficulty: bool;
     achievement_realnews: bool;
     achievement_clicker: bool;
+    achievement_lightning: bool;
+    achievement_pleasedosleep: bool;
+    achievement_noendgame: bool;
+    achievement_supercondensed: bool;
+    achievement_empowertwice: bool;
+    courageUnlocked: bool;
+    hasCondensed: bool;
 }
 
 export const HANDLES: PlayerHandles = {
     mana: createDecimal(1, 0, 10),
-    statistics_totalManaProduced: createDecimal(0, 0, 0),
-    statistics_totalTimePlayed: createDecimal(0, 0, 0),
-    statistics_totalClicks: createDecimal(0, 0, 0),
-    infinity_break_index: createDecimal(0, 0, 0),
+    statistics_totalManaProduced: createZero(),
+    statistics_totalTimePlayed: createZero(),
+    statistics_totalClicks: createZero(),
+    statistics_condensedManaProduced: createZero(),
+    statistics_condenses: createZero(),
+    statistics_timeThisCondense: createZero(),
+    infinity_break_index: createZero(),
     multiplier_currencyGlobal: createDecimal(1, 0, 1),
     multiplier_timePlayedAchievement: createDecimal(1, 0, 1),
     multiplier_tierOnePerPurchase: createDecimal(1, 0, 2),
     constant_timeAchievementDivisor: createDecimal(1, 0, 500),
-    count_manaConduit: createDecimal(0, 0, 0),
-    count_conduitConjugation: createDecimal(0, 0, 0),
-    count_conjugationCreation: createDecimal(0, 0, 0),
-    count_creationManufactory: createDecimal(0, 0, 0),
-    count_manufactureStaff: createDecimal(0, 0, 0),
-    bought_manaConduit: createDecimal(0, 0, 0),
-    bought_conduitConjugation: createDecimal(0, 0, 0),
-    bought_conjugationCreation: createDecimal(0, 0, 0),
-    bought_creationManufactory: createDecimal(0, 0, 0),
-    bought_manufactureStaff: createDecimal(0, 0, 0),
-    cost_manaConduit: createDecimal(0, 0, 0),
-    cost_conduitConjugation: createDecimal(0, 0, 0),
-    cost_conjugationCreation: createDecimal(0, 0, 0),
-    cost_creationManufactory: createDecimal(0, 0, 0),
-    cost_manufactureStaff: createDecimal(0, 0, 0),
-    multiplier_manaConduit: createDecimal(0, 0, 0),
-    multiplier_conduitConjugation: createDecimal(0, 0, 0),
-    multiplier_conjugationCreation: createDecimal(0, 0, 0),
-    multiplier_creationManufactory: createDecimal(0, 0, 0),
-    multiplier_manufactureStaff: createDecimal(0, 0, 0),
-    castSpeedTimer: createDecimal(0, 0, 0),
+    count_manaConduit: createZero(),
+    count_conduitConjugation: createZero(),
+    count_conjugationCreation: createZero(),
+    count_creationManufactory: createZero(),
+    count_manufactureStaff: createZero(),
+    bought_manaConduit: createZero(),
+    bought_conduitConjugation: createZero(),
+    bought_conjugationCreation: createZero(),
+    bought_creationManufactory: createZero(),
+    bought_manufactureStaff: createZero(),
+    cost_manaConduit: createZero(),
+    cost_conduitConjugation: createZero(),
+    cost_conjugationCreation: createZero(),
+    cost_creationManufactory: createZero(),
+    cost_manufactureStaff: createZero(),
+    multiplier_manaConduit: createZero(),
+    multiplier_conduitConjugation: createZero(),
+    multiplier_conjugationCreation: createZero(),
+    multiplier_creationManufactory: createZero(),
+    multiplier_manufactureStaff: createZero(),
+    castSpeedTimer: createZero(),
     castSpeedMagnitude: createDecimal(1, 0, 1),
     castSpeedCost: createDecimal(1, 0, 1000),
-    masteryOwned: createDecimal(0, 0, 0),
+    masteryOwned: createZero(),
     masteryLevel: createDecimal(1, 0, 1),
     masteryCost: createDecimal(1, 0, 1),
     masterySpeedEffect: createDecimal(1, 0, 1),
-    matrixOwned: createDecimal(0, 0, 0),
+    matrixOwned: createZero(),
     matrixCost: createDecimal(1, 0, 10),
     matrixPower: createDecimal(1, 0, 0.5),
     matrixSpeedPower: createDecimal(1, 0, 2),
-    empowerment_manaConduit: createDecimal(0, 0, 0),
-    empowerment_conduitConjugation: createDecimal(0, 0, 0),
-    empowerment_conjugationCreation: createDecimal(0, 0, 0),
-    empowerment_creationManufactory: createDecimal(0, 0, 0),
-    legacy_000: createDecimal(0, 0, 0),
-    cost_empowerment_manaConduit: createDecimal(0, 0, 0),
-    cost_empowerment_conduitConjugation: createDecimal(0, 0, 0),
-    cost_empowerment_conjugationCreation: createDecimal(0, 0, 0),
-    cost_empowerment_creationManufactory: createDecimal(0, 0, 0),
-    cost_empowerment_manufactureStaff: createDecimal(0, 0, 0),
+    empowerment_manaConduit: createZero(),
+    empowerment_conduitConjugation: createZero(),
+    empowerment_conjugationCreation: createZero(),
+    empowerment_creationManufactory: createZero(),
+    legacy_000: createZero(),
+    cost_empowerment_manaConduit: createZero(),
+    cost_empowerment_conduitConjugation: createZero(),
+    cost_empowerment_conjugationCreation: createZero(),
+    cost_empowerment_creationManufactory: createZero(),
+    cost_empowerment_manufactureStaff: createZero(),
     bolsterMultiplier: createDecimal(1, 0, 1),
     bolsterEffect: createDecimal(1, 0, 1.01),
     bolsterRequirement: createDecimal(1, 1, 45),
+    courageTimer: createZero(),
+    courageCooldown: createZero(),
+    courageMultiplier: createDecimal(1, 0, 10),
+    condensedMana: createZero(),
 };
 
 /** [WASM] */
@@ -137,6 +158,9 @@ export const player: Player = {
     statistics_totalManaProduced: 0,
     statistics_totalTimePlayed: 0,
     statistics_totalClicks: 0,
+    statistics_condensedManaProduced: 0,
+    statistics_condenses: 0,
+    statistics_timeThisCondense: 0,
     infinity_break_index: 0,
     multiplier_currencyGlobal: 0,
     multiplier_timePlayedAchievement: 0,
@@ -186,6 +210,10 @@ export const player: Player = {
     bolsterMultiplier: 0,
     bolsterEffect: 0,
     bolsterRequirement: 0,
+    courageTimer: 0,
+    courageCooldown: 0,
+    courageMultiplier: 0,
+    condensedMana: 0,
     achievement_buymanaconduit: false,
     achievement_buyconduitconjugation: false,
     achievement_buyconjugationcreation: false,
@@ -201,6 +229,13 @@ export const player: Player = {
     achievement_difficulty: false,
     achievement_realnews: false,
     achievement_clicker: false,
+    achievement_lightning: false,
+    achievement_pleasedosleep: false,
+    achievement_noendgame: false,
+    achievement_supercondensed: false,
+    achievement_empowertwice: false,
+    courageUnlocked: false,
+    hasCondensed: false,
 };
 
 export function initializeCoreHandles(
@@ -223,6 +258,16 @@ export function initializeCoreHandles(
     player.multiplier_timePlayedAchievement = timePlayedMultiplier;
     player.multiplier_tierOnePerPurchase = tierOnePerPurchase;
     player.constant_timeAchievementDivisor = timeDivisor;
+}
+
+export function initializeCondensedStatisticHandles(
+    condensedManaProduced: i32,
+    condenses: i32,
+    timeThisCondense: i32,
+): void {
+    player.statistics_condensedManaProduced = condensedManaProduced;
+    player.statistics_condenses = condenses;
+    player.statistics_timeThisCondense = timeThisCondense;
 }
 
 export function initializeTierOneHandles(
@@ -291,6 +336,16 @@ export function initializeEmpowermentHandles(
     player.bolsterRequirement = bolsterRequirement;
 }
 
+export function initializeCourageHandles(timer: i32, cooldown: i32, multiplier: i32): void {
+    player.courageTimer = timer;
+    player.courageCooldown = cooldown;
+    player.courageMultiplier = multiplier;
+}
+
+export function initializeCondensedManaHandle(condensedMana: i32): void {
+    player.condensedMana = condensedMana;
+}
+
 /** [/WASM] */
 
 initializeCoreHandles(
@@ -303,6 +358,11 @@ initializeCoreHandles(
     HANDLES.multiplier_timePlayedAchievement,
     HANDLES.multiplier_tierOnePerPurchase,
     HANDLES.constant_timeAchievementDivisor,
+);
+initializeCondensedStatisticHandles(
+    HANDLES.statistics_condensedManaProduced,
+    HANDLES.statistics_condenses,
+    HANDLES.statistics_timeThisCondense,
 );
 initializeTierOneHandles(
     HANDLES.count_manaConduit, HANDLES.count_conduitConjugation, HANDLES.count_conjugationCreation,
@@ -328,3 +388,5 @@ initializeEmpowermentHandles(
     HANDLES.cost_empowerment_manufactureStaff, HANDLES.bolsterMultiplier,
     HANDLES.bolsterEffect, HANDLES.bolsterRequirement,
 );
+initializeCourageHandles(HANDLES.courageTimer, HANDLES.courageCooldown, HANDLES.courageMultiplier);
+initializeCondensedManaHandle(HANDLES.condensedMana);
