@@ -1,19 +1,20 @@
 import { createApp } from "vue";
 import App from "@ui/App.vue";
 import { namedWasm } from "../generated/_wasm$globals.js";
-import "./background.js";
-import "./player.js";
-import "./scratch.js";
-import "./achievements.js";
-import "./currencies.js";
-import "./courage.js";
-import "./condensed.js";
-import "./tier_one.js";
-import "./progression.js";
-import "./debug.js";
-import "./save.js";
-import "./tick.js";
-import "./keybinds.js";
+import "./systems/background.js";
+import "./core/player.js";
+import "./core/scratch.js";
+import "./game/achievements.js";
+import "./game/currencies.js";
+import "./game/courage.js";
+import "./game/condensed.js";
+import "./guild/guild.js";
+import "./game/tier_one.js";
+import "./game/progression.js";
+import "./systems/debug.js";
+import "./systems/save.js";
+import "./systems/tick.js";
+import "./systems/keybinds.js";
 
 (globalThis as any).cheatSomeCookies = namedWasm.cheatSomeCookies;
 

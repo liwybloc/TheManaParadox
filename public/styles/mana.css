@@ -1,8 +1,13 @@
 .cast-controls {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 10px;
 }
+.cast-controls .cast-all { grid-column: 1; justify-self: start; }
+.cast-controls .cast-mode { grid-column: 3; justify-self: end; }
+.current-game-speed { grid-column: 2; color: #b9ddfa; font-size: 12px; text-align: center; }
 .cast-all,
 .cast-mode {
   min-width: 180px;
@@ -278,5 +283,28 @@
   100% {
     opacity: 0;
     transform: translate(8px, -34px) scale(0);
+  }
+}
+.mana-panel { position: relative; }
+.potion-effects {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 16px);
+  display: grid;
+  gap: 5px;
+  width: 220px;
+  padding: 9px 10px;
+  border: 1px solid #597b9b;
+  background: #111b25;
+  color: #b9ddfa;
+  font-size: 11px;
+}
+.potion-effects strong { color: #d5ebff; font-size: 12px; }
+.potion-effects span { line-height: 1.35; }
+@media (max-width: 1480px) {
+  .potion-effects {
+    position: static;
+    width: min(100%, 360px);
+    margin: 0 0 12px;
   }
 }

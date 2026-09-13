@@ -14,8 +14,12 @@
     width: 100%;
   }
   .tab-button {
-    min-width: 0;
-    flex: 1;
+    width: auto;
+    min-width: 150px;
+    max-width: none;
+    flex-basis: auto;
+    flex-grow: 0;
+    flex-shrink: 0;
     padding: 9px 5px;
   }
   .tab-icon {

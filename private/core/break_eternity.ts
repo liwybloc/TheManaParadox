@@ -4,15 +4,15 @@ const MAX_SIGNIFICANT_DIGITS: f64 = 17;
 const EXP_LIMIT: f64 = 9e15;
 const LAYER_DOWN: f64 = 15.954589770191003;
 const FIRST_NEG_LAYER: f64 = 1 / EXP_LIMIT;
-const CONSTANT_COUNT: i32 = 101;
+const CONSTANT_COUNT: i32 = 201;
 const DECIMAL_TRANSFER_CAPACITY: i32 = 256;
 const DECIMAL_COMPONENT_COUNT: i32 = 3;
 
-const signs = new Array<f64>();
-const layers = new Array<f64>();
+const signs = new Array<i32>();
+const layers = new Array<i32>();
 const magnitudes = new Array<f64>();
-const constantSigns = new Array<f64>();
-const constantLayers = new Array<f64>();
+const constantSigns = new Array<i32>();
+const constantLayers = new Array<i32>();
 const constantMagnitudes = new Array<f64>();
 let nextHandle: i32 = CONSTANT_COUNT;
 const decimalTransferBuffer = new StaticArray<f64>(DECIMAL_TRANSFER_CAPACITY * DECIMAL_COMPONENT_COUNT);
@@ -319,7 +319,7 @@ export function normalizeInto(result: i32, sign: f64, layer: f64, magnitude: f64
         sign = -sign;
     }
     if (magnitude === Infinity || layer === Infinity || magnitude === -Infinity || layer === -Infinity) {
-        writeDecimal(result, sign, Infinity, Infinity);
+        writeInfinity(result, sign);
         return;
     }
     if (layer === 0 && magnitude < FIRST_NEG_LAYER) {
@@ -350,7 +350,7 @@ export function normalizeInto(result: i32, sign: f64, layer: f64, magnitude: f64
         sign = 0;
     }
     if (isNaN(sign) || isNaN(layer) || isNaN(magnitude)) {
-        writeDecimal(result, NaN, NaN, NaN);
+        writeNaN(result);
         return;
     }
     writeDecimal(result, sign, layer, magnitude);
@@ -387,8 +387,8 @@ export function writeNumber(handle: i32, value: f64): void {
 
 export function writeDecimal(handle: i32, sign: f64, layer: f64, magnitude: f64): void {
     const index = mutableIndex(handle);
-    signs[index] = sign;
-    layers[index] = layer;
+    signs[index] = <i32>sign;
+    layers[index] = <i32>layer;
     magnitudes[index] = magnitude;
 }
 
@@ -425,11 +425,11 @@ export function getMagnitude(handle: i32): f64 {
 }
 
 function writeNaN(handle: i32): void {
-    writeDecimal(handle, NaN, NaN, NaN);
+    writeDecimal(handle, 0, 0, NaN);
 }
 
 function writeInfinity(handle: i32, sign: f64): void {
-    writeDecimal(handle, signOf(sign), Infinity, Infinity);
+    writeDecimal(handle, signOf(sign), 0, Infinity);
 }
 
 export function copyInto(result: i32, value: i32): void {

@@ -9,7 +9,8 @@ export interface PlayerHandles {
     statistics_condenses: i32;
     statistics_timeThisCondense: i32;
     statistics_fastestCondense: i32;
-    infinity_break_index: i32;
+    statistics_questsCompleted: i32;
+    mana_circle_tier: i32;
     multiplier_currencyGlobal: i32;
     multiplier_timePlayedAchievement: i32;
     multiplier_tierOnePerPurchase: i32;
@@ -62,6 +63,21 @@ export interface PlayerHandles {
     courageCooldown: i32;
     courageMultiplier: i32;
     condensedMana: i32;
+    coins: i32;
+    guildRank: i32;
+    activeQuest: i32;
+    wolfineHealth: i32;
+    combatShield: i32;
+    combatShieldMaximum: i32;
+    combatFreezeTurns: i32;
+    fireballCost: i32;
+    whirlwindCost: i32;
+    freezeCost: i32;
+    inventoryWolfFur: i32;
+    inventoryPotionOfSpeed: i32;
+    inventoryWolfFurPosition: i32;
+    inventoryPotionPosition: i32;
+    potionSpeedTimer: i32;
 }
 
 export interface Player extends PlayerHandles {
@@ -85,8 +101,22 @@ export interface Player extends PlayerHandles {
     achievement_noendgame: bool;
     achievement_supercondensed: bool;
     achievement_empowertwice: bool;
+    achievement_matrixmanipulation: bool;
+    achievement_unnecessary: bool;
+    achievement_timeforthefunpart: bool;
+    achievement_allcondensedupgrades: bool;
+    achievement_newhorizons: bool;
+    achievement_unlockguild: bool;
+    achievement_firstquest: bool;
+    achievement_drinkpotion: bool;
+    achievement_tenquests: bool;
+    achievement_rankupe: bool;
+    masteryUpgradedThisReset: bool;
+    castSpeedUsedThisCondense: bool;
     courageUnlocked: bool;
     hasCondensed: bool;
+    guildUnlocked: bool;
+    guildMember: bool;
 }
 
 export const HANDLES: PlayerHandles = {
@@ -98,7 +128,8 @@ export const HANDLES: PlayerHandles = {
     statistics_condenses: createZero(),
     statistics_timeThisCondense: createZero(),
     statistics_fastestCondense: createZero(),
-    infinity_break_index: createZero(),
+    statistics_questsCompleted: createZero(),
+    mana_circle_tier: createZero(),
     multiplier_currencyGlobal: createDecimal(1, 0, 1),
     multiplier_timePlayedAchievement: createDecimal(1, 0, 1),
     multiplier_tierOnePerPurchase: createDecimal(1, 0, 2),
@@ -151,6 +182,21 @@ export const HANDLES: PlayerHandles = {
     courageCooldown: createZero(),
     courageMultiplier: createDecimal(1, 0, 10),
     condensedMana: createZero(),
+    coins: createZero(),
+    guildRank: createZero(),
+    activeQuest: createDecimal(-1, 0, 1),
+    wolfineHealth: createZero(),
+    combatShield: createZero(),
+    combatShieldMaximum: createZero(),
+    combatFreezeTurns: createZero(),
+    fireballCost: createDecimal(1, 1, 210),
+    whirlwindCost: createDecimal(1, 1, 230),
+    freezeCost: createDecimal(1, 1, 250),
+    inventoryWolfFur: createZero(),
+    inventoryPotionOfSpeed: createZero(),
+    inventoryWolfFurPosition: createDecimal(-1, 0, 1),
+    inventoryPotionPosition: createDecimal(-1, 0, 1),
+    potionSpeedTimer: createZero(),
 };
 
 /** [WASM] */
@@ -164,7 +210,8 @@ export const player: Player = {
     statistics_condenses: 0,
     statistics_timeThisCondense: 0,
     statistics_fastestCondense: 0,
-    infinity_break_index: 0,
+    statistics_questsCompleted: 0,
+    mana_circle_tier: 0,
     multiplier_currencyGlobal: 0,
     multiplier_timePlayedAchievement: 0,
     multiplier_tierOnePerPurchase: 0,
@@ -217,6 +264,21 @@ export const player: Player = {
     courageCooldown: 0,
     courageMultiplier: 0,
     condensedMana: 0,
+    coins: 0,
+    guildRank: 0,
+    activeQuest: 0,
+    wolfineHealth: 0,
+    combatShield: 0,
+    combatShieldMaximum: 0,
+    combatFreezeTurns: 0,
+    fireballCost: 0,
+    whirlwindCost: 0,
+    freezeCost: 0,
+    inventoryWolfFur: 0,
+    inventoryPotionOfSpeed: 0,
+    inventoryWolfFurPosition: 0,
+    inventoryPotionPosition: 0,
+    potionSpeedTimer: 0,
     achievement_buymanaconduit: false,
     achievement_buyconduitconjugation: false,
     achievement_buyconjugationcreation: false,
@@ -237,8 +299,22 @@ export const player: Player = {
     achievement_noendgame: false,
     achievement_supercondensed: false,
     achievement_empowertwice: false,
+    achievement_matrixmanipulation: false,
+    achievement_unnecessary: false,
+    achievement_timeforthefunpart: false,
+    achievement_allcondensedupgrades: false,
+    achievement_newhorizons: false,
+    achievement_unlockguild: false,
+    achievement_firstquest: false,
+    achievement_drinkpotion: false,
+    achievement_tenquests: false,
+    achievement_rankupe: false,
+    masteryUpgradedThisReset: false,
+    castSpeedUsedThisCondense: false,
     courageUnlocked: false,
     hasCondensed: false,
+    guildUnlocked: false,
+    guildMember: false,
 };
 
 export function initializeCoreHandles(
@@ -256,7 +332,7 @@ export function initializeCoreHandles(
     player.statistics_totalManaProduced = totalManaProduced;
     player.statistics_totalTimePlayed = totalTimePlayed;
     player.statistics_totalClicks = totalClicks;
-    player.infinity_break_index = infinityBreakIndex;
+    player.mana_circle_tier = infinityBreakIndex;
     player.multiplier_currencyGlobal = globalMultiplier;
     player.multiplier_timePlayedAchievement = timePlayedMultiplier;
     player.multiplier_tierOnePerPurchase = tierOnePerPurchase;
@@ -273,6 +349,10 @@ export function initializeCondensedStatisticHandles(
     player.statistics_condenses = condenses;
     player.statistics_timeThisCondense = timeThisCondense;
     player.statistics_fastestCondense = fastestCondense;
+}
+
+export function initializeGuildStatisticHandles(questsCompleted: i32): void {
+    player.statistics_questsCompleted = questsCompleted;
 }
 
 export function initializeTierOneHandles(
@@ -351,6 +431,28 @@ export function initializeCondensedManaHandle(condensedMana: i32): void {
     player.condensedMana = condensedMana;
 }
 
+export function initializeGuildHandles(
+    coins: i32, rank: i32, activeQuest: i32, wolfineHealth: i32, shield: i32, shieldMaximum: i32, freezeTurns: i32,
+    fireballCost: i32, whirlwindCost: i32, freezeCost: i32,
+    wolfFur: i32, potionOfSpeed: i32, wolfFurPosition: i32, potionPosition: i32, potionSpeedTimer: i32,
+): void {
+    player.coins = coins;
+    player.guildRank = rank;
+    player.activeQuest = activeQuest;
+    player.wolfineHealth = wolfineHealth;
+    player.combatShield = shield;
+    player.combatShieldMaximum = shieldMaximum;
+    player.combatFreezeTurns = freezeTurns;
+    player.fireballCost = fireballCost;
+    player.whirlwindCost = whirlwindCost;
+    player.freezeCost = freezeCost;
+    player.inventoryWolfFur = wolfFur;
+    player.inventoryPotionOfSpeed = potionOfSpeed;
+    player.inventoryWolfFurPosition = wolfFurPosition;
+    player.inventoryPotionPosition = potionPosition;
+    player.potionSpeedTimer = potionSpeedTimer;
+}
+
 /** [/WASM] */
 
 initializeCoreHandles(
@@ -358,7 +460,7 @@ initializeCoreHandles(
     HANDLES.statistics_totalManaProduced,
     HANDLES.statistics_totalTimePlayed,
     HANDLES.statistics_totalClicks,
-    HANDLES.infinity_break_index,
+    HANDLES.mana_circle_tier,
     HANDLES.multiplier_currencyGlobal,
     HANDLES.multiplier_timePlayedAchievement,
     HANDLES.multiplier_tierOnePerPurchase,
@@ -370,6 +472,7 @@ initializeCondensedStatisticHandles(
     HANDLES.statistics_timeThisCondense,
     HANDLES.statistics_fastestCondense,
 );
+initializeGuildStatisticHandles(HANDLES.statistics_questsCompleted);
 initializeTierOneHandles(
     HANDLES.count_manaConduit, HANDLES.count_conduitConjugation, HANDLES.count_conjugationCreation,
     HANDLES.count_creationManufactory, HANDLES.count_manufactureStaff,
@@ -396,3 +499,9 @@ initializeEmpowermentHandles(
 );
 initializeCourageHandles(HANDLES.courageTimer, HANDLES.courageCooldown, HANDLES.courageMultiplier);
 initializeCondensedManaHandle(HANDLES.condensedMana);
+initializeGuildHandles(
+    HANDLES.coins, HANDLES.guildRank, HANDLES.activeQuest, HANDLES.wolfineHealth, HANDLES.combatShield, HANDLES.combatShieldMaximum, HANDLES.combatFreezeTurns,
+    HANDLES.fireballCost, HANDLES.whirlwindCost, HANDLES.freezeCost,
+    HANDLES.inventoryWolfFur, HANDLES.inventoryPotionOfSpeed,
+    HANDLES.inventoryWolfFurPosition, HANDLES.inventoryPotionPosition, HANDLES.potionSpeedTimer,
+);

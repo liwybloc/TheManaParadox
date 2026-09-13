@@ -1,6 +1,6 @@
-import { addUS, divInto, gt, gte, log10Into, mulUS, reachesLayerBoundary, writeDecimal, writeNumber } from "./break_eternity.js";
-import type { Player } from "./player.js";
-import type { Scratch } from "./scratch.js";
+import { addUS, divInto, gt, gte, log10Into, mulUS, reachesLayerBoundary, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 
 export const ACHIEVEMENTS = [
     { id: "achievement_buymanaconduit", number: 1, title: "Something feels.. familiar", description: "Purchase a Mana Conduit.", reward: "+1% mana production" },
@@ -15,14 +15,32 @@ export const ACHIEVEMENTS = [
     { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Cast Speed time.", reward: "Cast Speed time is increased by 5 seconds per purchase" },
     { id: "achievement_centennial", number: 11, title: "Centennial", description: "Reach 1.00e100 Mana.", reward: "Increase per-purchase multiplier by +0.1×" },
     { id: "achievement_circularhabits", number: 12, title: "Circular Habits", description: "Reach the limit of your mana circle." },
-    { id: "achievement_difficulty", number: 13, title: "I think this is called difficulty", description: "Reach the limit of your mana circle without any Crystal Matrices." },
+    { id: "achievement_difficulty", number: 13, title: "I think this is called difficulty", description: "Reach the limit of your mana circle without any Crystal Matrices.", reward: "Increase Crystal Matrix effect by +0.1×", category: "challenge" },
     { id: "achievement_realnews", number: 14, title: "REAL NEWS!", description: "View 50 different ticker messages." },
     { id: "achievement_clicker", number: 15, title: "Clicker!", description: "Click over 1,000 times.", reward: "Carpel tunnel" },
-    { id: "achievement_lightning", number: 16, title: "Lightning", description: "Condense in under 30 minutes.", reward: "Each tier 1 producer gains a production bonus based on its tier, from +1% to +5%." },
+    { id: "achievement_lightning", number: 16, title: "Lightning", description: "Condense in under 1 minute.", reward: "Each tier 1 producer gains a production bonus based on its tier, from +1% to +5%.", category: "challenge" },
     { id: "achievement_pleasedosleep", number: 17, title: "Please do sleep", description: "Be offline for more than an hour." },
-    { id: "achievement_noendgame", number: 18, title: "I don't believe in the Endgame", description: "Condense without bolstering.", reward: "Bolstering is 5× stronger" },
+    { id: "achievement_noendgame", number: 18, title: "I don't believe in the Endgame", description: "Condense without bolstering.", reward: "Bolstering is 5× stronger", category: "challenge" },
     { id: "achievement_supercondensed", number: 19, title: "Super-Condensed", description: "Condense 50 times." },
     { id: "achievement_empowertwice", number: 20, title: "Wait, you can get 2 of these?!", description: "Empower any producer twice." },
+    { id: "achievement_matrixmanipulation", number: 21, title: "Matrix Manipulation", description: "Conjure a Crystal Matrix without upgrading mastery.", category: "challenge" },
+    { id: "achievement_unnecessary", number: 22, title: "Unnecessary", description: "Condense without casting speed.", category: "challenge" },
+    { id: "achievement_timeforthefunpart", number: 23, title: "Time for the fun part", description: "Reach 10 condensed mana." },
+    { id: "achievement_allcondensedupgrades", number: 24, title: "Is this the end of the game?", description: "Purchase every condensed upgrade." },
+    { id: "achievement_newhorizons", number: 25, title: "LilysMana: New Horizons", description: "Expand your mana circle." },
+    { id: "achievement_unlockguild", number: 26, title: "I should've related these two!", description: "Unlock the Guild." },
+    { id: "achievement_firstquest", number: 27, title: "That was a battle! Literally", description: "Complete your first quest." },
+    { id: "achievement_drinkpotion", number: 28, title: "It's bitter!", description: "Drink a potion." },
+    { id: "achievement_tenquests", number: 29, title: "Will I rank up?", description: "Complete 10 quests." },
+    { id: "achievement_rankupe", number: 30, title: "Yes you will!", description: "Rank up to E tier." },
+];
+
+export const PROGRESSION_ACHIEVEMENT_ORDER = [
+    1, 2, 3, 4, 5,
+    14, 15, 9, 10, 20,
+    11, 7, 26, 27, 28,
+    29, 30, 12, 17, 6,
+    8, 19, 23, 24, 25,
 ];
 
 declare const player: Player;
@@ -55,11 +73,22 @@ export function hasTierOneAchievement(index: i32): bool {
         case 17: return player.achievement_noendgame;
         case 18: return player.achievement_supercondensed;
         case 19: return player.achievement_empowertwice;
+        case 20: return player.achievement_matrixmanipulation;
+        case 21: return player.achievement_unnecessary;
+        case 22: return player.achievement_timeforthefunpart;
+        case 23: return player.achievement_allcondensedupgrades;
+        case 24: return player.achievement_newhorizons;
+        case 25: return player.achievement_unlockguild;
+        case 26: return player.achievement_firstquest;
+        case 27: return player.achievement_drinkpotion;
+        case 28: return player.achievement_tenquests;
+        case 29: return player.achievement_rankupe;
         default: return false;
     }
 }
 
 export function setTierOneAchievement(index: i32, unlocked: bool): void {
+    const previous = hasTierOneAchievement(index);
     switch (index) {
         case 0: player.achievement_buymanaconduit = unlocked; break;
         case 1: player.achievement_buyconduitconjugation = unlocked; break;
@@ -81,15 +110,32 @@ export function setTierOneAchievement(index: i32, unlocked: bool): void {
         case 17: player.achievement_noendgame = unlocked; break;
         case 18: player.achievement_supercondensed = unlocked; break;
         case 19: player.achievement_empowertwice = unlocked; break;
+        case 20: player.achievement_matrixmanipulation = unlocked; break;
+        case 21: player.achievement_unnecessary = unlocked; break;
+        case 22: player.achievement_timeforthefunpart = unlocked; break;
+        case 23: player.achievement_allcondensedupgrades = unlocked; break;
+        case 24: player.achievement_newhorizons = unlocked; break;
+        case 25: player.achievement_unlockguild = unlocked; break;
+        case 26: player.achievement_firstquest = unlocked; break;
+        case 27: player.achievement_drinkpotion = unlocked; break;
+        case 28: player.achievement_tenquests = unlocked; break;
+        case 29: player.achievement_rankupe = unlocked; break;
     }
+    if (previous !== unlocked) achievementRevision++;
     refreshAchievementRewards();
+}
+
+let achievementRevision: i32 = 0;
+
+export function getAchievementRevision(): i32 {
+    return achievementRevision;
 }
 
 export function unlockTierOneAchievement(index: i32): bool {
     let changed = false;
     if (!hasTierOneAchievement(index)) {
         setTierOneAchievement(index, true);
-        if (index === 10) tierOneRewardsChanged = true;
+        if (index === 10 || index === 12) tierOneRewardsChanged = true;
         changed = true;
     }
     if (index === 4 && gte(player.count_manufactureStaff, 12) && !hasTierOneAchievement(7)) {

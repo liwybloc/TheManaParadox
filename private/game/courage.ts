@@ -1,7 +1,7 @@
-import { addUS, gt, gte, log10Into, mulUS, subUS, toNumber, writeDecimal, writeNumber } from "./break_eternity.js";
+import { addUS, gt, gte, log10Into, mulUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { hasCondensedUpgrade } from "./condensed.js";
-import type { Player } from "./player.js";
-import type { Scratch } from "./scratch.js";
+import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 
 declare const player: Player;
 declare const scratch: Scratch;

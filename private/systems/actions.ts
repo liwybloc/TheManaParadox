@@ -1,4 +1,4 @@
-import { namedWasm } from "../generated/_wasm$globals.js";
+import { namedWasm } from "../../generated/_wasm$globals.js";
 import { resetForCondense, saveGame } from "./save.js";
 
 type CondenseListener = () => void;
@@ -9,7 +9,7 @@ export function condense(): boolean {
     if (!namedWasm.calculateCondenseGain()) return false;
     resetForCondense();
     namedWasm.completeCondense();
-    saveGame();
+    void saveGame();
     for (const listener of condenseListeners) listener();
     return true;
 }

@@ -1,9 +1,9 @@
-import { writeNumber, readString } from "./break_eternity.js";
-import { CONDENSED_UPGRADE_COUNT, setCondensedUpgrade } from "./condensed.js";
-import { clampManaToInfinityBoundary } from "./currencies.js";
-import { HANDLES } from "./player.js";
-import { refreshMasteryDerivedState, refreshMatrixDerivedState } from "./progression.js";
-import { refreshTierOneDerivedState } from "./tier_one.js";
+import { writeNumber, readString } from "../core/break_eternity.js";
+import { CONDENSED_UPGRADE_COUNT, setCondensedUpgrade } from "../game/condensed.js";
+import { clampManaToInfinityBoundary } from "../game/currencies.js";
+import { HANDLES } from "../core/player.js";
+import { refreshMasteryDerivedState, refreshMatrixDerivedState } from "../game/progression.js";
+import { refreshTierOneDerivedState } from "../game/tier_one.js";
 
 (globalThis as any).readValue = (value: keyof typeof HANDLES) => {
     return readString(HANDLES[value] ?? HANDLES.mana);

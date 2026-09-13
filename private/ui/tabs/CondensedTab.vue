@@ -22,17 +22,16 @@ function resolvePlaceholders(text) {
             <button
                 v-for="upgrade in upgrades"
                 :key="upgrade.index"
+                v-show="upgrade.visible"
                 type="button"
-                :class="{ purchased: upgrade.purchased && !upgrade.repeatable, repeatable: upgrade.repeatable }"
+                :class="{ purchased: upgrade.purchased }"
                 :style="{ gridColumn: upgrade.slot % 5 + 1, gridRow: Math.floor(upgrade.slot / 5) + 1 }"
                 :disabled="!upgrade.affordable"
                 @click="$emit('buy', upgrade.index)"
             >
                 <strong>{{ resolvePlaceholders(upgrade.title) }}</strong>
-                <span v-if="upgrade.repeatable">Currently: x{{ upgrade.effect }}</span>
-                <small>{{ upgrade.purchased && !upgrade.repeatable ? "Purchased" : `Cost: ${upgrade.cost} condensed mana` }}</small>
+                <small>{{ upgrade.purchased ? "Purchased" : `Cost: ${upgrade.cost} condensed mana` }}</small>
             </button>
         </div>
-        <div v-else-if="activeSubtab === 'expand-mana-circle'"></div>
     </section>
 </template>

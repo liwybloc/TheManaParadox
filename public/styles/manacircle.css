@@ -1,0 +1,717 @@
+.mana-stage {
+  width: 100%;
+  min-height: 500px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  position: relative;
+  overflow: visible;
+}
+
+
+/* =========================================================
+   BASE MANA CIRCLE
+   ========================================================= */
+
+.mana-circle {
+  --mana-color: #9d4edd;
+  --mana-bright: #d6a4ff;
+  --mana-dark: #3c096c;
+  --size: 120px;
+
+  position: relative;
+
+  width: var(--size);
+  height: var(--size);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 2px solid var(--mana-color);
+  border-radius: 50%;
+
+  color: var(--mana-bright);
+
+  box-shadow:
+    0 0 10px var(--mana-color),
+    0 0 25px var(--mana-color),
+    inset 0 0 20px var(--mana-dark);
+
+  transition:
+    width 0.5s ease,
+    height 0.5s ease,
+    border-color 0.5s ease,
+    box-shadow 0.5s ease;
+
+  animation: circlePulse 2.2s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   CIRCLE 1
+   PURPLE
+   ========================================================= */
+
+.mana-0 {
+  --size: 120px;
+
+  --mana-color: #7b2cbf;
+  --mana-bright: #d8b4fe;
+  --mana-dark: #240046;
+}
+
+
+/* =========================================================
+   CIRCLE 2
+   PURPLE-BLUE
+   ========================================================= */
+
+.mana-1 {
+  --size: 155px;
+
+  --mana-color: #6366f1;
+  --mana-bright: #a5b4fc;
+  --mana-dark: #312e81;
+}
+
+
+/* =========================================================
+   CIRCLE 3
+   BRIGHT BLUE
+   ========================================================= */
+
+.mana-2 {
+  --size: 195px;
+
+  --mana-color: #00b4d8;
+  --mana-bright: #90e0ef;
+  --mana-dark: #023e8a;
+
+  box-shadow:
+    0 0 12px var(--mana-color),
+    0 0 32px rgba(0, 180, 216, 0.7),
+    0 0 60px rgba(0, 180, 216, 0.35),
+    inset 0 0 25px var(--mana-dark);
+}
+
+
+/* =========================================================
+   CIRCLE 4
+   DEEP ARCANE BLUE
+   ========================================================= */
+
+.mana-3 {
+  --size: 235px;
+
+  --mana-color: #0077ff;
+  --mana-bright: #7dd3fc;
+  --mana-dark: #001d6e;
+
+  border-width: 2px;
+
+  box-shadow:
+    0 0 16px var(--mana-color),
+    0 0 42px rgba(0, 119, 255, 0.8),
+    0 0 80px rgba(0, 119, 255, 0.4),
+    inset 0 0 30px var(--mana-dark);
+}
+
+
+/* =========================================================
+   CIRCLE 5
+   CRIMSON
+   ========================================================= */
+
+.mana-4 {
+  --size: 280px;
+
+  --mana-color: #d90429;
+  --mana-bright: #ff758f;
+  --mana-dark: #590d22;
+
+  border-width: 3px;
+
+  box-shadow:
+    0 0 18px var(--mana-color),
+    0 0 48px rgba(217, 4, 41, 0.85),
+    0 0 95px rgba(217, 4, 41, 0.4),
+    inset 0 0 35px var(--mana-dark);
+}
+
+
+/* =========================================================
+   CIRCLE 6
+   DEEP RED
+   ========================================================= */
+
+.mana-5 {
+  --size: 330px;
+
+  --mana-color: #ff001f;
+  --mana-bright: #ff8fa3;
+  --mana-dark: #60000d;
+
+  border-width: 3px;
+
+  box-shadow:
+    0 0 20px #ff001f,
+    0 0 60px rgba(255, 0, 31, 0.9),
+    0 0 115px rgba(180, 0, 25, 0.5),
+    inset 0 0 42px #60000d;
+
+  animation:
+    circlePulse 1.2s ease-in-out infinite,
+    unstable 0.14s linear infinite;
+}
+
+
+/* =========================================================
+   CIRCLE 7
+   WHITE / TRANSCENDENT
+   ========================================================= */
+
+.mana-6 {
+  --size: 390px;
+
+  --mana-color: #ffffff;
+  --mana-bright: #ffffff;
+  --mana-dark: #bae6fd;
+
+  border-width: 4px;
+
+  box-shadow:
+    0 0 14px rgba(255, 255, 255, 0.95),
+    0 0 40px rgba(255, 255, 255, 0.9),
+    0 0 85px rgba(186, 230, 253, 0.75),
+    0 0 145px rgba(255, 255, 255, 0.4),
+    inset 0 0 55px rgba(255, 255, 255, 0.9);
+
+  animation: divinePulse 0.9s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   OUTER GLOW
+   ========================================================= */
+
+.outer-glow {
+  position: absolute;
+
+  inset: -8%;
+
+  border-radius: 50%;
+
+  border: 1px solid var(--mana-color);
+
+  opacity: 0.25;
+
+  box-shadow:
+    0 0 20px var(--mana-color),
+    inset 0 0 20px var(--mana-color);
+
+  animation: outerGlowPulse 2.4s ease-in-out infinite;
+}
+
+
+/* =========================================================
+   RINGS
+   ========================================================= */
+
+.ring {
+  position: absolute;
+
+  border-radius: 50%;
+
+  border: 1px solid var(--mana-color);
+
+  pointer-events: none;
+}
+
+
+.ring-1 {
+  width: 82%;
+  height: 82%;
+
+  border-style: dashed;
+
+  opacity: 0.9;
+
+  animation: rotate 9s linear infinite;
+}
+
+
+.ring-2 {
+  width: 62%;
+  height: 62%;
+
+  border-width: 2px;
+
+  opacity: 0.65;
+
+  animation: rotateReverse 5s linear infinite;
+}
+
+
+.ring-3 {
+  width: 42%;
+  height: 42%;
+
+  border-style: dotted;
+
+  opacity: 0.6;
+
+  animation: rotate 2.8s linear infinite;
+}
+
+
+/* Lower circles start simpler */
+
+.mana-0 .ring-3 {
+  display: none;
+}
+
+.mana-0 .ring-2 {
+  opacity: 0.35;
+}
+
+.mana-1 .ring-3 {
+  opacity: 0.25;
+}
+
+
+/* Higher circles have glowing rings */
+
+.mana-3 .ring,
+.mana-4 .ring,
+.mana-5 .ring,
+.mana-6 .ring {
+  box-shadow:
+    0 0 8px var(--mana-color),
+    inset 0 0 8px var(--mana-color);
+}
+
+
+/* =========================================================
+   RUNES
+   ========================================================= */
+
+.runes {
+  position: absolute;
+
+  inset: 0;
+
+  border-radius: 50%;
+
+  animation: rotate 16s linear infinite;
+
+  pointer-events: none;
+}
+
+
+.runes span {
+  position: absolute;
+
+  left: 50%;
+  top: 50%;
+
+  font-size: clamp(8px, calc(var(--size) * 0.045), 16px);
+
+  transform:
+    rotate(calc(var(--i) * 30deg))
+    translateY(calc(var(--size) * -0.42))
+    rotate(calc(var(--i) * -30deg));
+
+  transform-origin: 0 0;
+
+  color: var(--mana-bright);
+
+  text-shadow:
+    0 0 5px var(--mana-bright),
+    0 0 12px var(--mana-color);
+}
+
+
+/* Progressive rune visibility */
+
+.mana-0 .runes {
+  opacity: 0.15;
+}
+
+.mana-1 .runes {
+  opacity: 0.35;
+}
+
+.mana-2 .runes {
+  opacity: 0.55;
+}
+
+.mana-3 .runes {
+  opacity: 0.75;
+}
+
+.mana-4 .runes,
+.mana-5 .runes,
+.mana-6 .runes {
+  opacity: 1;
+}
+
+
+/* =========================================================
+   ENERGY ORBITS
+   ========================================================= */
+
+.energy-orbit {
+  position: absolute;
+
+  border-radius: 50%;
+
+  border: 2px solid transparent;
+
+  pointer-events: none;
+
+  filter:
+    drop-shadow(0 0 4px var(--mana-color))
+    drop-shadow(0 0 9px var(--mana-color));
+}
+
+
+.orbit-1 {
+  width: 108%;
+  height: 70%;
+
+  border-top-color: var(--mana-bright);
+  border-bottom-color: var(--mana-color);
+
+  animation: orbitOne 3s linear infinite;
+}
+
+
+.orbit-2 {
+  width: 70%;
+  height: 108%;
+
+  border-left-color: var(--mana-bright);
+  border-right-color: var(--mana-color);
+
+  animation: orbitTwo 4.5s linear infinite;
+}
+
+
+/* Simplify lower circles */
+
+.mana-0 .energy-orbit {
+  display: none;
+}
+
+.mana-1 .orbit-2 {
+  display: none;
+}
+
+.mana-1 .orbit-1 {
+  opacity: 0.35;
+}
+
+
+/* =========================================================
+   CORE
+   ========================================================= */
+
+.mana-core {
+  position: absolute;
+
+  width: 27%;
+  height: 27%;
+
+  border-radius: 50%;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background:
+    radial-gradient(
+      circle,
+      rgba(255, 255, 255, 1) 0%,
+      var(--mana-bright) 20%,
+      var(--mana-color) 48%,
+      transparent 72%
+    );
+
+  box-shadow:
+    0 0 8px white,
+    0 0 18px var(--mana-color),
+    0 0 35px var(--mana-color);
+
+  animation: corePulse 1.3s ease-in-out infinite;
+}
+
+
+.core-inner {
+  width: 34%;
+  height: 34%;
+
+  border-radius: 50%;
+
+  background: #ffffff;
+
+  box-shadow:
+    0 0 8px #ffffff,
+    0 0 18px #ffffff;
+}
+
+
+/* =========================================================
+   NUMBER
+   ========================================================= */
+
+.mana-number {
+  position: relative;
+
+  z-index: 20;
+
+  font-size: clamp(15px, calc(var(--size) * 0.075), 27px);
+
+  font-weight: 700;
+
+  line-height: 1;
+
+  color: #ffffff;
+
+  pointer-events: none;
+
+  text-shadow:
+    0 0 8px #000000,
+    0 0 10px var(--mana-color),
+    0 0 18px var(--mana-color);
+}
+
+
+/* =========================================================
+   CIRCLE 5+ ENERGY FIELD
+   ========================================================= */
+
+.mana-4::before,
+.mana-5::before,
+.mana-6::before {
+  content: "";
+
+  position: absolute;
+
+  inset: -11%;
+
+  border-radius: 50%;
+
+  background:
+    conic-gradient(
+      from 0deg,
+      transparent 0deg,
+      var(--mana-color) 35deg,
+      transparent 70deg,
+      var(--mana-bright) 120deg,
+      transparent 160deg,
+      var(--mana-color) 220deg,
+      transparent 270deg,
+      var(--mana-bright) 315deg,
+      transparent 360deg
+    );
+
+  opacity: 0.18;
+
+  filter: blur(7px);
+
+  animation: rotate 3.5s linear infinite;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   CIRCLE 6 CHAOS FIELD
+   ========================================================= */
+
+.mana-5::after {
+  content: "";
+
+  position: absolute;
+
+  inset: -14%;
+
+  border-radius: 50%;
+
+  background:
+    repeating-conic-gradient(
+      transparent 0deg 11deg,
+      rgba(255, 20, 45, 0.28) 12deg 13deg,
+      transparent 14deg 24deg
+    );
+
+  opacity: 0.7;
+
+  animation: rotateReverse 6s linear infinite;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   CIRCLE 7 DIVINE SHOCKWAVE
+   ========================================================= */
+
+.mana-6::after {
+  content: "";
+
+  position: absolute;
+
+  inset: -16%;
+
+  border-radius: 50%;
+
+  border: 2px solid rgba(255, 255, 255, 0.7);
+
+  box-shadow:
+    0 0 20px rgba(255, 255, 255, 0.8),
+    inset 0 0 20px rgba(255, 255, 255, 0.5);
+
+  animation: divineShockwave 1.8s ease-out infinite;
+
+  pointer-events: none;
+}
+
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+@keyframes rotateReverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+
+@keyframes orbitOne {
+  from {
+    transform: rotateX(66deg) rotateZ(0deg);
+  }
+
+  to {
+    transform: rotateX(66deg) rotateZ(360deg);
+  }
+}
+
+
+@keyframes orbitTwo {
+  from {
+    transform: rotateY(66deg) rotateZ(0deg);
+  }
+
+  to {
+    transform: rotateY(66deg) rotateZ(-360deg);
+  }
+}
+
+
+@keyframes circlePulse {
+  0%,
+  100% {
+    filter: brightness(0.95);
+  }
+
+  50% {
+    filter: brightness(1.25);
+  }
+}
+
+
+@keyframes outerGlowPulse {
+  0%,
+  100% {
+    opacity: 0.15;
+    transform: scale(0.98);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(1.03);
+  }
+}
+
+
+@keyframes corePulse {
+  0%,
+  100% {
+    transform: scale(0.88);
+    opacity: 0.85;
+  }
+
+  50% {
+    transform: scale(1.15);
+    opacity: 1;
+  }
+}
+
+
+@keyframes unstable {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(0.5px, -0.5px);
+  }
+
+  50% {
+    transform: translate(-0.5px, 0.5px);
+  }
+
+  75% {
+    transform: translate(0.5px, 0.5px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+
+@keyframes divinePulse {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(1.55);
+  }
+}
+
+
+@keyframes divineShockwave {
+  0% {
+    transform: scale(0.78);
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: scale(1.28);
+    opacity: 0;
+  }
+}

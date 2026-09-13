@@ -1,6 +1,6 @@
 <script setup>
 import { onBeforeUnmount, ref } from "vue";
-import { displayKey, getKeybinds, KEYBIND_DEFINITIONS, resetKeybinds, setKeybind, subscribeToKeybinds } from "@game/keybinds.js";
+import { displayKey, getKeybinds, KEYBIND_DEFINITIONS, resetKeybinds, setKeybind, subscribeToKeybinds } from "@game/systems/keybinds.js";
 
 defineEmits(["close"]);
 

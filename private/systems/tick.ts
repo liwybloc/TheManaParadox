@@ -1,11 +1,12 @@
-import { gt, lte, mulUS, multiplyInto, subUS, writeNumber } from "./break_eternity.js";
-import { consumeTierOneRewardsChanged } from "./achievements.js";
-import { updateCourage } from "./courage.js";
-import { addPlayerTime, gainCurrency } from "./currencies.js";
-import { HANDLES } from "./player.js";
-import { resetCastSpeed } from "./progression.js";
-import { SCRATCH_HANDLES } from "./scratch.js";
-import { refreshTierOneDerivedState } from "./tier_one.js";
+import { gt, lte, mulUS, multiplyInto, subUS, toNumber, writeNumber } from "../core/break_eternity.js";
+import { consumeTierOneRewardsChanged } from "../game/achievements.js";
+import { updateCourage } from "../game/courage.js";
+import { addPlayerTime, gainCurrency } from "../game/currencies.js";
+import { getGameSpeed, isQuestActive, updatePotionEffects, updateQuestBoard } from "../guild/guild.js";
+import { HANDLES } from "../core/player.js";
+import { refreshMasteryDerivedState, refreshMatrixDerivedState, resetCastSpeed } from "../game/progression.js";
+import { SCRATCH_HANDLES } from "../core/scratch.js";
+import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { PerformanceStats } from "./performance-stats.js";
 
 // Hello Scarlet, what do you want?
@@ -41,7 +42,7 @@ let modifierHandle: i32 = 0;
 let castSpeedTimerHandle: i32 = 0;
 let castSpeedMagnitudeHandle: i32 = 0;
 let castSpeedCostHandle: i32 = 0;
-let courageMultiplierHandle: i32 = 0;
+let manaCurrencyHandle: i32 = 0;
 
 const modifierScope = new StaticArray<i32>(MAX_MODIFIERS);
 const modifierTarget = new StaticArray<i32>(MAX_MODIFIERS);
@@ -67,7 +68,7 @@ export function initializeTick(
     speedTimerHandle: i32,
     speedMagnitudeHandle: i32,
     speedCostHandle: i32,
-    courageMultiplier: i32,
+    manaCurrency: i32,
 ): void {
     secondsHandle = tickSecondsHandle;
     productionHandle = tickProductionHandle;
@@ -75,7 +76,7 @@ export function initializeTick(
     castSpeedTimerHandle = speedTimerHandle;
     castSpeedMagnitudeHandle = speedMagnitudeHandle;
     castSpeedCostHandle = speedCostHandle;
-    courageMultiplierHandle = courageMultiplier;
+    manaCurrencyHandle = manaCurrency;
     initializeModifierCaches();
 }
 
@@ -142,14 +143,15 @@ export function speedMultiplierFor(entity: i32): f64 {
 function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
     if (countTimePlayed) addPlayerTime(secondsHandle);
-    const courageActive = updateCourage(secondsHandle);
+    updateCourage(secondsHandle);
     applyCastSpeed();
+    mulUS(secondsHandle, getGameSpeed());
     for (let entity: i32 = 0; entity < productionEntityCount; entity++) {
+        if (isQuestActive() && entityDestinationHandle[entity] === manaCurrencyHandle) continue;
         multiplyInto(productionHandle, entityAmountHandle[entity], secondsHandle);
         mulUS(mulUS(productionHandle, entityBaseProductionHandle[entity]), entityBaseMultiplierHandle[entity]);
         writeNumber(modifierHandle, productionMultiplierFor(entity) * speedMultiplierFor(entity));
         mulUS(productionHandle, modifierHandle);
-        if (courageActive) mulUS(productionHandle, courageMultiplierHandle);
         gainCurrency(entityDestinationHandle[entity], productionHandle);
     }
 }
@@ -241,8 +243,16 @@ function calculateModifier(scope: i32, target: i32, type: i32): f64 {
 }
 
 export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
+    writeNumber(secondsHandle, deltaMilliseconds / 1000);
+    updatePotionEffects(secondsHandle);
+    updateQuestBoard(deltaMilliseconds / 1000);
     tickProduction(deltaMilliseconds, countTimePlayed);
-    if (consumeTierOneRewardsChanged()) refreshTierOneDerivedState();
+    if (consumeTierOneRewardsChanged()) {
+        refreshMasteryDerivedState();
+        refreshMatrixDerivedState();
+        refreshMasteryDerivedState();
+        refreshTierOneDerivedState();
+    }
 }
 
 export function simulateTicks(durationMilliseconds: f64, stepMilliseconds: f64, countTimePlayed: bool): void {
@@ -264,7 +274,7 @@ initializeTick(
     HANDLES.castSpeedTimer,
     HANDLES.castSpeedMagnitude,
     HANDLES.castSpeedCost,
-    HANDLES.courageMultiplier,
+    HANDLES.mana,
 );
 
 registerProductionEntity(

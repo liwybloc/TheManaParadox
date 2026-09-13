@@ -1,0 +1,58 @@
+export const TABS = [
+    {
+        id: "mana",
+        label: "Mana",
+        icon: "✦",
+        subtabs: [{ id: "basic-spells", label: "Basic Spells" }],
+    },
+    {
+        id: "condensed",
+        label: "Condensed",
+        icon: "◆",
+        requiresCondensed: true,
+        subtabs: [
+            { id: "condensed-upgrades", label: "Condensed Upgrades" },
+        ],
+    },
+    {
+        id: "manacircle",
+        label: "Mana Circles",
+        icon: "⭕",
+        requiresCondensed: true,
+        subtabs: [
+            { id: "current-mana-circle", label: "Current Mana Circle" },
+        ],
+    },
+    {
+        id: "guild",
+        label: "Guild",
+        icon: "⚔",
+        requiresGuild: true,
+        subtabs: [
+            { id: "guild-main", label: "Board" },
+            { id: "guild-inventory", label: "Inventory" },
+            { id: "guild-shop", label: "Shop" },
+            { id: "guild-ascension-hall", label: "Ascension Hall", requiresAscensionHall: true },
+        ],
+    },
+    { id: "quest", label: "Quest", icon: "🐺", requiresQuest: true },
+    {
+        id: "achievements",
+        label: "Achievements",
+        icon: "★",
+        subtabs: [
+            { id: "basic-achievements", label: "Progression" },
+            { id: "challenge-achievements", label: "Challenges" },
+        ]
+    },
+    { id: "statistics", label: "Statistics", icon: "▤" },
+    {
+        id: "options",
+        label: "Options",
+        icon: "⚙",
+        subtabs: [
+            { id: "general", label: "General" },
+            { id: "visuals", label: "Visuals" },
+        ],
+    },
+];

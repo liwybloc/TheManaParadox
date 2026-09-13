@@ -13,16 +13,17 @@ import {
     passesLayerBoundary,
     pow10Into,
     powInto,
+    powUS,
     subInto,
     subUS,
     toNumber,
     writeDecimal,
     writeNumber,
-} from "./break_eternity.js";
+} from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasCondensedUpgrade } from "./condensed.js";
-import type { Player } from "./player.js";
-import type { Scratch } from "./scratch.js";
+import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 
 declare const player: Player;
 declare const scratch: Scratch;
@@ -34,11 +35,13 @@ export const TIER_ONE_COUNT: i32 = 5;
 // Effect = baseMultiplier * growthBase ^ ((log10(conduits) - startExponent) / exponentInterval)
 // Next requirement = requirementMargin * 10 ^ (startExponent + exponentInterval * log_growthBase(currentEffect / baseMultiplier))
 const BOLSTER_BASE_MULTIPLIER: i32 = 16;
-const BOLSTER_GROWTH_BASE: f64 = 3.25;
+const BOLSTER_GROWTH_BASE: f64 = 2.75;
 const BOLSTER_START_EXPONENT: i32 = 45;
 const BOLSTER_EXPONENT_INTERVAL: i32 = 10;
 const BOLSTER_REQUIREMENT_MARGIN: f64 = 1.01;
 const BOLSTER_MINIMUM_EFFECT: f64 = 1;
+const BOLSTER_SOFTCAP_MULTIPLIER: i32 = 350000;
+const BOLSTER_SOFTCAP_POWER: f64 = 0.5;
 const CONDENSED_PRODUCER_MULTIPLIER: i32 = 2;
 const CONDENSED_STAFF_MULTIPLIER: i32 = 5;
 
@@ -58,11 +61,14 @@ export function refreshBolsterRequirement(): void {
         return;
     }
     divInto(scratch.tierOneExponent, player.bolsterMultiplier, BOLSTER_BASE_MULTIPLIER);
+    if (hasTierOneAchievement(17)) divUS(scratch.tierOneExponent, 5);
     log10Into(scratch.tierOneExponent, scratch.tierOneExponent);
     writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
     log10Into(scratch.productionModifier, scratch.productionModifier);
+    divUS(scratch.tierOneExponent, scratch.productionModifier);
+    undoBolsterExponentSoftcap(scratch.tierOneExponent);
     addUS(
-        mulUS(divUS(scratch.tierOneExponent, scratch.productionModifier), BOLSTER_EXPONENT_INTERVAL),
+        mulUS(scratch.tierOneExponent, BOLSTER_EXPONENT_INTERVAL),
         BOLSTER_START_EXPONENT,
     );
     powInto(player.bolsterRequirement, 10, scratch.tierOneExponent);
@@ -77,6 +83,7 @@ export function refreshBolsterEffect(): void {
     }
     log10Into(scratch.tierOneExponent, player.count_manaConduit);
     divUS(subUS(scratch.tierOneExponent, BOLSTER_START_EXPONENT), BOLSTER_EXPONENT_INTERVAL);
+    applyBolsterExponentSoftcap(scratch.tierOneExponent);
     writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
     powInto(player.bolsterEffect, scratch.productionModifier, scratch.tierOneExponent);
     mulUS(player.bolsterEffect, BOLSTER_BASE_MULTIPLIER);
@@ -85,6 +92,35 @@ export function refreshBolsterEffect(): void {
         writeNumber(player.bolsterEffect, BOLSTER_MINIMUM_EFFECT);
     }
     divInto(scratch.bolsterRelativeIncrease, player.bolsterEffect, player.bolsterMultiplier);
+}
+
+// Above x350,000 total effect, exponent x follows threshold * (x / threshold)^0.5.
+// The curve never decreases, but each additional exponent contributes progressively less.
+function applyBolsterExponentSoftcap(exponent: i32): void {
+    calculateBolsterSoftcapExponent(scratch.tierOneProduction);
+    if (!gt(exponent, scratch.tierOneProduction)) return;
+    divUS(exponent, scratch.tierOneProduction);
+    writeNumber(scratch.productionModifier, BOLSTER_SOFTCAP_POWER);
+    powUS(exponent, scratch.productionModifier);
+    mulUS(exponent, scratch.tierOneProduction);
+}
+
+function undoBolsterExponentSoftcap(exponent: i32): void {
+    calculateBolsterSoftcapExponent(scratch.tierOneProduction);
+    if (!gt(exponent, scratch.tierOneProduction)) return;
+    divUS(exponent, scratch.tierOneProduction);
+    powUS(exponent, 2);
+    mulUS(exponent, scratch.tierOneProduction);
+}
+
+function calculateBolsterSoftcapExponent(result: i32): void {
+    writeNumber(result, BOLSTER_SOFTCAP_MULTIPLIER);
+    divUS(result, BOLSTER_BASE_MULTIPLIER);
+    if (hasTierOneAchievement(17)) divUS(result, 5);
+    log10Into(result, result);
+    writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
+    log10Into(scratch.productionModifier, scratch.productionModifier);
+    divUS(result, scratch.productionModifier);
 }
 
 export function canBolster(): bool {
@@ -242,7 +278,7 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
     const cost = tierOneCostHandle(index);
     if (gte(player.mana, cost)) return 1;
     if (!gt(player.mana, 1)) return 0;
-    const infinityBoundary = <i32>toNumber(player.infinity_break_index);
+    const infinityBoundary = <i32>toNumber(player.mana_circle_tier);
     if (passesLayerBoundary(cost, infinityBoundary)) return 0;
 
     const scalingExponent = index + 1;

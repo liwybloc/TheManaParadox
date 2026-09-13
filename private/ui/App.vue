@@ -1,35 +1,65 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { HANDLES } from "@game/player.js";
-import { SCRATCH_HANDLES } from "@game/scratch.js";
-import { ACHIEVEMENTS } from "@game/achievements.js";
-import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/condensed.js";
-import { TABS } from "@game/tabs.js";
-import { castAll, condense, increaseMastery as increaseMasteryAction, increaseMatrix as increaseMatrixAction, subscribeToCondense } from "@game/actions.js";
-import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/save.js";
-import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/tick.js";
+import { HANDLES } from "@game/core/player.js";
+import { SCRATCH_HANDLES } from "@game/core/scratch.js";
+import { ACHIEVEMENTS } from "@game/game/achievements.js";
+import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/game/condensed.js";
+import { TABS } from "@game/config/tabs.js";
+import { GUILD_RANKS, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES } from "@game/guild/guild.js";
+import { GUILD_QUESTS_BY_ID } from "@game/guild/quests.js";
+import { INVENTORY_ITEMS_BY_ID, Items, resolveItemDescription } from "@game/guild/items.js";
+import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
+import { castAll, condense, increaseMastery as increaseMasteryAction, increaseMatrix as increaseMatrixAction, subscribeToCondense } from "@game/systems/actions.js";
+import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
+import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
 import GoalProgressBar from "./components/GoalProgressBar.vue";
 import TabNavigation from "./components/TabNavigation.vue";
 import ManaTab from "./tabs/ManaTab.vue";
 import CondensedTab from "./tabs/CondensedTab.vue";
+import ManaCircleTab from "./tabs/ManaCircleTab.vue";
+import GuildTab from "./tabs/GuildTab.vue";
+import QuestTab from "./tabs/QuestTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
 import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
 import NotificationStack from "./components/NotificationStack.vue";
 import TimeSimulation from "./components/TimeSimulation.vue";
 import KeybindMenu from "./components/KeybindMenu.vue";
+import MessageTicker from "./components/MessageTicker.vue";
 import { showNotification } from "./notifications.js";
 
-const activeTab = ref("mana");
-const activeSubtabs = ref(Object.fromEntries(TABS.map((tab) => [tab.id, tab.subtabs?.[0]?.id ?? ""])));
+function tabDefinition(tabId) {
+    return TABS.find((tab) => tab.id === tabId);
+}
+
+function isValidTab(tabId) {
+    return tabDefinition(tabId) !== undefined;
+}
+
+function isValidSubTab(tabId, subtabId) {
+    return tabDefinition(tabId)?.subtabs?.some((subtab) => subtab.id === subtabId) ?? false;
+}
+
+const selectedTab = localStorage.getItem("selectedTab");
+const selectedSubTab = localStorage.getItem("selectedSubTab");
+const startTab = isValidTab(selectedTab) ? selectedTab : TABS[0].id;
+const startingSubtabs = Object.fromEntries(TABS.map((tab) => [tab.id, tab.subtabs?.[0]?.id ?? ""]));
+if (isValidSubTab(startTab, selectedSubTab)) startingSubtabs[startTab] = selectedSubTab;
+
+const activeTab = ref(startTab);
+const activeSubtabs = ref(startingSubtabs);
 const mana = ref("0");
 const canCondense = ref(false);
 const brokenInfinity = ref(false);
 const condenseManaGained = ref("0");
 const condensedMana = ref("0");
 const condensedUnlocked = ref(false);
+const guildUnlocked = ref(false);
+const ascensionHallUnlocked = ref(false);
+const questActive = ref(false);
+const manaCircle = ref(0);
 const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
     ...upgrade,
     index,
@@ -75,6 +105,9 @@ const castSpeedSpell = ref({
     affordable: false,
 });
 const castMax = ref(false);
+const potionEffects = ref([]);
+const gameSpeed = ref("1.00");
+const gameSpeedIncreased = ref(false);
 const mastery = ref({
     level: "1",
     effect: "1",
@@ -105,6 +138,24 @@ const bolster = ref({
     multiplier: "×1.00",
     requirement: "1.00e45",
 });
+const guild = ref({ member: false, rank: "F", rankIndex: 0, nextRank: "E", questActive: false, refreshTimer: "10:00", experience: 0, experienceRequirement: 25, coins: "0", wolfFur: "0", potions: "0", inventoryItems: [], shopItems: [], shopUpgrades: [] });
+const questResult = ref({ visible: false, monster: "Wolfines", items: [] });
+const guildQuests = ref(Array.from({ length: 6 }, (_, index) => ({ ...GUILD_QUESTS_BY_ID.get(index), index, rank: "F", locked: false, visible: index < 3 })));
+const combat = ref({
+    monster: "Wolfines",
+    rank: "F",
+    enemyHealth: "150",
+    enemyMaximumHealth: "150",
+    enemyPercent: 1,
+    shield: "0",
+    shieldPercent: 1,
+    freezeTurns: "0",
+    spells: [
+        { index: 0, name: "Fireball", effect: "35 damage", costHandle: HANDLES.fireballCost, cost: "1e210", affordable: false },
+        { index: 1, name: "Whirlwind", effect: "60 damage", costHandle: HANDLES.whirlwindCost, cost: "1e230", affordable: false },
+        { index: 2, name: "Freeze", effect: "10 damage · freezes for 2 turns", costHandle: HANDLES.freezeCost, cost: "1e250", affordable: false },
+    ],
+});
 const resetConfirmationVisible = ref(false);
 const changeKeybindsVisible = ref(false);
 const updateRate = ref(getUpdateRate());
@@ -122,38 +173,106 @@ const statistics = ref({
 });
 const achievements = ref(ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: false })));
 let animationFrame;
+let displayErrorReported = false;
 let achievementsInitialized = false;
+let displayedAchievementRevision = -1;
+let displayedInventoryRevision = -1;
 
 const activeSubtab = computed(() => activeSubtabs.value[activeTab.value]);
-const visibleTabs = computed(() => TABS.filter((tab) => !tab.requiresCondensed || condensedUnlocked.value));
+const visibleTabs = computed(() => TABS.filter((tab) => {
+    if (tab.requiresCondensed && !condensedUnlocked.value) return false;
+    if (tab.requiresGuild && !guildUnlocked.value) return false;
+    if (tab.requiresQuest && !questActive.value) return false;
+    return true;
+}).map((tab) => ({
+    ...tab,
+    subtabs: tab.subtabs?.filter((subtab) => !subtab.requiresAscensionHall || ascensionHallUnlocked.value),
+})));
+
+function displayedItemDefinition(itemId) {
+    const definition = INVENTORY_ITEMS_BY_ID.get(itemId);
+    if (!definition) return undefined;
+    return {
+        ...definition,
+        description: resolveItemDescription(definition.description, {
+            duration: namedWasm.potionDuration(itemId),
+            effect: namedWasm.potionEffect(itemId).toFixed(2),
+        }),
+    };
+}
 
 function selectTab(id) {
+    if (!isValidTab(id)) return;
     activeTab.value = id;
+    localStorage.setItem("selectedTab", id);
+    localStorage.setItem("selectedSubTab", activeSubtabs.value[id]);
 }
 
 function selectSubtab(id) {
+    if (!isValidSubTab(activeTab.value, id)) return;
     activeSubtabs.value[activeTab.value] = id;
+    localStorage.setItem("selectedSubTab", id);
 }
 
 function updateDisplay() {
-    namedWasm.refreshCondensedUpgradeState();
+    try {
+        updateGlobalDisplay();
+        updateAchievementNotifications();
+        switch (activeTab.value) {
+            case "mana": updateManaDisplay(); break;
+            case "condensed": updateCondensedDisplay(); break;
+            case "manacircle": manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier); break;
+            case "guild": updateGuildDisplay(activeSubtab.value); break;
+            case "quest": updateQuestDisplay(); break;
+            case "achievements": updateAchievementsDisplay(); break;
+            case "statistics": updateStatisticsDisplay(); break;
+        }
+        displayErrorReported = false;
+    } catch (error) {
+        if (!displayErrorReported) console.error("Failed to update the active game display", error);
+        displayErrorReported = true;
+    } finally {
+        animationFrame = requestAnimationFrame(updateDisplay);
+    }
+}
+
+function updateGlobalDisplay() {
     mana.value = formatDecimal(HANDLES.mana);
     canCondense.value = namedWasm.canCondense();
-    condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
     condensedUnlocked.value = namedWasm.hasCondensed();
-    for (const upgrade of condensedUpgrades.value) {
-        upgrade.cost = formatDecimal(upgrade.costHandle, 0);
-        upgrade.purchased = namedWasm.hasCondensedUpgrade(upgrade.index);
-        upgrade.affordable = namedWasm.canBuyCondensedUpgrade(upgrade.index);
-        if (upgrade.repeatable) {
-            upgrade.amount = formatDecimal(upgrade.amountHandle, 0);
-            upgrade.effect = formatDecimal(upgrade.effectHandle);
-        }
+    if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
+    ascensionHallUnlocked.value = namedWasm.isAscensionHallUnlocked();
+    if (!ascensionHallUnlocked.value && activeSubtabs.value.guild === "guild-ascension-hall") {
+        activeSubtabs.value.guild = "guild-main";
     }
-    for (const [key, placeholder] of Object.entries(CONDENSED_UPGRADE_PLACEHOLDERS)) {
-        condensedUpgradePlaceholders.value[key] = `${placeholder.prefix}${formatDecimal(placeholder.handle)}`;
-    }
+    guildUnlocked.value = namedWasm.isGuildUnlocked();
+    questActive.value = namedWasm.isQuestActive();
     nextGoalProgress.value = namedWasm.manaCondenseProgress();
+    if (!questActive.value && activeTab.value === "quest") selectTab("guild");
+}
+
+function updateManaDisplay() {
+    const potionSpeedTimers = POTION_SPEED_TIMER_HANDLES
+        .map((handle) => namedWasm.toNumber(handle))
+        .filter((seconds) => seconds > 0);
+    const potionSpeedIITimers = POTION_SPEED_II_TIMER_HANDLES
+        .map((handle) => namedWasm.toNumber(handle))
+        .filter((seconds) => seconds > 0);
+    const potionSpeedIIITimers = POTION_SPEED_III_TIMER_HANDLES
+        .map((handle) => namedWasm.toNumber(handle))
+        .filter((seconds) => seconds > 0);
+    gameSpeed.value = formatDecimal(namedWasm.getGameSpeed());
+    gameSpeedIncreased.value = namedWasm.isGameSpeedIncreased();
+    potionEffects.value = potionSpeedTimers.map((seconds, index) => ({
+        id: `speed-${index}`,
+        text: `Potion of Speed: +${namedWasm.potionEffect(Items.POTION_SPEED_I).toFixed(2)}× Game Speed (${formatShortTimer(seconds)})`,
+    })).concat(potionSpeedIITimers.map((seconds, index) => ({
+        id: `speed-ii-${index}`,
+        text: `Potion of Speed II: +${namedWasm.potionEffect(Items.POTION_SPEED_II).toFixed(2)}× Game Speed (${formatShortTimer(seconds)})`,
+    }))).concat(potionSpeedIIITimers.map((seconds, index) => ({
+        id: `speed-iii-${index}`,
+        text: `Potion of Speed III: +${namedWasm.potionEffect(Items.POTION_SPEED_III).toFixed(2)}× Game Speed (${formatShortTimer(seconds)})`,
+    })));
     for (const upgrade of tierOneUpgrades.value) {
         upgrade.amount = formatDecimal(upgrade.handle, 0);
         upgrade.cost = `${formatDecimal(upgrade.costHandle)} mana`;
@@ -192,6 +311,126 @@ function updateDisplay() {
     bolster.value.relIncrease = `×${formatDecimal(SCRATCH_HANDLES.bolsterRelativeIncrease)}`;
     bolster.value.multiplier = `×${formatDecimal(HANDLES.bolsterMultiplier)}`;
     bolster.value.requirement = formatDecimal(HANDLES.bolsterRequirement);
+}
+
+function updateGuildDisplay(subtab) {
+    guild.value.member = namedWasm.isGuildMember();
+    guild.value.questActive = questActive.value;
+    if (subtab === "guild-main") updateGuildBoardDisplay();
+    else if (subtab === "guild-inventory") updateGuildInventoryDisplay();
+    else if (subtab === "guild-shop") updateGuildShopDisplay();
+}
+
+function updateGuildShopDisplay() {
+    const guildRankIndex = namedWasm.toNumber(HANDLES.guildRank);
+    guild.value.coins = formatDecimal(HANDLES.coins, 0);
+    guild.value.shopItems = Array.from({ length: 3 }, (_, slot) => {
+        const itemId = namedWasm.shopItemId(slot);
+        return {
+            slot,
+            itemId,
+            name: displayedItemDefinition(itemId)?.name ?? "Unknown Item",
+            cost: namedWasm.shopItemCost(slot),
+            affordable: namedWasm.canBuyShopItem(slot),
+            refreshRemaining: namedWasm.shopItemRefreshTimer(slot),
+        };
+    });
+    guild.value.shopUpgrades = GUILD_SHOP_UPGRADES.map((upgrade) => ({
+        ...upgrade,
+        locked: guildRankIndex < upgrade.rank,
+        purchased: namedWasm.hasGuildShopUpgrade(upgrade.id),
+        affordable: namedWasm.canBuyGuildShopUpgrade(upgrade.id),
+    }));
+}
+
+function updateGuildInventoryDisplay() {
+    guild.value.coins = formatDecimal(HANDLES.coins, 0);
+    const inventoryRevision = namedWasm.getInventoryRevision();
+    if (inventoryRevision !== displayedInventoryRevision) {
+        const inventoryItems = [];
+        for (let position = 0; position < 100; position++) {
+            const type = namedWasm.inventoryItemAt(position);
+            if (type === 0) continue;
+            const definition = displayedItemDefinition(type);
+            if (!definition) continue;
+            inventoryItems.push({
+                position,
+                type,
+                ...definition,
+            });
+        }
+        guild.value.inventoryItems = inventoryItems;
+        displayedInventoryRevision = inventoryRevision;
+    }
+}
+
+function updateGuildBoardDisplay() {
+    const guildRankIndex = namedWasm.toNumber(HANDLES.guildRank);
+    guild.value.rank = GUILD_RANKS[guildRankIndex] ?? "F";
+    guild.value.rankIndex = guildRankIndex;
+    guild.value.nextRank = GUILD_RANKS[guildRankIndex + 1] ?? "—";
+    guild.value.experience = namedWasm.getGuildExperience();
+    const experienceRequirement = namedWasm.guildExperienceRequirement();
+    guild.value.experienceRequirement = Number.isFinite(experienceRequirement) ? experienceRequirement : "∞";
+    questResult.value.visible = namedWasm.hasQuestResult();
+    if (questResult.value.visible) {
+        questResult.value.monster = GUILD_QUESTS_BY_ID.get(namedWasm.lastCompletedQuestDefinitionId())?.monster ?? "monsters";
+        questResult.value.items = Array.from({ length: namedWasm.lastQuestRewardCount() }, (_, index) => {
+            const item = INVENTORY_ITEMS_BY_ID.get(namedWasm.lastQuestRewardItem(index));
+            return {
+                name: item?.name ?? "Unknown Item",
+                amount: namedWasm.lastQuestRewardAmount(index),
+                dropped: namedWasm.lastQuestRewardDropped(index),
+            };
+        }).filter((item) => item.amount > 0);
+    }
+    guild.value.refreshTimer = formatShortTimer(namedWasm.getQuestRefreshRemaining());
+    for (const quest of guildQuests.value) {
+        const definition = GUILD_QUESTS_BY_ID.get(namedWasm.questDefinitionId(quest.index));
+        if (definition) Object.assign(quest, definition, {
+            rewards: definition.rewards.map((reward) => ({
+                ...reward,
+                name: INVENTORY_ITEMS_BY_ID.get(reward.item)?.name ?? "Unknown Item",
+            })),
+        });
+        quest.rank = GUILD_RANKS[namedWasm.questRank(quest.index)] ?? "F";
+        quest.locked = namedWasm.isQuestSlotLocked(quest.index);
+        quest.visible = quest.index < namedWasm.visibleQuestSlotCount();
+    }
+}
+
+function updateQuestDisplay() {
+    if (!questActive.value) return;
+    const activeQuestId = namedWasm.questDefinitionId(namedWasm.activeQuestIndex());
+    const activeQuest = GUILD_QUESTS_BY_ID.get(activeQuestId);
+    combat.value.monster = activeQuest?.monster ?? "Monsters";
+    combat.value.rank = GUILD_RANKS[activeQuest?.rank ?? 0] ?? "F";
+    combat.value.enemyHealth = formatDecimal(HANDLES.wolfineHealth, 0);
+    combat.value.enemyMaximumHealth = String(namedWasm.enemyMaximumHealth(namedWasm.activeQuestIndex()));
+    combat.value.enemyPercent = namedWasm.wolfineHealthPercent();
+    combat.value.shield = formatDecimal(namedWasm.combatShieldHandle(), 0);
+    combat.value.shieldPercent = namedWasm.combatShieldPercent();
+    combat.value.freezeTurns = formatDecimal(HANDLES.combatFreezeTurns, 0);
+    for (const spell of combat.value.spells) {
+        spell.cost = formatDecimal(spell.costHandle);
+        spell.affordable = namedWasm.canCastCombatSpell(spell.index);
+    }
+}
+
+function updateCondensedDisplay() {
+    namedWasm.refreshCondensedUpgradeState();
+    for (const upgrade of condensedUpgrades.value) {
+        upgrade.cost = formatDecimal(upgrade.costHandle, 0);
+        upgrade.purchased = namedWasm.hasCondensedUpgrade(upgrade.index);
+        upgrade.affordable = namedWasm.canBuyCondensedUpgrade(upgrade.index);
+        upgrade.visible = upgrade.index !== condensedUpgrades.value.length - 1 || namedWasm.canSeeAscensionHallUpgrade();
+    }
+    for (const [key, placeholder] of Object.entries(CONDENSED_UPGRADE_PLACEHOLDERS)) {
+        condensedUpgradePlaceholders.value[key] = `${placeholder.prefix}${formatDecimal(placeholder.handle)}`;
+    }
+}
+
+function updateStatisticsDisplay() {
     statistics.value.timePlayed = formatTotalTime(HANDLES.statistics_totalTimePlayed);
     statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced);
     statistics.value.condensedManaProduced = formatDecimal(HANDLES.statistics_condensedManaProduced);
@@ -199,7 +438,15 @@ function updateDisplay() {
     statistics.value.timeThisCondense = formatTotalTime(HANDLES.statistics_timeThisCondense);
     statistics.value.fastestCondense = formatTotalTime(HANDLES.statistics_fastestCondense);
     statistics.value.hasCondensed = namedWasm.hasCondensed();
+}
+
+function updateAchievementsDisplay() {
     achievements.value[5].reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
+}
+
+function updateAchievementNotifications(force = false) {
+    const revision = namedWasm.getAchievementRevision();
+    if (!force && revision === displayedAchievementRevision) return;
     for (let index = 0; index < achievements.value.length; index++) {
         const achievement = achievements.value[index];
         const unlocked = namedWasm.hasTierOneAchievement(index);
@@ -209,7 +456,7 @@ function updateDisplay() {
         achievement.unlocked = unlocked;
     }
     achievementsInitialized = true;
-    animationFrame = requestAnimationFrame(updateDisplay);
+    displayedAchievementRevision = revision;
 }
 
 function formatDecimal(handle, decimals = 2) {
@@ -263,7 +510,7 @@ function updateTickRate(value) {
 }
 
 async function exportGameSave() {
-    const saveData = exportSave();
+    const saveData = await exportSave();
     try {
         await navigator.clipboard.writeText(saveData);
         window.alert("Save copied to clipboard.");
@@ -272,13 +519,13 @@ async function exportGameSave() {
     }
 }
 
-function importGameSave() {
+async function importGameSave() {
     const saveData = window.prompt("Paste your save:");
     if (saveData === null || saveData.trim() === "") return;
     try {
         achievementsInitialized = false;
-        importSave(saveData.trim());
-        saveGame();
+        await importSave(saveData.trim());
+        await saveGame();
         window.alert("Save imported successfully.");
     } catch (error) {
         console.error("Failed to import The Mana Paradox save", error);
@@ -336,6 +583,66 @@ function buyCondensedUpgrade(index) {
 
 function bolsterStaff() {
     namedWasm.bolster();
+}
+
+function applyToGuild() {
+    if (namedWasm.applyToGuild()) void saveGame();
+}
+
+function acceptGuildQuest(index) {
+    if (!namedWasm.acceptGuildQuest(index)) return;
+    selectTab("quest");
+    void saveGame();
+}
+
+function castCombatSpell(index) {
+    if (namedWasm.castCombatSpell(index)) void saveGame();
+}
+
+function abandonGuildQuest() {
+    namedWasm.abandonGuildQuest();
+    void saveGame();
+}
+
+function dismissQuestResult() {
+    namedWasm.dismissQuestResult();
+}
+
+function moveInventoryItem(item, position) {
+    if (namedWasm.moveInventoryItem(item, position)) void saveGame();
+}
+
+function useInventoryItem(action, position, itemId) {
+    if (action === "drink-speed-potion") namedWasm.drinkPotion(position, itemId);
+}
+
+function sellInventoryItem(position, itemId) {
+    namedWasm.sellInventoryItem(position, itemId);
+}
+
+function sellAllMaterials() {
+    namedWasm.sellAllInventoryItems(false);
+}
+
+function sellAllItems() {
+    namedWasm.sellAllInventoryItems(true);
+}
+
+function drinkAllPotions() {
+    namedWasm.drinkAllPotions();
+}
+
+function buyShopItem(slot) {
+    namedWasm.buyShopItem(slot);
+}
+
+function buyGuildShopUpgrade(index) {
+    if (namedWasm.buyGuildShopUpgrade(index)) void saveGame();
+}
+
+function formatShortTimer(seconds) {
+    const remaining = Math.max(0, Math.ceil(seconds));
+    return `${Math.floor(remaining / 60)}:${String(remaining % 60).padStart(2, "0")}`;
 }
 
 function resetGame() {
@@ -419,6 +726,9 @@ onBeforeUnmount(() => {
                 :matrix="matrix"
                 :courage="courage"
                 :bolster="bolster"
+                :potion-effects="potionEffects"
+                :game-speed="gameSpeed"
+                :game-speed-increased="gameSpeedIncreased"
                 @buy="buyTierOne"
                 @empower="empowerTierOne"
                 @buy-all="buyAllTierOne"
@@ -441,8 +751,38 @@ onBeforeUnmount(() => {
                 :placeholders="condensedUpgradePlaceholders"
                 @buy="buyCondensedUpgrade"
             />
+            <ManaCircleTab
+                v-else-if="activeTab === 'manacircle'"
+                :active-subtab="activeSubtab"
+                :manaCircle="manaCircle"
+            />
+            <GuildTab
+                v-else-if="activeTab === 'guild'"
+                :active-subtab="activeSubtab"
+                :guild="guild"
+                :quests="guildQuests"
+                :quest-result="questResult"
+                @apply="applyToGuild"
+                @accept="acceptGuildQuest"
+                @dismiss-result="dismissQuestResult"
+                @move-item="moveInventoryItem"
+                @use-item="useInventoryItem"
+                @sell-item="sellInventoryItem"
+                @sell-all-materials="sellAllMaterials"
+                @sell-all-items="sellAllItems"
+                @drink-all-potions="drinkAllPotions"
+                @buy-shop-item="buyShopItem"
+                @buy-shop-upgrade="buyGuildShopUpgrade"
+            />
+            <QuestTab
+                v-else-if="activeTab === 'quest'"
+                :combat="combat"
+                @cast="castCombatSpell"
+                @abandon="abandonGuildQuest"
+            />
             <AchievementsTab
                 v-else-if="activeTab === 'achievements'"
+                :active-subtab="activeSubtab"
                 :achievements="achievements"
             />
             <OptionsTab
@@ -456,6 +796,8 @@ onBeforeUnmount(() => {
                 @reset-game="resetGame"
                 @update-rate="updateTickRate"
             />
+
+
         </main>
         <div v-if="resetConfirmationVisible" class="confirmation-overlay" role="presentation" @click.self="cancelResetGame">
             <section class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-game-title">
@@ -468,7 +810,8 @@ onBeforeUnmount(() => {
             </section>
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
-        <footer>The Mana Paradox v0.0.4</footer>
+        <MessageTicker />
+        <footer>The Mana Paradox v0.0.7</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

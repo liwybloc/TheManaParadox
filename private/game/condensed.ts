@@ -1,20 +1,17 @@
-import { addInto, addUS, copyInto, createDecimal, createZero, divInto, divUS, floorInto, gt, gte, log10Into, lte, multiplyInto, mulUS, powInto, subUS, writeDecimal, writeNumber } from "./break_eternity.js";
+import { addInto, addUS, copyInto, createDecimal, createZero, divInto, divUS, eq, floorInto, gt, gte, log10Into, lt, lte, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { unlockTierOneAchievement } from "./achievements.js";
-import type { Player } from "./player.js";
-import type { Scratch } from "./scratch.js";
+import { isQuestActive } from "../guild/guild.js";
+import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 
 type CondensedUpgradeDefinition = {
     slot: number;
     title: string;
     cost: [number, number, number];
-    repeatable?: boolean;
-    amountHandle?: i32;
-    effectHandle?: i32;
 }
 
 export const CONDENSED_HANDLES = {
-    gainMultiplierBought: createZero(),
-    gainMultiplier: createDecimal(1, 0, 1),
+    ascensionHallUnlocked: createZero(),
 };
 
 const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
@@ -45,11 +42,8 @@ const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
     
     {
         slot: 12,
-        title: "Multiply condensed mana gain by x2",
-        cost: [1, 0, 10],
-        repeatable: true,
-        amountHandle: CONDENSED_HANDLES.gainMultiplierBought,
-        effectHandle: CONDENSED_HANDLES.gainMultiplier,
+        title: "Unlock the Guild's Ascension Hall",
+        cost: [1, 0, 8192],
     },
 ];
 
@@ -71,21 +65,18 @@ declare const scratch: Scratch;
 const CONDENSED_UPGRADE_COUNT_WASM: i32 = 20;
 const condensedUpgrades = new StaticArray<u8>(CONDENSED_UPGRADE_COUNT_WASM);
 const condensedUpgradeCosts = new StaticArray<i32>(CONDENSED_UPGRADE_COUNT_WASM);
-let condensedGainMultiplierBought: i32 = 0;
-let condensedGainMultiplier: i32 = 0;
+let ascensionHallUnlocked: i32 = 0;
 let condensedManaBuff: i32 = 0;
 let masteryCastPowerBuff: i32 = 0;
 let condensedCourageBuff: i32 = 0;
 
 export function initializeCondensedHandles(
-    gainMultiplierBought: i32,
-    gainMultiplier: i32,
+    ascensionHall: i32,
     manaBuff: i32,
     castPowerBuff: i32,
     courageBuff: i32,
 ): void {
-    condensedGainMultiplierBought = gainMultiplierBought;
-    condensedGainMultiplier = gainMultiplier;
+    ascensionHallUnlocked = ascensionHall;
     condensedManaBuff = manaBuff;
     masteryCastPowerBuff = castPowerBuff;
     condensedCourageBuff = courageBuff;
@@ -97,33 +88,37 @@ export function initializeCondensedUpgradeCost(index: i32, costHandle: i32): voi
 }
 
 export function canCondense(): bool {
+    if (isQuestActive()) return false;
     writeDecimal(scratch.productionModifier, 1, 1, 308.25471555991675);
     return gte(player.mana, scratch.productionModifier);
 }
 
 export function calculateCondenseGain(): bool {
     if (!canCondense()) return false;
+    if (!player.castSpeedUsedThisCondense) unlockTierOneAchievement(21);
     if (!gt(player.statistics_fastestCondense, 0)
         || gt(player.statistics_fastestCondense, player.statistics_timeThisCondense)) {
         copyInto(player.statistics_fastestCondense, player.statistics_timeThisCondense);
     }
-    writeNumber(scratch.productionModifier, 1800);
-    if (gt(scratch.productionModifier, player.statistics_timeThisCondense)) unlockTierOneAchievement(15);
+    if (lt(player.statistics_timeThisCondense, 60)) unlockTierOneAchievement(15);
     writeNumber(scratch.productionModifier, 1);
     if (lte(player.bolsterMultiplier, scratch.productionModifier)) unlockTierOneAchievement(17);
-    log10Into(scratch.condenseGain, player.mana);
-    writeNumber(scratch.productionModifier, 308);
-    divUS(scratch.condenseGain, scratch.productionModifier);
-    floorInto(scratch.condenseGain, scratch.condenseGain);
-    mulUS(scratch.condenseGain, condensedGainMultiplier);
+    if (eq(player.mana_circle_tier, 0)) {
+        writeNumber(scratch.condenseGain, 1);
+    } else {
+        log10Into(scratch.condenseGain, player.mana);
+        writeNumber(scratch.productionModifier, 308);
+        divUS(scratch.condenseGain, scratch.productionModifier);
+        floorInto(scratch.condenseGain, scratch.condenseGain);
+    }
     addUS(player.statistics_condensedManaProduced, scratch.condenseGain);
-    addUS(scratch.condenseGain, player.condensedMana);
     return true;
 }
 
 export function completeCondense(): void {
     addUS(player.condensedMana, scratch.condenseGain);
     addUS(player.statistics_condenses, 1);
+    if (gte(player.condensedMana, 10)) unlockTierOneAchievement(22);
     if (gte(player.statistics_condenses, 50)) unlockTierOneAchievement(18);
     player.hasCondensed = true;
 }
@@ -137,13 +132,28 @@ export function setHasCondensed(value: bool): void {
 }
 
 export function hasCondensedUpgrade(index: i32): bool {
-    if (index === CONDENSED_UPGRADE_COUNT_WASM - 1) return gt(condensedGainMultiplierBought, 0);
+    if (index === CONDENSED_UPGRADE_COUNT_WASM - 1) return gt(ascensionHallUnlocked, 0);
     return index >= 0 && index < CONDENSED_UPGRADE_COUNT_WASM && condensedUpgrades[index] !== 0;
 }
 
 export function setCondensedUpgrade(index: i32, purchased: bool): void {
     if (index < 0 || index >= CONDENSED_UPGRADE_COUNT_WASM) return;
+    if (index === CONDENSED_UPGRADE_COUNT_WASM - 1) {
+        writeNumber(ascensionHallUnlocked, purchased ? 1 : 0);
+        return;
+    }
     condensedUpgrades[index] = purchased ? 1 : 0;
+}
+
+export function isAscensionHallUnlocked(): bool {
+    return hasCondensedUpgrade(CONDENSED_UPGRADE_COUNT_WASM - 1);
+}
+
+export function canSeeAscensionHallUpgrade(): bool {
+    for (let index: i32 = 0; index < CONDENSED_UPGRADE_COUNT_WASM - 1; index++) {
+        if (!hasCondensedUpgrade(index)) return false;
+    }
+    return true;
 }
 
 export function condensedUpgradeCostHandle(index: i32): i32 {
@@ -152,28 +162,27 @@ export function condensedUpgradeCostHandle(index: i32): i32 {
 }
 
 export function canBuyCondensedUpgrade(index: i32): bool {
-    return (index === CONDENSED_UPGRADE_COUNT_WASM - 1 || !hasCondensedUpgrade(index))
+    return (index !== CONDENSED_UPGRADE_COUNT_WASM - 1 || canSeeAscensionHallUpgrade())
+        && !hasCondensedUpgrade(index)
         && gte(player.condensedMana, condensedUpgradeCostHandle(index));
 }
 
 export function buyCondensedUpgrade(index: i32): bool {
     if (!canBuyCondensedUpgrade(index)) return false;
     subUS(player.condensedMana, condensedUpgradeCostHandle(index));
-    if (index === CONDENSED_UPGRADE_COUNT_WASM - 1) {
-        addUS(condensedGainMultiplierBought, 1);
-        refreshCondensedUpgradeState();
-        return true;
-    }
     setCondensedUpgrade(index, true);
+    checkAllCondensedUpgradesAchievement();
     return true;
 }
 
-export function refreshCondensedUpgradeState(): void {
-    powInto(condensedGainMultiplier, 2, condensedGainMultiplierBought);
-    const repeatableCost = condensedUpgradeCosts[CONDENSED_UPGRADE_COUNT_WASM - 1];
-    powInto(repeatableCost, 10, condensedGainMultiplierBought);
-    mulUS(repeatableCost, 10);
+function checkAllCondensedUpgradesAchievement(): void {
+    for (let index: i32 = 0; index < CONDENSED_UPGRADE_COUNT_WASM; index++) {
+        if (!hasCondensedUpgrade(index)) return;
+    }
+    unlockTierOneAchievement(23);
+}
 
+export function refreshCondensedUpgradeState(): void {
     addInto(condensedManaBuff, player.condensedMana, 1);
     divInto(masteryCastPowerBuff, player.masteryLevel, 50);
     addInto(condensedCourageBuff, player.condensedMana, 1);
@@ -187,8 +196,7 @@ for (let index = 0; index < CONDENSED_UPGRADES.length; index++) {
     initializeCondensedUpgradeCost(index, CONDENSED_UPGRADES[index].costHandle);
 }
 initializeCondensedHandles(
-    CONDENSED_HANDLES.gainMultiplierBought,
-    CONDENSED_HANDLES.gainMultiplier,
+    CONDENSED_HANDLES.ascensionHallUnlocked,
     CONDENSED_UPGRADE_PLACEHOLDERS.condensedManaBuff.handle,
     CONDENSED_UPGRADE_PLACEHOLDERS.masteryCastPowerBuff.handle,
     CONDENSED_UPGRADE_PLACEHOLDERS.condensedCourageBuff.handle,

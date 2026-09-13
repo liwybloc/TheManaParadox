@@ -157,6 +157,16 @@
   color: #f0d2ad;
   background: #332417;
 }
+.upgrade-row .cast-producer:hover:not(:disabled) {
+  border-color: #a978d8;
+  background: #3b2a4c;
+  color: #f4eaff;
+}
+.upgrade-row .empower-button:hover:not(:disabled) {
+  border-color: #d69b59;
+  background: #4a321d;
+  color: #ffe4c2;
+}
 .upgrade-row button span,
 .upgrade-row button strong {
   display: block;
@@ -220,4 +230,3 @@
 .notice strong {
   color: #c9a4ff;
 }
-

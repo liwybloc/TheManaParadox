@@ -9,14 +9,24 @@ defineProps({
     matrix: { type: Object, required: true },
     courage: { type: Object, required: true },
     bolster: { type: Object, required: true },
+    potionEffects: { type: Array, required: true },
+    gameSpeed: { type: String, required: true },
+    gameSpeedIncreased: { type: Boolean, required: true },
 });
 defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix", "activate-courage", "bolster"]);
 </script>
 
 <template>
-    <section class="tab-panel">
+    <section class="tab-panel mana-panel">
+        <aside v-if="potionEffects.length" class="potion-effects">
+            <template v-if="potionEffects.length">
+                <strong>Potion Effects:</strong>
+                <span v-for="effect in potionEffects" :key="effect.id">{{ effect.text }}</span>
+            </template>
+        </aside>
         <div class="cast-controls">
             <button class="cast-all" type="button" @click="$emit('buy-all')">Cast All</button>
+            <strong v-if="gameSpeedIncreased" class="current-game-speed">Current Game Speed: ×{{ gameSpeed }}</strong>
             <button class="cast-mode" type="button" @click="$emit('toggle-cast-mode')">{{ castMode }}</button>
         </div>
         <button
@@ -92,9 +102,9 @@ defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "inc
             </span>
             <strong>Courage</strong>
             <span>I must work up the courage.. to get stronger!</span>
-            <small v-if="courage.active">×{{ courage.multiplier }} all production · {{ courage.timer }}</small>
-            <small v-else-if="!courage.available">Cooldown: {{ courage.cooldown }}</small>
-            <small v-else>Ready</small>
+            <small v-if="courage.active">×{{ courage.multiplier }} Game Speed · {{ courage.timer }}</small>
+            <small v-else-if="!courage.available">×{{ courage.multiplier }} Game Speed · Cooldown: {{ courage.cooldown }}</small>
+            <small v-else>×{{ courage.multiplier }} Game Speed · Ready</small>
         </button>
     </section>
 </template>

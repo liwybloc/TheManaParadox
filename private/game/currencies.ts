@@ -8,11 +8,12 @@ import {
     reachesLayerBoundary,
     toNumber,
     writeNumber,
-} from "./break_eternity.js";
+} from "../core/break_eternity.js";
 import { checkManaAchievements, checkTimeAchievements } from "./achievements.js";
 import { hasCondensedUpgrade } from "./condensed.js";
-import type { Player } from "./player.js";
-import type { Scratch } from "./scratch.js";
+import { hasGuildShopUpgrade } from "../guild/guild.js";
+import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 
 declare const player: Player;
 declare const scratch: Scratch;
@@ -24,6 +25,7 @@ const CONDENSE_LOG10_REQUIREMENT: f64 = 308.25471555991675;
 export function gainCurrency(currency: i32, amount: i32): void {
     if (currency === player.mana) {
         multiplyInto(scratch.currencyGain, amount, player.multiplier_currencyGlobal);
+        if (hasGuildShopUpgrade(1)) mulUS(scratch.currencyGain, 2);
         if (hasCondensedUpgrade(13)) {
             writeNumber(scratch.productionModifier, 0);
             addUS(addUS(scratch.productionModifier, player.condensedMana), 1);
@@ -39,11 +41,11 @@ export function gainCurrency(currency: i32, amount: i32): void {
 }
 
 export function clampManaToInfinityBoundary(): void {
-    clampToBoundary(player.mana, <i32>toNumber(player.infinity_break_index));
+    clampToBoundary(player.mana, <i32>toNumber(player.mana_circle_tier));
 }
 
 export function isAtInfinityBoundary(value: i32): bool {
-    return reachesLayerBoundary(value, <i32>toNumber(player.infinity_break_index));
+    return reachesLayerBoundary(value, <i32>toNumber(player.mana_circle_tier));
 }
 
 export function manaCondenseProgress(): f64 {

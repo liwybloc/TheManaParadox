@@ -1,0 +1,309 @@
+<script setup>
+import { computed, onBeforeUnmount, ref } from "vue";
+
+const props = defineProps({
+    activeSubtab: { type: String, required: true },
+    guild: { type: Object, required: true },
+    quests: { type: Array, required: true },
+    questResult: { type: Object, required: true },
+});
+const emit = defineEmits([
+    "apply", "accept", "dismiss-result", "move-item", "use-item", "sell-item",
+    "sell-all-materials", "sell-all-items", "drink-all-potions",
+    "buy-shop-item", "buy-shop-upgrade",
+]);
+const selectedQuest = ref(null);
+const selectedItem = ref(null);
+const inventoryGrid = ref(null);
+const dragging = ref(null);
+let pendingPress = null;
+const rankProgress = computed(() => {
+    const requirement = Number(props.guild.experienceRequirement);
+    if (!Number.isFinite(requirement) || requirement <= 0) return 0;
+    return Math.max(0, Math.min(1, props.guild.experience / requirement));
+});
+
+function acceptQuest() {
+    if (selectedQuest.value === null || props.guild.questActive) return;
+    emit("accept", selectedQuest.value.index);
+    selectedQuest.value = null;
+}
+
+function beginPress(event, item) {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    const bounds = event.currentTarget.getBoundingClientRect();
+    pendingPress = {
+        item,
+        bounds,
+        startX: event.clientX,
+        startY: event.clientY,
+        cursorX: event.clientX,
+        cursorY: event.clientY,
+    };
+    window.addEventListener("pointermove", trackPress);
+    window.addEventListener("pointerup", finishPress, { once: true });
+}
+
+function startDrag() {
+    if (!pendingPress) return;
+    const { item, bounds, cursorX, cursorY } = pendingPress;
+    dragging.value = {
+        sourcePosition: item.position,
+        itemWidth: item.width,
+        itemHeight: item.height,
+        type: item.type,
+        name: item.name,
+        style: item.style,
+        cursorX,
+        cursorY,
+        width: bounds.width,
+        height: bounds.height,
+    };
+}
+
+function trackPress(event) {
+    if (!pendingPress) return;
+    event.preventDefault();
+    pendingPress.cursorX = event.clientX;
+    pendingPress.cursorY = event.clientY;
+    if (!dragging.value) {
+        const distanceX = event.clientX - pendingPress.startX;
+        const distanceY = event.clientY - pendingPress.startY;
+        if (Math.hypot(distanceX, distanceY) > 25) startDrag();
+    }
+    if (!dragging.value) return;
+    dragging.value.cursorX = event.clientX;
+    dragging.value.cursorY = event.clientY;
+}
+
+function finishPress() {
+    window.removeEventListener("pointermove", trackPress);
+    if (!pendingPress) return;
+    if (dragging.value) finishDrag();
+    else selectedItem.value = pendingPress.item;
+    pendingPress = null;
+}
+
+function finishDrag() {
+    const drag = dragging.value;
+    const grid = inventoryGrid.value;
+    if (!drag || !grid) {
+        dragging.value = null;
+        return;
+    }
+    const slots = grid.querySelectorAll(".inventory-slot");
+    if (slots.length !== 100) {
+        dragging.value = null;
+        return;
+    }
+    const first = slots[0].getBoundingClientRect();
+    const second = slots[1].getBoundingClientRect();
+    const nextRow = slots[10].getBoundingClientRect();
+    const columnStep = second.left - first.left;
+    const rowStep = nextRow.top - first.top;
+    const itemLeft = drag.cursorX - drag.width / 2;
+    const itemTop = drag.cursorY - drag.height / 2;
+    const rawColumn = Math.round((itemLeft - first.left) / columnStep);
+    const rawRow = Math.round((itemTop - first.top) / rowStep);
+    const lastColumn = 10 - drag.itemWidth;
+    const lastRow = 10 - drag.itemHeight;
+    if (rawColumn < 0 || rawColumn > lastColumn || rawRow < 0 || rawRow > lastRow) {
+        dragging.value = null;
+        return;
+    }
+    emit("move-item", drag.sourcePosition, rawRow * 10 + rawColumn);
+    dragging.value = null;
+}
+
+function itemStyle(position, width, height) {
+    return {
+        gridColumn: `${position % 10 + 1} / span ${width}`,
+        gridRow: `${Math.floor(position / 10) + 1} / span ${height}`,
+        visibility: dragging.value?.sourcePosition === position ? "hidden" : "visible",
+    };
+}
+
+function sellSelectedItem() {
+    if (!selectedItem.value) return;
+    emit("sell-item", selectedItem.value.position, selectedItem.value.type);
+    selectedItem.value = null;
+}
+
+function draggedItemStyle() {
+    if (!dragging.value) return {};
+    return {
+        position: "fixed",
+        left: `${dragging.value.cursorX}px`,
+        top: `${dragging.value.cursorY}px`,
+        width: `${dragging.value.width}px`,
+        height: `${dragging.value.height}px`,
+        transform: "translate(-50%, -50%)",
+        zIndex: 200,
+        pointerEvents: "none",
+    };
+}
+
+onBeforeUnmount(() => {
+    window.removeEventListener("pointermove", trackPress);
+    window.removeEventListener("pointerup", finishPress);
+});
+</script>
+
+<template>
+    <section class="tab-panel guild-panel">
+        <div v-if="!guild.member" class="guild-application">
+            <h1>You've grown strong enough</h1>
+            <p>Do you wish to apply to the Guild?</p>
+            <button type="button" @click="$emit('apply')">Apply to the Guild</button>
+        </div>
+        <template v-else-if="activeSubtab === 'guild-main'">
+            <div class="section-title"><h1>Quest Board</h1><p>Guild Rank: <strong>{{ guild.rank }}</strong> · Refresh: {{ guild.refreshTimer }}</p></div>
+            <div v-if="questResult.visible" class="quest-result" role="status">
+                <div>
+                    <strong>You defeated the {{ questResult.monster }}!</strong>
+                    <template v-for="item in questResult.items" :key="item.name">
+                        <span v-if="item.amount > item.dropped">You received {{ item.amount - item.dropped }} {{ item.name }}.</span>
+                        <span v-if="item.dropped" class="dropped-item">You dropped {{ item.dropped }} {{ item.name }}.</span>
+                    </template>
+                </div>
+                <button type="button" aria-label="Dismiss quest result" @click="$emit('dismiss-result')">×</button>
+            </div>
+            <div class="quest-board">
+                <button
+                    v-for="quest in quests"
+                    v-show="quest.visible"
+                    :key="quest.index"
+                    type="button"
+                    :class="{ 'quest-locked': quest.locked }"
+                    :disabled="guild.questActive || quest.locked"
+                    @click="selectedQuest = quest"
+                >
+                    <span class="quest-rank">{{ quest.rank }}</span>
+                    <strong>{{ quest.title }}</strong>
+                    <small>{{ quest.locked ? "Completed · waiting for refresh" : quest.monster }}</small>
+                </button>
+            </div>
+            <div
+                class="guild-rank-progress"
+                :data-tooltip="`${guild.rank} → ${guild.nextRank}`"
+                role="progressbar"
+                aria-label="Guild rank progress"
+                aria-valuemin="0"
+                aria-valuemax="100"
+                :aria-valuenow="Math.round(rankProgress * 10000) / 100"
+            >
+                <span :style="{ width: `${rankProgress * 100}%` }"></span>
+                <strong>{{ (rankProgress * 100).toFixed(2) }}%</strong>
+            </div>
+            <p v-if="guild.questActive" class="quest-active-note">Finish your active quest before accepting another.</p>
+        </template>
+        <template v-else-if="activeSubtab === 'guild-inventory'">
+            <div class="section-title"><h1>Guild Inventory</h1><p>You have {{ guild.coins }} coins.</p></div>
+            <div class="inventory-bulk-actions">
+                <button type="button" @click="$emit('sell-all-materials')">Sell All Materials</button>
+                <button type="button" @click="$emit('sell-all-items')">Sell All Items</button>
+                <button type="button" @click="$emit('drink-all-potions')">Drink All Potions</button>
+            </div>
+            <div class="guild-inventory-layout">
+                <div ref="inventoryGrid" class="guild-inventory-grid">
+                    <span
+                        v-for="slot in 100"
+                        :key="slot"
+                        class="inventory-slot"
+                        :style="{ gridColumn: (slot - 1) % 10 + 1, gridRow: Math.floor((slot - 1) / 10) + 1 }"
+                    ></span>
+                    <button
+                        v-for="item in guild.inventoryItems"
+                        :key="`${item.type}-${item.position}`"
+                        :class="['inventory-item', item.style, { selected: selectedItem?.position === item.position }]"
+                        type="button"
+                        :style="itemStyle(item.position, item.width, item.height)"
+                        @pointerdown="beginPress($event, item)"
+                    >
+                        <strong>{{ item.name }}</strong>
+                    </button>
+                </div>
+                <aside class="inventory-details">
+                    <template v-if="selectedItem">
+                        <span :class="['inventory-details-icon', selectedItem.style]"></span>
+                        <h2>{{ selectedItem.name }}</h2>
+                        <small>{{ selectedItem.width }}×{{ selectedItem.height }} item</small>
+                        <p>{{ selectedItem.description }}</p>
+                        <button
+                            v-if="selectedItem.use"
+                            class="inventory-use-button"
+                            type="button"
+                            :disabled="!selectedItem.use.enabled"
+                            @click="$emit('use-item', selectedItem.use.action, selectedItem.position, selectedItem.type)"
+                        >
+                            {{ selectedItem.use.label }}
+                        </button>
+                        <button
+                            class="inventory-use-button inventory-sell-button"
+                            type="button"
+                            @click="sellSelectedItem"
+                        >
+                            Sell for {{ selectedItem.sellPrice[0] }}–{{ selectedItem.sellPrice[1] }} coins
+                        </button>
+                    </template>
+                </aside>
+            </div>
+        </template>
+        <template v-else-if="activeSubtab === 'guild-ascension-hall'">
+            <div class="section-title"><h1>Ascension Hall</h1></div>
+        </template>
+        <template v-else-if="activeSubtab === 'guild-shop'">
+            <div class="section-title"><h1>Guild Shop</h1><p>You have {{ guild.coins }} coins.</p></div>
+            <div class="guild-shop-items">
+                <button
+                    v-for="item in guild.shopItems"
+                    :key="item.slot"
+                    type="button"
+                    :class="{ refreshing: item.refreshRemaining > 0 }"
+                    :disabled="!item.affordable"
+                    @click="$emit('buy-shop-item', item.slot)"
+                >
+                    <strong>{{ item.refreshRemaining > 0 ? "Empty" : item.name }}</strong>
+                    <small>{{ item.refreshRemaining > 0 ? `Refresh: ${Math.ceil(item.refreshRemaining)}s` : `Cost: ${item.cost} coins` }}</small>
+                </button>
+            </div>
+            <div class="guild-shop-upgrades">
+                <div v-for="rank in [0, 1, 2]" :key="rank" class="guild-shop-upgrade-row">
+                    <strong class="guild-shop-rank">{{ ["F:", "E:", "D:"][rank] }}</strong>
+                    <button
+                        v-for="upgrade in guild.shopUpgrades.filter((upgrade) => upgrade.rank === rank)"
+                        :key="upgrade.id"
+                        type="button"
+                        :class="{ purchased: upgrade.purchased, locked: upgrade.locked, affordable: upgrade.affordable }"
+                        :disabled="upgrade.locked || upgrade.purchased || !upgrade.affordable"
+                        @click="$emit('buy-shop-upgrade', upgrade.id)"
+                    >
+                        <strong>{{ upgrade.locked ? "Locked" : upgrade.title }}</strong>
+                        <small v-if="!upgrade.locked">{{ upgrade.purchased ? "Purchased" : `Cost: ${upgrade.cost} coins` }}</small>
+                    </button>
+                </div>
+            </div>
+        </template>
+
+        <div v-if="selectedQuest" class="quest-detail-overlay" @click.self="selectedQuest = null">
+            <section class="quest-detail">
+                <span class="quest-rank">{{ selectedQuest.rank }}</span>
+                <h2>{{ selectedQuest.title }}</h2>
+                <p>{{ selectedQuest.description }}</p>
+                <div class="quest-reward"><strong>Rewards</strong><span v-for="reward in selectedQuest.rewards" :key="reward.item">{{ reward.amount }} {{ reward.name }}</span></div>
+                <div><button type="button" :disabled="guild.questActive" @click="acceptQuest">Accept Quest</button><button type="button" @click="selectedQuest = null">Cancel</button></div>
+            </section>
+        </div>
+    </section>
+    <Teleport to="body">
+        <button
+            v-if="dragging"
+            :class="['inventory-item', dragging.style]"
+            type="button"
+            :style="draggedItemStyle()"
+        >
+            <strong>{{ dragging.name }}</strong>
+        </button>
+    </Teleport>
+</template>

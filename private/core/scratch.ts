@@ -9,6 +9,8 @@ export interface Scratch {
     bolsterRelativeIncrease: i32;
     tierOneDisplayMultiplier: i32;
     condenseGain: i32;
+    gameSpeed: i32;
+    effectiveGameSpeed: i32;
 }
 
 export const SCRATCH_HANDLES: Scratch = {
@@ -20,6 +22,8 @@ export const SCRATCH_HANDLES: Scratch = {
     bolsterRelativeIncrease: createZero(),
     tierOneDisplayMultiplier: createDecimal(1, 0, 1),
     condenseGain: createZero(),
+    gameSpeed: createDecimal(1, 0, 1),
+    effectiveGameSpeed: createDecimal(1, 0, 1),
 };
 
 /** [WASM] */
@@ -33,6 +37,8 @@ export const scratch: Scratch = {
     bolsterRelativeIncrease: 0,
     tierOneDisplayMultiplier: 0,
     condenseGain: 0,
+    gameSpeed: 0,
+    effectiveGameSpeed: 0,
 };
 
 export function initializeScratch(
@@ -44,6 +50,8 @@ export function initializeScratch(
     bolsterRelativeIncrease: i32,
     tierOneDisplayMultiplier: i32,
     condenseGain: i32,
+    gameSpeed: i32,
+    effectiveGameSpeed: i32,
 ): void {
     scratch.currencyGain = currencyGain;
     scratch.tierOneSeconds = tierOneSeconds;
@@ -53,6 +61,8 @@ export function initializeScratch(
     scratch.bolsterRelativeIncrease = bolsterRelativeIncrease;
     scratch.tierOneDisplayMultiplier = tierOneDisplayMultiplier;
     scratch.condenseGain = condenseGain;
+    scratch.gameSpeed = gameSpeed;
+    scratch.effectiveGameSpeed = effectiveGameSpeed;
 }
 
 /** [/WASM] */
@@ -66,4 +76,6 @@ initializeScratch(
     SCRATCH_HANDLES.bolsterRelativeIncrease,
     SCRATCH_HANDLES.tierOneDisplayMultiplier,
     SCRATCH_HANDLES.condenseGain,
+    SCRATCH_HANDLES.gameSpeed,
+    SCRATCH_HANDLES.effectiveGameSpeed,
 );
