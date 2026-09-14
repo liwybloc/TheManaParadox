@@ -2,43 +2,19 @@
 import { computed } from 'vue';
 
 const props = defineProps({
-  activeSubtab: {
-    type: String,
-    required: true
-  },
+    activeSubtab: {
+        type: String,
+        required: true
+    },
 
-  manaCircle: {
-    type: Number,
-    required: true
-  }
+    manaCircle: {
+        type: Number,
+        required: true
+    }
 });
 
 const circleClass = computed(() => {
-  switch (props.manaCircle) {
-    case 0:
-      return 'mana-0';
-
-    case 1:
-      return 'mana-1';
-
-    case 2:
-      return 'mana-2';
-
-    case 3:
-      return 'mana-3';
-
-    case 4:
-      return 'mana-4';
-
-    case 5:
-      return 'mana-5';
-
-    case 6:
-      return 'mana-6';
-
-    default:
-      return 'mana-0';
-  }
+    return 'mana' + props.manaCircle;
 });
 </script>
 

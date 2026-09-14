@@ -1,14 +1,16 @@
-import { addUS, copyInto, createZero, divUS, gt, gte, log10Into, lte, mulUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
-import { unlockTierOneAchievement } from "../game/achievements.js";
+import { addUS, copyInto, createZero, divUS, gt, gte, log10Into, lte, mulUS, powUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import { consumeCircularHabitsReward, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 import { INVENTORY_ITEMS } from "./items.js";
 import { GUILD_QUESTS } from "./quests.js";
+import { GUILD_SHOP_UPGRADES } from "./shop.js";
 
+type Num10 = [number, number, number, number, number, number, number, number, number, number];
 export const GUILD_RANKS = ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"];
-export const POTION_SPEED_TIMER_HANDLES = Array.from({ length: 10 }, () => createZero());
-export const POTION_SPEED_II_TIMER_HANDLES = Array.from({ length: 10 }, () => createZero());
-export const POTION_SPEED_III_TIMER_HANDLES = Array.from({ length: 10 }, () => createZero());
+export const POTION_SPEED_TIMER_HANDLES: Num10 = Array.from({ length: 10 }, () => createZero()) as Num10;
+export const POTION_SPEED_II_TIMER_HANDLES: Num10 = Array.from({ length: 10 }, () => createZero()) as Num10;
+export const POTION_SPEED_III_TIMER_HANDLES: Num10 = Array.from({ length: 10 }, () => createZero()) as Num10;
 declare const player: Player;
 declare const scratch: Scratch;
 
@@ -39,6 +41,7 @@ const shopItemIds = new StaticArray<i32>(SHOP_ITEM_COUNT);
 const shopItemCosts = new StaticArray<i32>(SHOP_ITEM_COUNT);
 const shopItemRefreshTimers = new StaticArray<f64>(SHOP_ITEM_COUNT);
 const shopUpgrades = new StaticArray<u8>(SHOP_UPGRADE_COUNT);
+const shopUpgradeCosts = new StaticArray<i32>(SHOP_UPGRADE_COUNT);
 const potionSpeedTimers = new StaticArray<i32>(10);
 const potionSpeedIITimers = new StaticArray<i32>(10);
 const potionSpeedIIITimers = new StaticArray<i32>(10);
@@ -141,8 +144,10 @@ export function setQuestRefreshRemaining(seconds: f64): void {
 }
 
 export function updateQuestBoard(deltaSeconds: f64): void {
+    if (consumeCircularHabitsReward()) placeInventoryItems(INVENTORY_POTION_OF_SPEED_II, 3);
     if (!player.guildMember || deltaSeconds <= 0) return;
     updateShopItemRefreshes(deltaSeconds);
+    if (isQuestActive()) return;
     questRefreshRemaining -= deltaSeconds;
     if (questRefreshRemaining > 0) return;
     for (let index: i32 = 0; index < QUEST_SLOT_COUNT; index++) questSlotLocked[index] = 0;
@@ -162,6 +167,11 @@ export function hasGuildShopUpgrade(index: i32): bool {
 export function setGuildShopUpgrade(index: i32, purchased: bool): void {
     if (index < 0 || index >= SHOP_UPGRADE_COUNT) return;
     shopUpgrades[index] = purchased ? 1 : 0;
+}
+
+export function configureGuildShopUpgradeCost(index: i32, cost: i32): void {
+    if (index < 0 || index >= SHOP_UPGRADE_COUNT || cost < 0) return;
+    shopUpgradeCosts[index] = cost;
 }
 
 export function visibleQuestSlotCount(): i32 {
@@ -216,15 +226,7 @@ export function buyGuildShopUpgrade(index: i32): bool {
 }
 
 function guildShopUpgradeCost(index: i32): i32 {
-    if (index === 0) return 25;
-    if (index === 1) return 50;
-    if (index === 2) return 100;
-    if (index === 3) return 125;
-    if (index === 4) return 175;
-    if (index === 5) return 250;
-    if (index === 6) return 325;
-    if (index === 7) return 100;
-    return 10000;
+    return index >= 0 && index < SHOP_UPGRADE_COUNT ? shopUpgradeCosts[index] : 0;
 }
 
 function refreshShopItems(): void {
@@ -246,7 +248,7 @@ function updateShopItemRefreshes(deltaSeconds: f64): void {
 
 function rollShopItem(slot: i32): void {
     const item = 1 + nextCombatRandom(25);
-    const maximumSell = <i32>inventoryItemSellMaximums[item];
+    const maximumSell = inventoryItemSellMaximum(item);
     shopItemIds[slot] = item;
     shopItemCosts[slot] = maximumSell + nextCombatRandom(maximumSell + 1);
 }
@@ -256,11 +258,15 @@ export function combatShieldHandle(): i32 {
 }
 
 export function wolfineHealthPercent(): f64 {
-    return Math.max(0, Math.min(1, toNumber(player.wolfineHealth) / enemyMaximumHealth(activeQuestIndex())));
+    copyInto(scratch.currencyGain, player.wolfineHealth);
+    divUS(scratch.currencyGain, enemyMaximumHealth(activeQuestIndex()));
+    return Math.max(0, Math.min(1, toNumber(scratch.currencyGain)));
 }
 
 export function enemyMaximumHealth(questSlot: i32): i32 {
-    return 150 * (1 << questRank(questSlot));
+    const rank = questRank(questSlot);
+    writeNumber(scratch.enemyMaximumHealth, rank <= 0 ? 150 : rank === 1 ? 250 : 500);
+    return scratch.enemyMaximumHealth;
 }
 
 export function combatShieldPercent(): f64 {
@@ -388,14 +394,15 @@ export function drinkPotion(position: i32, itemId: i32): bool {
     clearInventoryItem(position, <u8>itemId);
     if (itemId === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, 1);
     inventoryRevision++;
+    player.potionUsedThisCondense = true;
     unlockTierOneAchievement(27);
     return true;
 }
 
 export function sellInventoryItem(position: i32, itemId: i32): i32 {
     if (position < 0 || position >= INVENTORY_SIZE || inventorySlots[position] !== itemId) return 0;
-    const minimum = <i32>inventoryItemSellMinimums[itemId];
-    const maximum = <i32>inventoryItemSellMaximums[itemId];
+    const minimum = inventoryItemSellMinimum(itemId);
+    const maximum = inventoryItemSellMaximum(itemId);
     if (minimum <= 0 || maximum < minimum) return 0;
     const coins = minimum + nextCombatRandom(maximum - minimum + 1);
     clearInventoryItem(position, <u8>itemId);
@@ -407,6 +414,7 @@ export function sellInventoryItem(position: i32, itemId: i32): i32 {
 }
 
 export function sellAllInventoryItems(includePotions: bool): i32 {
+    const soldFullInventory = includePotions && isInventoryFull();
     let coins: i32 = 0;
     for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
         const item = inventorySlots[position];
@@ -414,6 +422,7 @@ export function sellAllInventoryItems(includePotions: bool): i32 {
         if (!includePotions && isPotion(item)) continue;
         coins += sellInventoryItem(position, item);
     }
+    if (soldFullInventory) unlockTierOneAchievement(34);
     return coins;
 }
 
@@ -424,7 +433,15 @@ export function drinkAllPotions(): i32 {
         if (!isPotion(item)) continue;
         if (drinkPotion(position, item)) consumed++;
     }
+    if (consumed >= 20) unlockTierOneAchievement(31);
     return consumed;
+}
+
+function isInventoryFull(): bool {
+    for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
+        if (inventorySlots[position] === INVENTORY_EMPTY) return false;
+    }
+    return true;
 }
 
 function isPotion(item: i32): bool {
@@ -441,7 +458,9 @@ export function potionDuration(itemId: i32): i32 {
     const baseDuration: i32 = itemId === INVENTORY_POTION_OF_SPEED ? 120
         : itemId === INVENTORY_POTION_OF_SPEED_II ? 60
         : itemId === INVENTORY_POTION_OF_SPEED_III ? 30 : 0;
-    return hasGuildShopUpgrade(0) ? baseDuration * 2 : baseDuration;
+    let duration = hasGuildShopUpgrade(0) ? baseDuration * 2 : baseDuration;
+    if (hasTierOneAchievement(31)) duration += 30;
+    return duration;
 }
 
 export function potionEffect(itemId: i32): f64 {
@@ -482,7 +501,10 @@ export function refreshPotionEffectState(): void {
 }
 
 function potionSpeedEffect(baseEffect: f64): f64 {
-    return hasGuildShopUpgrade(3) ? baseEffect * 3 / 2 : baseEffect;
+    let effect = baseEffect;
+    if (hasTierOneAchievement(30)) effect *= 1.25;
+    if (hasGuildShopUpgrade(3)) effect *= 1.5;
+    return effect;
 }
 
 export function updatePotionEffects(seconds: i32): void {
@@ -540,6 +562,10 @@ export function getGameSpeed(): i32 {
 
 export function isGameSpeedIncreased(): bool {
     return gt(getGameSpeed(), 1);
+}
+
+export function hasActivePotionEffects(): bool {
+    return gt(scratch.gameSpeed, 1);
 }
 
 export function initializePotionSpeedTimers(
@@ -627,9 +653,11 @@ export function questRank(index: i32): i32 {
 
 export function acceptGuildQuest(index: i32): bool {
     if (!player.guildMember || isQuestActive() || index < 0 || index >= visibleQuestSlotCount() || isQuestSlotLocked(index)) return false;
+    questResultPending = false;
     writeNumber(player.activeQuest, index);
-    writeNumber(player.wolfineHealth, enemyMaximumHealth(index));
+    copyInto(player.wolfineHealth, enemyMaximumHealth(index));
     writeNumber(player.combatFreezeTurns, 0);
+    player.combatUsedNonFreeze = false;
     log10Into(player.combatShieldMaximum, player.mana);
     log10Into(player.combatShield, player.mana);
     resetCombatSpellCosts();
@@ -640,8 +668,12 @@ export function castCombatSpell(index: i32): bool {
     if (!isQuestActive() || index < 0 || index >= 3) return false;
     const cost = combatSpellCost(index);
     if (!gte(player.mana, cost)) return false;
-    subUS(player.mana, cost);
-    writeNumber(scratch.productionModifier, 100000);
+    divUS(player.mana, cost);
+    if (index !== 2) player.combatUsedNonFreeze = true;
+    writeNumber(scratch.productionModifier, 1.1);
+    powUS(cost, scratch.productionModifier);
+    const scalingExponent = index === 0 ? 10 : index === 1 ? 20 : hasTierOneAchievement(32) ? 10 : 30;
+    writeDecimal(scratch.productionModifier, 1, 1, scalingExponent);
     mulUS(cost, scratch.productionModifier);
     subUS(player.wolfineHealth, combatSpellDamage(index));
     if (index === 2) writeNumber(player.combatFreezeTurns, 2);
@@ -688,6 +720,7 @@ function finishQuest(victory: bool): void {
     if (victory) {
         const completedSlot = activeQuestIndex();
         const completedQuest = questDefinitionId(completedSlot);
+        if (questRank(completedSlot) >= 2 && !player.combatUsedNonFreeze) unlockTierOneAchievement(32);
         lastCompletedQuestDefinition = completedQuest;
         if (completedSlot >= 0 && completedSlot < QUEST_SLOT_COUNT) questSlotLocked[completedSlot] = 1;
         awardQuestRewards(completedQuest);
@@ -712,6 +745,7 @@ function finishQuest(victory: bool): void {
     writeNumber(player.wolfineHealth, 0);
     writeNumber(player.combatShield, 0);
     writeNumber(player.combatFreezeTurns, 0);
+    player.combatUsedNonFreeze = false;
     resetCombatSpellCosts();
 }
 
@@ -835,6 +869,20 @@ function isInventoryItem(item: u8): bool {
     return item >= INVENTORY_WOLF_FUR && item <= 25;
 }
 
+export function inventoryItemSellMinimum(item: i32): i32 {
+    if (item < 0 || item >= 256) return 0;
+    return effectiveInventorySellPrice(<i32>inventoryItemSellMinimums[item]);
+}
+
+export function inventoryItemSellMaximum(item: i32): i32 {
+    if (item < 0 || item >= 256) return 0;
+    return effectiveInventorySellPrice(<i32>inventoryItemSellMaximums[item]);
+}
+
+function effectiveInventorySellPrice(price: i32): i32 {
+    return hasTierOneAchievement(34) ? <i32>Math.ceil(<f64>price * 1.5) : price;
+}
+
 function inventoryItemWidth(item: u8): i32 {
     const width = inventoryItemWidths[item];
     return width > 0 ? width : 1;
@@ -876,35 +924,23 @@ function combatSpellDamage(index: i32): i32 {
 }
 
 export function resetCombatSpellCosts(): void {
-    writeDecimal(player.fireballCost, 1, 1, 210);
-    writeDecimal(player.whirlwindCost, 1, 1, 230);
-    writeDecimal(player.freezeCost, 1, 1, 250);
+    writeDecimal(player.fireballCost, 1, 1, 40);
+    writeDecimal(player.whirlwindCost, 1, 1, 80);
+    writeDecimal(player.freezeCost, 1, 1, 120);
 }
 
 /** [/WASM] */
 
 initializeQuestBoard();
-initializePotionSpeedTimers(
-    POTION_SPEED_TIMER_HANDLES[0], POTION_SPEED_TIMER_HANDLES[1], POTION_SPEED_TIMER_HANDLES[2],
-    POTION_SPEED_TIMER_HANDLES[3], POTION_SPEED_TIMER_HANDLES[4], POTION_SPEED_TIMER_HANDLES[5],
-    POTION_SPEED_TIMER_HANDLES[6], POTION_SPEED_TIMER_HANDLES[7], POTION_SPEED_TIMER_HANDLES[8],
-    POTION_SPEED_TIMER_HANDLES[9],
-);
-initializePotionSpeedIITimers(
-    POTION_SPEED_II_TIMER_HANDLES[0], POTION_SPEED_II_TIMER_HANDLES[1], POTION_SPEED_II_TIMER_HANDLES[2],
-    POTION_SPEED_II_TIMER_HANDLES[3], POTION_SPEED_II_TIMER_HANDLES[4], POTION_SPEED_II_TIMER_HANDLES[5],
-    POTION_SPEED_II_TIMER_HANDLES[6], POTION_SPEED_II_TIMER_HANDLES[7], POTION_SPEED_II_TIMER_HANDLES[8],
-    POTION_SPEED_II_TIMER_HANDLES[9],
-);
-initializePotionSpeedIIITimers(
-    POTION_SPEED_III_TIMER_HANDLES[0], POTION_SPEED_III_TIMER_HANDLES[1], POTION_SPEED_III_TIMER_HANDLES[2],
-    POTION_SPEED_III_TIMER_HANDLES[3], POTION_SPEED_III_TIMER_HANDLES[4], POTION_SPEED_III_TIMER_HANDLES[5],
-    POTION_SPEED_III_TIMER_HANDLES[6], POTION_SPEED_III_TIMER_HANDLES[7], POTION_SPEED_III_TIMER_HANDLES[8],
-    POTION_SPEED_III_TIMER_HANDLES[9],
-);
+initializePotionSpeedTimers(...POTION_SPEED_TIMER_HANDLES);
+initializePotionSpeedIITimers(...POTION_SPEED_II_TIMER_HANDLES);
+initializePotionSpeedIIITimers(...POTION_SPEED_III_TIMER_HANDLES);
 for (const item of INVENTORY_ITEMS) {
     configureInventoryItem(item.id, item.width, item.height);
     configureInventoryItemSellPrice(item.id, item.sellPrice[0], item.sellPrice[1]);
+}
+for (const upgrade of GUILD_SHOP_UPGRADES) {
+    configureGuildShopUpgradeCost(upgrade.id, upgrade.cost);
 }
 refreshShopItems();
 for (const quest of GUILD_QUESTS) {

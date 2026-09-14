@@ -1,9 +1,9 @@
-import { addInto, addUS, divInto, divUS, gt, gte, multiplyInto, mulUS, powInto, powUS, roundInto, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import { addInto, addUS, ceilInto, divInto, divUS, gt, gte, multiplyInto, mulUS, powInto, powUS, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { checkCastSpeedAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasCondensedUpgrade } from "./condensed.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
-import { resetBolster, resetTierOneAmounts } from "./tier_one.js";
+import { resetMeridianPurification, resetTierOneAmounts } from "./tier_one.js";
 
 declare const player: Player;
 declare const scratch: Scratch;
@@ -17,7 +17,7 @@ export function castSpeed(): bool {
     player.castSpeedUsedThisCondense = true;
     subUS(player.mana, player.castSpeedCost);
     if (!gt(player.castSpeedTimer, 0)) {
-        multiplyInto(player.castSpeedMagnitude, player.masterySpeedEffect, player.matrixSpeedPower);
+        multiplyInto(player.castSpeedMagnitude, player.sealedMeridiansSpeedEffect, player.matrixSpeedPower);
     } else {
         mulUS(player.castSpeedMagnitude, player.matrixSpeedPower);
     }
@@ -40,47 +40,48 @@ export function castSpeedMax(): void {
     while (castSpeed()) {}
 }
 
-export function increaseMastery(): bool {
-    if (!canIncreaseMastery()) return false;
-    player.masteryUpgradedThisReset = true;
+export function sealMeridians(): bool {
+    if (!canSealMeridians()) return false;
+    player.meridianSealedThisReset = true;
     const speedIsActive = gt(player.castSpeedTimer, 0);
-    addUS(player.masteryOwned, 1);
-    refreshMasteryDerivedState();
+    addUS(player.sealedMeridiansOwned, 1);
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
-    refreshMasteryDerivedState();
-    if (gte(player.masteryLevel, 5)) unlockTierOneAchievement(6);
+    refreshSealedMeridiansDerivedState();
+    if (gte(player.sealedMeridians, 5)) unlockTierOneAchievement(6);
     if (speedIsActive) mulUS(player.castSpeedMagnitude, 2);
     resetTierOne();
     return true;
 }
 
-export function canIncreaseMastery(): bool {
-    return gte(player.count_manufactureStaff, player.masteryCost);
+export function canSealMeridians(): bool {
+    return gte(player.count_manufactureStaff, player.sealMeridiansCost);
 }
 
-export function isMasteryVisible(): bool {
-    return gt(player.masteryOwned, 0) || gt(player.bought_manufactureStaff, 0);
+export function areSealedMeridiansVisible(): bool {
+    return gt(player.sealedMeridiansOwned, 0) || gt(player.bought_manufactureStaff, 0);
 }
 
-export function refreshMasteryDerivedState(): void {
-    addInto(player.masteryLevel, player.masteryOwned, 1);
-    powInto(player.masteryCost, 3, player.masteryOwned);
-    roundInto(player.masteryCost, player.masteryCost);
+export function refreshSealedMeridiansDerivedState(): void {
+    addInto(player.sealedMeridians, player.sealedMeridiansOwned, 1);
+    writeNumber(scratch.productionModifier, hasTierOneAchievement(20) ? 2.85 : 3);
+    powInto(player.sealMeridiansCost, scratch.productionModifier, player.sealedMeridiansOwned);
+    ceilInto(player.sealMeridiansCost, player.sealMeridiansCost);
     if (hasCondensedUpgrade(15)) {
-        powInto(player.masterySpeedEffect, player.matrixSpeedPower, player.masteryOwned);
+        powInto(player.sealedMeridiansSpeedEffect, player.matrixSpeedPower, player.sealedMeridiansOwned);
     } else {
-        powInto(player.masterySpeedEffect, 2, player.masteryOwned);
+        powInto(player.sealedMeridiansSpeedEffect, 2, player.sealedMeridiansOwned);
     }
 }
 
 export function increaseMatrix(): bool {
     if (!canIncreaseMatrix()) return false;
-    if (!player.masteryUpgradedThisReset) unlockTierOneAchievement(20);
+    if (!player.meridianSealedThisReset) unlockTierOneAchievement(20);
     addUS(player.matrixOwned, 1);
     refreshMatrixDerivedState();
     resetTierOne();
-    resetMastery();
-    player.masteryUpgradedThisReset = false;
+    resetSealedMeridians();
+    player.meridianSealedThisReset = false;
     return true;
 }
 
@@ -89,7 +90,7 @@ export function canIncreaseMatrix(): bool {
 }
 
 export function isMatrixVisible(): bool {
-    return isMasteryVisible() || gt(player.matrixOwned, 0);
+    return areSealedMeridiansVisible() || gt(player.matrixOwned, 0);
 }
 
 export function refreshMatrixDerivedState(): void {
@@ -108,26 +109,26 @@ export function refreshMatrixDerivedState(): void {
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
     if (hasCondensedUpgrade(17)) {
-        addInto(scratch.productionModifier, player.masteryLevel, 0);
+        addInto(scratch.productionModifier, player.sealedMeridians, 0);
         writeNumber(scratch.tierOneSeconds, 50);
-        // cast speed power bonus = Mastery level / 50.
+        // Cast Speed power bonus = Sealed Meridians / 50.
         divUS(scratch.productionModifier, scratch.tierOneSeconds);
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
 }
 
-export function resetMastery(): void {
-    writeNumber(player.masteryOwned, hasCondensedUpgrade(10) ? 1 : 0);
-    refreshMasteryDerivedState();
+export function resetSealedMeridians(): void {
+    writeNumber(player.sealedMeridiansOwned, hasCondensedUpgrade(10) ? 1 : 0);
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
 }
 
 function resetTierOne(): void {
     if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 20);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     resetTierOneAmounts();
-    resetBolster();
+    resetMeridianPurification();
     resetCastSpeed();
 }
 
@@ -140,24 +141,27 @@ export function resetCastSpeed(): void {
 export function applyCondensedResetStartingValues(): void {
     if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 20);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
-    applyCondensedMasteryMinimum();
+    writeNumber(player.matrixOwned, hasTierOneAchievement(21) ? 1 : 0);
+    applyCondensedSealedMeridiansMinimum();
+    refreshMatrixDerivedState();
+    refreshSealedMeridiansDerivedState();
 }
 
-export function applyCondensedMasteryMinimum(): void {
-    if (hasCondensedUpgrade(10) && !gt(player.masteryOwned, 0)) {
-        writeNumber(player.masteryOwned, 1);
-        refreshMasteryDerivedState();
+export function applyCondensedSealedMeridiansMinimum(): void {
+    if (hasCondensedUpgrade(10) && !gt(player.sealedMeridiansOwned, 0)) {
+        writeNumber(player.sealedMeridiansOwned, 1);
+        refreshSealedMeridiansDerivedState();
         refreshMatrixDerivedState();
-        refreshMasteryDerivedState();
+        refreshSealedMeridiansDerivedState();
     }
 }
 
-export function hasMasteryUpgradedThisReset(): bool {
-    return player.masteryUpgradedThisReset;
+export function hasSealedMeridianThisReset(): bool {
+    return player.meridianSealedThisReset;
 }
 
-export function setMasteryUpgradedThisReset(value: bool): void {
-    player.masteryUpgradedThisReset = value;
+export function setSealedMeridianThisReset(value: bool): void {
+    player.meridianSealedThisReset = value;
 }
 
 export function hasCastSpeedUsedThisCondense(): bool {
@@ -170,6 +174,6 @@ export function setCastSpeedUsedThisCondense(value: bool): void {
 
 /** [/WASM] */
 
-refreshMasteryDerivedState();
+refreshSealedMeridiansDerivedState();
 refreshMatrixDerivedState();
-refreshMasteryDerivedState();
+refreshSealedMeridiansDerivedState();

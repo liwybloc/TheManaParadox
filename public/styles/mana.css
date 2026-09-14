@@ -7,7 +7,19 @@
 }
 .cast-controls .cast-all { grid-column: 1; justify-self: start; }
 .cast-controls .cast-mode { grid-column: 3; justify-self: end; }
-.current-game-speed { grid-column: 2; color: #b9ddfa; font-size: 12px; text-align: center; }
+.useful-stats {
+  grid-column: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-self: center;
+  text-align: center;
+}
+.current-game-speed { color: #b9ddfa; font-size: 12px; }
+.mana-per-second {
+  color: #c49cff;
+  font-size: 16px;
+}
 .cast-all,
 .cast-mode {
   min-width: 180px;
@@ -80,7 +92,7 @@
   cursor: not-allowed;
   opacity: 0.65;
 }
-.mastery-controls {
+.sealed-meridians-controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
@@ -88,7 +100,7 @@
   width: 80%;
   margin: 14px auto 0;
 }
-.mastery-summary,
+.sealed-meridians-summary,
 .matrix-summary {
   display: flex;
   align-items: center;
@@ -99,7 +111,7 @@
   font-weight: 700;
   text-align: center;
 }
-.increase-mastery,
+.seal-meridians,
 .increase-matrix {
   min-height: 76px;
   padding: 10px;
@@ -109,42 +121,42 @@
   cursor: pointer;
   text-align: center;
 }
-.increase-mastery strong,
-.increase-mastery span,
-.increase-mastery small,
+.seal-meridians strong,
+.seal-meridians span,
+.seal-meridians small,
 .increase-matrix strong,
 .increase-matrix span,
 .increase-matrix small {
   display: block;
 }
-.increase-mastery strong,
+.seal-meridians strong,
 .increase-matrix strong {
   color: #e6bb8d;
   font-size: 16px;
 }
-.increase-mastery span,
+.seal-meridians span,
 .increase-matrix span {
   margin: 6px 0;
 }
-.increase-mastery small,
+.seal-meridians small,
 .increase-matrix small {
   color: #b8a18d;
 }
-.increase-mastery:hover:not(:disabled),
+.seal-meridians:hover:not(:disabled),
 .increase-matrix:hover:not(:disabled) {
   border-color: #c18b59;
   background: #38291d;
 }
-.increase-mastery:active:not(:disabled),
+.seal-meridians:active:not(:disabled),
 .increase-matrix:active:not(:disabled) {
   background: #211810;
 }
-.increase-mastery:focus-visible,
+.seal-meridians:focus-visible,
 .increase-matrix:focus-visible {
   outline: 2px solid #e6bb8d;
   outline-offset: 2px;
 }
-.increase-mastery:disabled,
+.seal-meridians:disabled,
 .increase-matrix:disabled {
   cursor: not-allowed;
   opacity: 0.65;
@@ -153,7 +165,7 @@
   display: grid;
   gap: 7px;
 }
-.bolster-staff {
+.purify-meridians {
   display: block;
   min-width: 150px;
   width: 26%;
@@ -166,20 +178,20 @@
   cursor: pointer;
   text-align: center;
 }
-.bolster-staff strong,
-.bolster-staff span,
-.bolster-staff small {
+.purify-meridians strong,
+.purify-meridians span,
+.purify-meridians small {
   display: block;
 }
-.bolster-staff span,
-.bolster-staff small {
+.purify-meridians span,
+.purify-meridians small {
   font-size: 10px;
 }
-.bolster-staff:hover:not(:disabled) {
+.purify-meridians:hover:not(:disabled) {
   border-color: #a574db;
   background: #39294a;
 }
-.bolster-staff:disabled {
+.purify-meridians:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }

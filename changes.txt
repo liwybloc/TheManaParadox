@@ -1,23 +1,10 @@
-v0.0.7
-- added the guild, unlocked at 1e210 mana
-- added a rotating quest board that refreshes every 10 minutes
-- added f, e, and d-rank quests with stronger enemies and better rewards
-- added guild experience and rank progression through d rank
-- added turn-based quest combat with spells
-- added a 10x10 guild inventory with movable items and stuff
-- added coins and the ability to sell quest rewards
-- added a rotating guild shop with items and rank-based upgrades
-- added upgrades that improve potions, mana production, and expand the quest board to six slots
-- added potions, monster materials, redstone, glowstone, and other ranked drops
-- added three potions of speed, providing +4.00x, +14.00x, or +63.00x game speed for 120, 60, or 30 seconds
-- up to 10 simultaneous potion effects with separate timers
-- added a current game speed display and active potion effect list to basic spells
-- changed courage to provide 10x game speed instead of 10x production (same thing)
-- added five guild-related achievements
-- added challenge and progression achievement categories
-- improved achievement ordering
-- added a mana circles tab
-- replaced the repeatable condensed mana upgrade with an ascension hall unlock (tbd)
-- added a softcap to staff bolstering and nerfed it to accommodate for the guild
-- remembered the selected tab and subtab when reloading
+v0.0.8
+- renamed the tier 1 producers and updated mastery and staff bolstering to sealed meridians and purification of meridians
+- added five new challenge achievements and rewards for several existing achievements
+- added more progression goals leading up to the guild and condense
+- showed mana per second, multiplier, maximum mana, and achievement displays
+- made background stars animated
+- rebalanced courage, condensed upgrades, purification of meridians, guild combat, enemy health, spell costs, and shop prices
+- improved offline time simulation with speed up and skip controls that work now :3
+- fixed quest results, rewards, locking, and board refreshes during combat
 - optimizations and bug fixes

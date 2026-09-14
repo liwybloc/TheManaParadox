@@ -9,7 +9,7 @@ declare const scratch: Scratch;
 /** [WASM] */
 
 const COURAGE_DURATION: f64 = 15;
-const COURAGE_COOLDOWN: f64 = 30;
+const COURAGE_COOLDOWN: f64 = 15;
 
 export function isCourageVisible(): bool {
     if (player.courageUnlocked) return true;
@@ -28,9 +28,9 @@ export function setCourageUnlocked(unlocked: bool): void {
 }
 
 export function activateCourage(): bool {
-    if (!player.courageUnlocked || gt(player.courageCooldown, 0)) return false;
-    writeNumber(player.courageTimer, hasCondensedUpgrade(12) ? COURAGE_DURATION * 2 : COURAGE_DURATION);
-    writeNumber(player.courageCooldown, hasCondensedUpgrade(14) ? COURAGE_COOLDOWN * 0.75 : COURAGE_COOLDOWN);
+    if (!player.courageUnlocked || isCourageActive() || gt(player.courageCooldown, 0)) return false;
+    writeNumber(player.courageTimer, hasCondensedUpgrade(12) ? COURAGE_DURATION * 1.25 : COURAGE_DURATION);
+    writeNumber(player.courageCooldown, 0);
     writeNumber(player.courageMultiplier, 10);
     if (hasCondensedUpgrade(18)) {
         writeNumber(scratch.productionModifier, 0);
@@ -51,8 +51,21 @@ export function updateCourage(deltaSeconds: i32): bool {
     const active = isCourageActive();
     if (elapsed === 0) return active;
 
-    reduceTimer(player.courageTimer, deltaSeconds, elapsed);
-    reduceTimer(player.courageCooldown, deltaSeconds, elapsed);
+    if (!active) {
+        reduceTimer(player.courageCooldown, deltaSeconds, elapsed);
+        return false;
+    }
+
+    const activeRemaining = toNumber(player.courageTimer);
+    if (activeRemaining > elapsed) {
+        subUS(player.courageTimer, deltaSeconds);
+        return true;
+    }
+
+    writeNumber(player.courageTimer, 0);
+    const cooldown = hasCondensedUpgrade(14) ? COURAGE_COOLDOWN * 0.75 : COURAGE_COOLDOWN;
+    const cooldownRemaining = cooldown - (elapsed - activeRemaining);
+    writeNumber(player.courageCooldown, Math.max(0, cooldownRemaining));
     return active;
 }
 

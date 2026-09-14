@@ -35,17 +35,8 @@ input {
   height: var(--star-size);
   border-radius: 50%;
   background: #fff;
-  animation:
-    star-twinkle var(--twinkle-duration) ease-in-out var(--twinkle-delay) infinite alternate,
-    star-drift var(--drift-duration) ease-in-out var(--drift-delay) infinite alternate;
-}
-@keyframes star-drift {
-  from {
-    transform: translate(0, 0);
-  }
-  to {
-    transform: translate(var(--drift-x), var(--drift-y));
-  }
+  will-change: transform, opacity;
+  animation: star-twinkle var(--twinkle-duration) ease-in-out var(--twinkle-delay) infinite alternate;
 }
 @keyframes star-twinkle {
   from {
@@ -57,6 +48,9 @@ input {
 }
 body.effects-disabled #sky {
   display: none;
+}
+body.star-animation-disabled .star {
+  animation-play-state: paused;
 }
 @media (prefers-reduced-motion: reduce) {
   .star {
@@ -122,4 +116,3 @@ body.effects-disabled #sky {
   from { transform: scaleX(1); }
   to { transform: scaleX(0); }
 }
-

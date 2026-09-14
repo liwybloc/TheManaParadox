@@ -216,7 +216,7 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "The condensed core of a disabled mana golem.",
 		width: 2,
 		height: 2,
-		style: "mana-core"
+		style: "inventory-mana-core"
 	},
 	{
 		id: Items.REDSTONE,
@@ -238,7 +238,7 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
     { id: Items.TROLL_HEART, name: "Troll Heart", description: "A dense heart steeped in regenerative mana.", width: 2, height: 2, style: "troll-heart" },
     { id: Items.PHANTOM_SILK, name: "Phantom Silk", description: "Nearly weightless silk left by a phantom.", width: 2, height: 1, style: "phantom-silk" },
     { id: Items.ARCANE_CRYSTAL, name: "Arcane Crystal", description: "A crystal saturated with refined magic.", width: 1, height: 2, style: "arcane-crystal" },
-    { id: Items.DRAGON_GLASS, name: "Dragon Glass", description: "Heat-fused glass from a draconic lair.", width: 2, height: 1, style: "dragon-glass" },
+    { id: Items.DRAGON_GLASS, name: "Dragon Glass", description: "Heat-fused glass from a draconic lair.", width: 1, height: 2, style: "dragon-glass" },
 ];
 
 export const INVENTORY_ITEMS: readonly InventoryItemDefinition[] = INVENTORY_ITEM_DATA.map((item) => ({

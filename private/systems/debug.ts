@@ -2,7 +2,7 @@ import { writeNumber, readString } from "../core/break_eternity.js";
 import { CONDENSED_UPGRADE_COUNT, setCondensedUpgrade } from "../game/condensed.js";
 import { clampManaToInfinityBoundary } from "../game/currencies.js";
 import { HANDLES } from "../core/player.js";
-import { refreshMasteryDerivedState, refreshMatrixDerivedState } from "../game/progression.js";
+import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 
 (globalThis as any).readValue = (value: keyof typeof HANDLES) => {
@@ -12,7 +12,7 @@ import { refreshTierOneDerivedState } from "../game/tier_one.js";
 (globalThis as any).assignValue = (value: keyof typeof HANDLES, number: number) => {
     writeNumber(HANDLES[value] ?? HANDLES.mana, number);
     refreshTierOneDerivedState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
     clampManaToInfinityBoundary();
 };
@@ -23,8 +23,8 @@ import { refreshTierOneDerivedState } from "../game/tier_one.js";
         throw new Error(`Condensed upgrade index must be an integer from 0 to ${CONDENSED_UPGRADE_COUNT - 1}`);
     }
     setCondensedUpgrade(index, owned);
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshTierOneDerivedState();
 };

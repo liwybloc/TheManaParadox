@@ -1,16 +1,16 @@
-import { buyMaxTierOne, castAll, castSpeed, condense, increaseMastery, increaseMatrix } from "./actions.js";
+import { buyMaxTierOne, castAll, castSpeed, condense, increaseMatrix, sealMeridians } from "./actions.js";
 
 export const KEYBIND_DEFINITIONS = [
-    { id: "buy-tier-1", label: "Cast Max: Mana Conduit", defaultKey: "1" },
-    { id: "buy-tier-2", label: "Cast Max: Conduit Conjugation", defaultKey: "2" },
-    { id: "buy-tier-3", label: "Cast Max: Conjugation Creation", defaultKey: "3" },
-    { id: "buy-tier-4", label: "Cast Max: Creation Manufactory", defaultKey: "4" },
-    { id: "buy-tier-5", label: "Cast Max: Manufacture Staff", defaultKey: "5" },
+    { id: "buy-tier-1", label: "Cast Max: Mana Absorber", defaultKey: "1" },
+    { id: "buy-tier-2", label: "Cast Max: Pylon", defaultKey: "2" },
+    { id: "buy-tier-3", label: "Cast Max: Conduit", defaultKey: "3" },
+    { id: "buy-tier-4", label: "Cast Max: Circuit", defaultKey: "4" },
+    { id: "buy-tier-5", label: "Cast Max: Meridian", defaultKey: "5" },
     { id: "condense", label: "Condense", defaultKey: "c" },
     { id: "cast-all", label: "Cast Max All", defaultKey: "m" },
     { id: "cast-speed", label: "Cast Speed", defaultKey: "s" },
     { id: "matrix", label: "Buy Crystal Matrix", defaultKey: "x" },
-    { id: "mastery", label: "Buy Mastery", defaultKey: "y" },
+    { id: "seal-meridians", label: "Seal Meridians", defaultKey: "y" },
 ];
 
 const STORAGE_KEY = "TheManaParadoxKeybinds";
@@ -65,7 +65,7 @@ function runAction(id: string): void {
         case "cast-all": castAll(); break;
         case "cast-speed": castSpeed(); break;
         case "matrix": increaseMatrix(); break;
-        case "mastery": increaseMastery(); break;
+        case "seal-meridians": sealMeridians(); break;
     }
 }
 
@@ -77,6 +77,9 @@ function loadBindings(): Record<string, string> {
     const defaults = Object.fromEntries(KEYBIND_DEFINITIONS.map((entry) => [entry.id, entry.defaultKey]));
     try {
         const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
+        if (typeof saved.mastery === "string" && typeof saved["seal-meridians"] !== "string") {
+            saved["seal-meridians"] = saved.mastery;
+        }
         for (const definition of KEYBIND_DEFINITIONS) {
             if (typeof saved[definition.id] === "string") defaults[definition.id] = normalizeKey(saved[definition.id]);
         }

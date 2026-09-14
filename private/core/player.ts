@@ -38,10 +38,10 @@ export interface PlayerHandles {
     castSpeedTimer: i32;
     castSpeedMagnitude: i32;
     castSpeedCost: i32;
-    masteryOwned: i32;
-    masteryLevel: i32;
-    masteryCost: i32;
-    masterySpeedEffect: i32;
+    sealedMeridiansOwned: i32;
+    sealedMeridians: i32;
+    sealMeridiansCost: i32;
+    sealedMeridiansSpeedEffect: i32;
     matrixOwned: i32;
     matrixCost: i32;
     matrixPower: i32;
@@ -56,9 +56,9 @@ export interface PlayerHandles {
     cost_empowerment_conjugationCreation: i32;
     cost_empowerment_creationManufactory: i32;
     cost_empowerment_manufactureStaff: i32;
-    bolsterMultiplier: i32;
-    bolsterEffect: i32;
-    bolsterRequirement: i32;
+    purifiedMeridiansMultiplier: i32;
+    meridianPurificationEffect: i32;
+    meridianPurificationRequirement: i32;
     courageTimer: i32;
     courageCooldown: i32;
     courageMultiplier: i32;
@@ -87,7 +87,7 @@ export interface Player extends PlayerHandles {
     achievement_buycreationmanufactory: bool;
     achievement_buymanufacturestaff: bool;
     achievement_playtwohours: bool;
-    achievement_upgrademastery: bool;
+    achievement_sealmeridians: bool;
     achievement_havesixstaff: bool;
     achievement_produce1e50mana: bool;
     achievement_castspeedminute: bool;
@@ -111,8 +111,16 @@ export interface Player extends PlayerHandles {
     achievement_drinkpotion: bool;
     achievement_tenquests: bool;
     achievement_rankupe: bool;
-    masteryUpgradedThisReset: bool;
+    achievement_hatethetaste: bool;
+    achievement_lovethetaste: bool;
+    achievement_freezeonly: bool;
+    achievement_noboosting: bool;
+    achievement_sellfullinventory: bool;
+    meridianSealedThisReset: bool;
     castSpeedUsedThisCondense: bool;
+    potionUsedThisCondense: bool;
+    boostedProducerThisCondense: bool;
+    combatUsedNonFreeze: bool;
     courageUnlocked: bool;
     hasCondensed: bool;
     guildUnlocked: bool;
@@ -157,10 +165,10 @@ export const HANDLES: PlayerHandles = {
     castSpeedTimer: createZero(),
     castSpeedMagnitude: createDecimal(1, 0, 1),
     castSpeedCost: createDecimal(1, 0, 1000),
-    masteryOwned: createZero(),
-    masteryLevel: createDecimal(1, 0, 1),
-    masteryCost: createDecimal(1, 0, 1),
-    masterySpeedEffect: createDecimal(1, 0, 1),
+    sealedMeridiansOwned: createZero(),
+    sealedMeridians: createDecimal(1, 0, 1),
+    sealMeridiansCost: createDecimal(1, 0, 1),
+    sealedMeridiansSpeedEffect: createDecimal(1, 0, 1),
     matrixOwned: createZero(),
     matrixCost: createDecimal(1, 0, 10),
     matrixPower: createDecimal(1, 0, 0.5),
@@ -175,9 +183,9 @@ export const HANDLES: PlayerHandles = {
     cost_empowerment_conjugationCreation: createZero(),
     cost_empowerment_creationManufactory: createZero(),
     cost_empowerment_manufactureStaff: createZero(),
-    bolsterMultiplier: createDecimal(1, 0, 1),
-    bolsterEffect: createDecimal(1, 0, 1.01),
-    bolsterRequirement: createDecimal(1, 1, 45),
+    purifiedMeridiansMultiplier: createDecimal(1, 0, 1),
+    meridianPurificationEffect: createDecimal(1, 0, 1.01),
+    meridianPurificationRequirement: createDecimal(1, 1, 45),
     courageTimer: createZero(),
     courageCooldown: createZero(),
     courageMultiplier: createDecimal(1, 0, 10),
@@ -189,9 +197,9 @@ export const HANDLES: PlayerHandles = {
     combatShield: createZero(),
     combatShieldMaximum: createZero(),
     combatFreezeTurns: createZero(),
-    fireballCost: createDecimal(1, 1, 210),
-    whirlwindCost: createDecimal(1, 1, 230),
-    freezeCost: createDecimal(1, 1, 250),
+    fireballCost: createDecimal(1, 1, 40),
+    whirlwindCost: createDecimal(1, 1, 80),
+    freezeCost: createDecimal(1, 1, 120),
     inventoryWolfFur: createZero(),
     inventoryPotionOfSpeed: createZero(),
     inventoryWolfFurPosition: createDecimal(-1, 0, 1),
@@ -239,10 +247,10 @@ export const player: Player = {
     castSpeedTimer: 0,
     castSpeedMagnitude: 0,
     castSpeedCost: 0,
-    masteryOwned: 0,
-    masteryLevel: 0,
-    masteryCost: 0,
-    masterySpeedEffect: 0,
+    sealedMeridiansOwned: 0,
+    sealedMeridians: 0,
+    sealMeridiansCost: 0,
+    sealedMeridiansSpeedEffect: 0,
     matrixOwned: 0,
     matrixCost: 0,
     matrixPower: 0,
@@ -257,9 +265,9 @@ export const player: Player = {
     cost_empowerment_conjugationCreation: 0,
     cost_empowerment_creationManufactory: 0,
     cost_empowerment_manufactureStaff: 0,
-    bolsterMultiplier: 0,
-    bolsterEffect: 0,
-    bolsterRequirement: 0,
+    purifiedMeridiansMultiplier: 0,
+    meridianPurificationEffect: 0,
+    meridianPurificationRequirement: 0,
     courageTimer: 0,
     courageCooldown: 0,
     courageMultiplier: 0,
@@ -285,7 +293,7 @@ export const player: Player = {
     achievement_buycreationmanufactory: false,
     achievement_buymanufacturestaff: false,
     achievement_playtwohours: false,
-    achievement_upgrademastery: false,
+    achievement_sealmeridians: false,
     achievement_havesixstaff: false,
     achievement_produce1e50mana: false,
     achievement_castspeedminute: false,
@@ -309,8 +317,16 @@ export const player: Player = {
     achievement_drinkpotion: false,
     achievement_tenquests: false,
     achievement_rankupe: false,
-    masteryUpgradedThisReset: false,
+    achievement_hatethetaste: false,
+    achievement_lovethetaste: false,
+    achievement_freezeonly: false,
+    achievement_noboosting: false,
+    achievement_sellfullinventory: false,
+    meridianSealedThisReset: false,
     castSpeedUsedThisCondense: false,
+    potionUsedThisCondense: false,
+    boostedProducerThisCondense: false,
+    combatUsedNonFreeze: false,
     courageUnlocked: false,
     hasCondensed: false,
     guildUnlocked: false,
@@ -385,16 +401,16 @@ export function initializeTierOneHandles(
 
 export function initializeProgressionHandles(
     timer: i32, magnitude: i32, speedCost: i32,
-    masteryOwned: i32, masteryLevel: i32, masteryCost: i32, masteryEffect: i32,
+    sealedMeridiansOwned: i32, sealedMeridians: i32, sealMeridiansCost: i32, sealedMeridiansEffect: i32,
     matrixOwned: i32, matrixCost: i32, matrixPower: i32, matrixEffect: i32,
 ): void {
     player.castSpeedTimer = timer;
     player.castSpeedMagnitude = magnitude;
     player.castSpeedCost = speedCost;
-    player.masteryOwned = masteryOwned;
-    player.masteryLevel = masteryLevel;
-    player.masteryCost = masteryCost;
-    player.masterySpeedEffect = masteryEffect;
+    player.sealedMeridiansOwned = sealedMeridiansOwned;
+    player.sealedMeridians = sealedMeridians;
+    player.sealMeridiansCost = sealMeridiansCost;
+    player.sealedMeridiansSpeedEffect = sealedMeridiansEffect;
     player.matrixOwned = matrixOwned;
     player.matrixCost = matrixCost;
     player.matrixPower = matrixPower;
@@ -404,7 +420,7 @@ export function initializeProgressionHandles(
 export function initializeEmpowermentHandles(
     e0: i32, e1: i32, e2: i32, e3: i32, legacy: i32,
     c0: i32, c1: i32, c2: i32, c3: i32, c4: i32,
-    bolsterMultiplier: i32, bolsterEffect: i32, bolsterRequirement: i32,
+    purifiedMeridiansMultiplier: i32, meridianPurificationEffect: i32, meridianPurificationRequirement: i32,
 ): void {
     player.empowerment_manaConduit = e0;
     player.empowerment_conduitConjugation = e1;
@@ -416,9 +432,9 @@ export function initializeEmpowermentHandles(
     player.cost_empowerment_conjugationCreation = c2;
     player.cost_empowerment_creationManufactory = c3;
     player.cost_empowerment_manufactureStaff = c4;
-    player.bolsterMultiplier = bolsterMultiplier;
-    player.bolsterEffect = bolsterEffect;
-    player.bolsterRequirement = bolsterRequirement;
+    player.purifiedMeridiansMultiplier = purifiedMeridiansMultiplier;
+    player.meridianPurificationEffect = meridianPurificationEffect;
+    player.meridianPurificationRequirement = meridianPurificationRequirement;
 }
 
 export function initializeCourageHandles(timer: i32, cooldown: i32, multiplier: i32): void {
@@ -486,7 +502,7 @@ initializeTierOneHandles(
 );
 initializeProgressionHandles(
     HANDLES.castSpeedTimer, HANDLES.castSpeedMagnitude, HANDLES.castSpeedCost,
-    HANDLES.masteryOwned, HANDLES.masteryLevel, HANDLES.masteryCost, HANDLES.masterySpeedEffect,
+    HANDLES.sealedMeridiansOwned, HANDLES.sealedMeridians, HANDLES.sealMeridiansCost, HANDLES.sealedMeridiansSpeedEffect,
     HANDLES.matrixOwned, HANDLES.matrixCost, HANDLES.matrixPower, HANDLES.matrixSpeedPower,
 );
 initializeEmpowermentHandles(
@@ -494,8 +510,8 @@ initializeEmpowermentHandles(
     HANDLES.empowerment_conjugationCreation, HANDLES.empowerment_creationManufactory, HANDLES.legacy_000,
     HANDLES.cost_empowerment_manaConduit, HANDLES.cost_empowerment_conduitConjugation,
     HANDLES.cost_empowerment_conjugationCreation, HANDLES.cost_empowerment_creationManufactory,
-    HANDLES.cost_empowerment_manufactureStaff, HANDLES.bolsterMultiplier,
-    HANDLES.bolsterEffect, HANDLES.bolsterRequirement,
+    HANDLES.cost_empowerment_manufactureStaff, HANDLES.purifiedMeridiansMultiplier,
+    HANDLES.meridianPurificationEffect, HANDLES.meridianPurificationRequirement,
 );
 initializeCourageHandles(HANDLES.courageTimer, HANDLES.courageCooldown, HANDLES.courageMultiplier);
 initializeCondensedManaHandle(HANDLES.condensedMana);

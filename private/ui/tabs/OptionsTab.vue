@@ -2,8 +2,10 @@
 defineProps({
     activeSubtab: { type: String, required: true },
     updateRate: { type: Number, required: true },
+    starsVisible: { type: Boolean, required: true },
+    starsAnimated: { type: Boolean, required: true },
 });
-const emit = defineEmits(["edit-keybinds", "stars-visible", "export-save", "import-save", "reset-game", "update-rate"]);
+const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "export-save", "import-save", "reset-game", "update-rate"]);
 </script>
 
 <template>
@@ -32,7 +34,8 @@ const emit = defineEmits(["edit-keybinds", "stars-visible", "export-save", "impo
         <div v-else-if="activeSubtab === 'visuals'">
             <div class="section-title"><h1>Visual Options</h1><p>Configure decorative elements.</p></div>
             <div class="option-list">
-                <label><span><strong>Show star background</strong><small>Display static background stars.</small></span><input type="checkbox" checked @change="emit('stars-visible', $event.currentTarget.checked)" /></label>
+                <label><span><strong>Show star background</strong><small>Display background stars.</small></span><input type="checkbox" :checked="starsVisible" @change="emit('stars-visible', $event.currentTarget.checked)" /></label>
+                <label><span><strong>Animate stars</strong><small>Allow stars to twinkle and move with mana.</small></span><input type="checkbox" :checked="starsAnimated" @change="emit('stars-animated', $event.currentTarget.checked)" /></label>
             </div>
         </div>
     </section>

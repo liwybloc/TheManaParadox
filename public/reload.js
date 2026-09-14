@@ -9,6 +9,7 @@ if(window.location.href.includes("localhost")) {
 
             const nextBuild = await response.text();
             if (currentBuild !== undefined && nextBuild !== currentBuild) {
+                await window.saveGame();
                 window.location.reload();
                 return;
             }

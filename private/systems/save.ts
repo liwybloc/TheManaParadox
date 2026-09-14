@@ -1,17 +1,17 @@
 import { getLayer, getMagnitude, getSign, writeDecimal } from "../core/break_eternity.js";
-import { checkOfflineAchievement, hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setTierOneAchievement } from "../game/achievements.js";
+import { checkOfflineAchievement, hasBoostedProducerThisCondense, hasCombatUsedNonFreeze, hasPotionUsedThisCondense, hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setBoostedProducerThisCondense, setCombatUsedNonFreeze, setPotionUsedThisCondense, setTierOneAchievement } from "../game/achievements.js";
 import { clampManaToInfinityBoundary } from "../game/currencies.js";
 import { isCourageUnlocked, setCourageUnlocked } from "../game/courage.js";
 import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCondensedUpgrade, setHasCondensed } from "../game/condensed.js";
 import { HANDLES } from "../core/player.js";
-import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasMasteryUpgradedThisReset, refreshMasteryDerivedState, refreshMatrixDerivedState, setCastSpeedUsedThisCondense, setMasteryUpgradedThisReset } from "../game/progression.js";
+import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSealedMeridianThisReset, refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, setCastSpeedUsedThisCondense, setSealedMeridianThisReset } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { simulateTime } from "./tick.js";
-import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getQuestRefreshRemaining, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, resetCombatSpellCosts, setGuildExperience, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
+import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, resetCombatSpellCosts, setGuildExperience, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "009";
+const CURRENT_SAVE_VERSION = "010";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -64,6 +64,7 @@ const achievementFields003 = achievementSaveFields(5, 10);
 const achievementFields004 = achievementSaveFields(5, 15);
 const achievementFields007 = achievementSaveFields(5, 20);
 const achievementFields008 = achievementSaveFields(5, 25);
+const achievementFields009 = achievementSaveFields(5, 30);
 const condensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT - 1 }, (_, index) => booleanSaveField(
     () => hasCondensedUpgrade(index),
     (purchased) => setCondensedUpgrade(index, purchased),
@@ -77,7 +78,7 @@ const totalCondensedManaField = decimalSaveField(HANDLES.statistics_condensedMan
 const castSpeedTimerField = decimalSaveField(HANDLES.castSpeedTimer, [0, 0, 0]);
 const castSpeedMagnitudeField = decimalSaveField(HANDLES.castSpeedMagnitude, [1, 0, 1]);
 const castSpeedCostField = decimalSaveField(HANDLES.castSpeedCost, [1, 0, 1000]);
-const masteryOwnedField = decimalSaveField(HANDLES.masteryOwned, [0, 0, 0]);
+const sealedMeridiansOwnedField = decimalSaveField(HANDLES.sealedMeridiansOwned, [0, 0, 0]);
 const matrixOwnedField = decimalSaveField(HANDLES.matrixOwned, [0, 0, 0]);
 const matrixPowerField = decimalSaveField(HANDLES.matrixPower, [1, 0, 0.5]);
 const infinityBreakIndexField = decimalSaveField(HANDLES.mana_circle_tier, [0, 0, 0]);
@@ -88,13 +89,13 @@ const empowermentFields = [
     decimalSaveField(HANDLES.empowerment_creationManufactory, [0, 0, 0]),
     decimalSaveField(HANDLES.legacy_000, [0, 0, 0]),
 ];
-const bolsterMultiplierField = decimalSaveField(HANDLES.bolsterMultiplier, [1, 0, 1]);
+const purifiedMeridiansMultiplierField = decimalSaveField(HANDLES.purifiedMeridiansMultiplier, [1, 0, 1]);
 const courageUnlockedField = booleanSaveField(isCourageUnlocked, setCourageUnlocked);
 const courageTimerField = decimalSaveField(HANDLES.courageTimer, [0, 0, 0]);
 const courageCooldownField = decimalSaveField(HANDLES.courageCooldown, [0, 0, 0]);
 const timeThisCondenseField = decimalSaveField(HANDLES.statistics_timeThisCondense, [0, 0, 0]);
 const fastestCondenseField = decimalSaveField(HANDLES.statistics_fastestCondense, [0, 0, 0]);
-const masteryUpgradedThisResetField = booleanSaveField(hasMasteryUpgradedThisReset, setMasteryUpgradedThisReset);
+const meridianSealedThisResetField = booleanSaveField(hasSealedMeridianThisReset, setSealedMeridianThisReset);
 const castSpeedUsedThisCondenseField = booleanSaveField(hasCastSpeedUsedThisCondense, setCastSpeedUsedThisCondense);
 const guildUnlockedField = booleanSaveField(isGuildUnlocked, setGuildUnlocked);
 const guildMemberField = booleanSaveField(isGuildMember, setGuildMember);
@@ -106,9 +107,9 @@ const guildFields: readonly SaveField[] = [
     decimalSaveField(HANDLES.wolfineHealth, [0, 0, 0]),
     decimalSaveField(HANDLES.combatShieldMaximum, [0, 0, 0]),
     decimalSaveField(HANDLES.combatFreezeTurns, [0, 0, 0]),
-    decimalSaveField(HANDLES.fireballCost, [1, 1, 210]),
-    decimalSaveField(HANDLES.whirlwindCost, [1, 1, 230]),
-    decimalSaveField(HANDLES.freezeCost, [1, 1, 250]),
+    decimalSaveField(HANDLES.fireballCost, [1, 1, 40]),
+    decimalSaveField(HANDLES.whirlwindCost, [1, 1, 80]),
+    decimalSaveField(HANDLES.freezeCost, [1, 1, 120]),
     decimalSaveField(HANDLES.inventoryWolfFur, [0, 0, 0]),
     decimalSaveField(HANDLES.inventoryPotionOfSpeed, [0, 0, 0]),
 ];
@@ -166,15 +167,15 @@ const dRankGuildFields: readonly SaveField[] = [
         () => hasGuildShopUpgrade(offset + 6),
         (purchased) => setGuildShopUpgrade(offset + 6, purchased),
     )),
-    ...POTION_SPEED_III_TIMER_HANDLES.map((handle) => decimalSaveField(handle, [0, 0, 0])),
 ];
+const potionSpeedIIITimerFields = POTION_SPEED_III_TIMER_HANDLES.map((handle) => decimalSaveField(handle, [0, 0, 0]));
 
 const savedFields002: readonly SaveField[] = [
     ...savedFields001,
     castSpeedTimerField,
     castSpeedMagnitudeField,
     castSpeedCostField,
-    masteryOwnedField,
+    sealedMeridiansOwnedField,
     matrixOwnedField,
     matrixPowerField,
     totalManaProducedField,
@@ -186,7 +187,7 @@ const savedFields002: readonly SaveField[] = [
 const savedFields003: readonly SaveField[] = [
     ...savedFields002,
     ...empowermentFields,
-    bolsterMultiplierField,
+    purifiedMeridiansMultiplierField,
     ...achievementFields003,
     totalClicksField,
     numberSaveField(lastSaveTimestamp, 0),
@@ -219,7 +220,7 @@ const savedFields006: readonly SaveField[] = [
 const savedFields007: readonly SaveField[] = [
     ...savedFields006,
     ...achievementFields007,
-    masteryUpgradedThisResetField,
+    meridianSealedThisResetField,
     castSpeedUsedThisCondenseField,
 ];
 
@@ -240,33 +241,47 @@ const savedFields008: readonly SaveField[] = [
     ...extendedGuildFields,
     ...dRankGuildFields,
 ];
+
+// idk why this is = savedFields008 i think i messed up ordering somewhere
 const savedFields009: readonly SaveField[] = savedFields008;
+
+const savedFields010: readonly SaveField[] = [
+    ...savedFields009,
+    ...potionSpeedIIITimerFields,
+    ...achievementFields009,
+    booleanSaveField(hasPotionUsedThisCondense, setPotionUsedThisCondense),
+    booleanSaveField(hasBoostedProducerThisCondense, setBoostedProducerThisCondense),
+    booleanSaveField(hasCombatUsedNonFreeze, setCombatUsedNonFreeze),
+];
 
 const condenseResetFields: readonly SaveField[] = [
     ...savedFields001,
     castSpeedTimerField,
     castSpeedMagnitudeField,
     castSpeedCostField,
-    masteryOwnedField,
+    sealedMeridiansOwnedField,
     matrixOwnedField,
     matrixPowerField,
     infinityBreakIndexField,
     ...empowermentFields,
-    bolsterMultiplierField,
+    purifiedMeridiansMultiplierField,
     courageUnlockedField,
     courageTimerField,
     courageCooldownField,
     timeThisCondenseField,
-    masteryUpgradedThisResetField,
+    meridianSealedThisResetField,
     castSpeedUsedThisCondenseField,
+    booleanSaveField(hasPotionUsedThisCondense, setPotionUsedThisCondense),
+    booleanSaveField(hasBoostedProducerThisCondense, setBoostedProducerThisCondense),
+    booleanSaveField(hasCombatUsedNonFreeze, setCombatUsedNonFreeze),
 ];
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields008));
+    const bytes = new Uint8Array(totalByteLength(savedFields010));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields008) {
+    for (const field of savedFields010) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -308,13 +323,16 @@ export async function importSave(saveData: string): Promise<void> {
         case "009":
             await importFields(encoded, savedFields009, true);
             break;
+        case "010":
+            await importFields(encoded, savedFields010, true);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
     refreshCondensedUpgradeState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshTierOneDerivedState();
     resetCombatSpellCosts();
     ensureInventoryPlacements();
@@ -336,11 +354,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields008 || fields === savedFields009;
+    const currentVersionFields = fields === savedFields010;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields008) field.reset();
+    for (const field of savedFields010) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -435,12 +453,12 @@ export async function saveGame(): Promise<void> {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields008) field.reset();
+    for (const field of savedFields010) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshTierOneDerivedState();
     refreshPotionEffectState();
     ensureShopItems();
@@ -453,11 +471,13 @@ export function resetForCondense(): void {
     for (const field of condenseResetFields) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
-    refreshMasteryDerivedState();
+    refreshSealedMeridiansDerivedState();
     refreshTierOneDerivedState();
     applyCondensedResetStartingValues();
+    refreshPotionEffectState();
+    setPotionUsedThisCondense(hasActivePotionEffects());
     clampManaToInfinityBoundary();
 }
 

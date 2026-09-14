@@ -32,8 +32,8 @@ export function castAll(): void {
     namedWasm.buyMaxAllTierOne();
 }
 
-export function increaseMastery(): void {
-    namedWasm.increaseMastery();
+export function sealMeridians(): void {
+    namedWasm.sealMeridians();
 }
 
 export function increaseMatrix(): void {

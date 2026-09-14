@@ -17,7 +17,10 @@ const messages = [
     'at first i thought this was gibberish, then i realized it was actually written in parkour',
     'I be ponderin my orb',
     'mrawo :3',
-    'Mr. Layer? Congrats, you\'re always on the list!'
+    'Mr. Layer? Congrats, you\'re always on the list!',
+    'woah, i see a horizon appearing! like some sort of.. New Horizons!',
+    'i wish my brain looked like a #####',
+    'you ever just smell like vegetables?'
 ];
 
 messages.push(`fun fact there are ${messages.length + 1} different message tickers`);

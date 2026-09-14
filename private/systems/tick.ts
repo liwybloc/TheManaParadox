@@ -1,10 +1,10 @@
-import { gt, lte, mulUS, multiplyInto, subUS, toNumber, writeNumber } from "../core/break_eternity.js";
+import { gt, lte, mulUS, multiplyInto, subUS, writeNumber } from "../core/break_eternity.js";
 import { consumeTierOneRewardsChanged } from "../game/achievements.js";
 import { updateCourage } from "../game/courage.js";
-import { addPlayerTime, gainCurrency } from "../game/currencies.js";
+import { addPlayerTime, gainProductionCurrency } from "../game/currencies.js";
 import { getGameSpeed, isQuestActive, updatePotionEffects, updateQuestBoard } from "../guild/guild.js";
 import { HANDLES } from "../core/player.js";
-import { refreshMasteryDerivedState, refreshMatrixDerivedState, resetCastSpeed } from "../game/progression.js";
+import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, resetCastSpeed } from "../game/progression.js";
 import { SCRATCH_HANDLES } from "../core/scratch.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { PerformanceStats } from "./performance-stats.js";
@@ -39,6 +39,7 @@ let productionEntityCount: i32 = 0;
 let secondsHandle: i32 = 0;
 let productionHandle: i32 = 0;
 let modifierHandle: i32 = 0;
+let updatesPerSecondHandle: i32 = 0;
 let castSpeedTimerHandle: i32 = 0;
 let castSpeedMagnitudeHandle: i32 = 0;
 let castSpeedCostHandle: i32 = 0;
@@ -65,6 +66,7 @@ export function initializeTick(
     tickSecondsHandle: i32,
     tickProductionHandle: i32,
     tickModifierHandle: i32,
+    tickUpdatesPerSecondHandle: i32,
     speedTimerHandle: i32,
     speedMagnitudeHandle: i32,
     speedCostHandle: i32,
@@ -73,6 +75,7 @@ export function initializeTick(
     secondsHandle = tickSecondsHandle;
     productionHandle = tickProductionHandle;
     modifierHandle = tickModifierHandle;
+    updatesPerSecondHandle = tickUpdatesPerSecondHandle;
     castSpeedTimerHandle = speedTimerHandle;
     castSpeedMagnitudeHandle = speedMagnitudeHandle;
     castSpeedCostHandle = speedCostHandle;
@@ -142,6 +145,7 @@ export function speedMultiplierFor(entity: i32): f64 {
 
 function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
+    writeNumber(updatesPerSecondHandle, 1000 / deltaMilliseconds);
     if (countTimePlayed) addPlayerTime(secondsHandle);
     updateCourage(secondsHandle);
     applyCastSpeed();
@@ -152,7 +156,7 @@ function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
         mulUS(mulUS(productionHandle, entityBaseProductionHandle[entity]), entityBaseMultiplierHandle[entity]);
         writeNumber(modifierHandle, productionMultiplierFor(entity) * speedMultiplierFor(entity));
         mulUS(productionHandle, modifierHandle);
-        gainCurrency(entityDestinationHandle[entity], productionHandle);
+        gainProductionCurrency(entityDestinationHandle[entity], productionHandle);
     }
 }
 
@@ -248,9 +252,9 @@ export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
     updateQuestBoard(deltaMilliseconds / 1000);
     tickProduction(deltaMilliseconds, countTimePlayed);
     if (consumeTierOneRewardsChanged()) {
-        refreshMasteryDerivedState();
+        refreshSealedMeridiansDerivedState();
         refreshMatrixDerivedState();
-        refreshMasteryDerivedState();
+        refreshSealedMeridiansDerivedState();
         refreshTierOneDerivedState();
     }
 }
@@ -271,6 +275,7 @@ initializeTick(
     SCRATCH_HANDLES.tierOneSeconds,
     SCRATCH_HANDLES.tierOneProduction,
     SCRATCH_HANDLES.productionModifier,
+    SCRATCH_HANDLES.updatesPerSecond,
     HANDLES.castSpeedTimer,
     HANDLES.castSpeedMagnitude,
     HANDLES.castSpeedCost,
@@ -318,11 +323,12 @@ const MIN_UPDATE_RATE = 10;
 const MAX_UPDATE_RATE = 200;
 const DEFAULT_UPDATE_RATE = 33;
 let updateRate = loadUpdateRate();
+setUpdateRate(updateRate);
+
 const BASE_SIMULATION_BATCH_SIZE = 5000;
-const MAX_SIMULATION_BATCH_SIZE = 250_000;
 const simulationListeners = new Set<(state: TimeSimulationState) => void>();
 let simulationActive = false;
-let simulationBatchSize = BASE_SIMULATION_BATCH_SIZE;
+let simulationStepMilliseconds = DEFAULT_UPDATE_RATE;
 let simulationSkipRequested = false;
 let simulationTotalMilliseconds = 0;
 let simulationCompletedMilliseconds = 0;
@@ -361,7 +367,7 @@ export async function simulateTime(seconds: number, countTimePlayed = true): Pro
     if (finiteSeconds === 0) return;
 
     simulationActive = true;
-    simulationBatchSize = BASE_SIMULATION_BATCH_SIZE;
+    simulationStepMilliseconds = updateRate;
     simulationSkipRequested = false;
     simulationTotalMilliseconds = finiteSeconds * 1000;
     simulationCompletedMilliseconds = 0;
@@ -371,16 +377,21 @@ export async function simulateTime(seconds: number, countTimePlayed = true): Pro
         while (simulationCompletedMilliseconds < simulationTotalMilliseconds) {
             const remainingMilliseconds = simulationTotalMilliseconds - simulationCompletedMilliseconds;
             if (simulationSkipRequested) {
-                tick(remainingMilliseconds, countTimePlayed);
+                simulateTicks(
+                    remainingMilliseconds,
+                    Math.max(simulationStepMilliseconds, remainingMilliseconds / 100),
+                    countTimePlayed,
+                );
                 simulationCompletedMilliseconds = simulationTotalMilliseconds;
                 notifySimulationListeners();
                 break;
             }
 
-            const remainingTicks = Math.ceil(remainingMilliseconds / updateRate);
-            const batchTicks = Math.min(remainingTicks, simulationBatchSize);
-            const batchMilliseconds = Math.min(remainingMilliseconds, batchTicks * updateRate);
-            simulateTicks(batchMilliseconds, updateRate, countTimePlayed);
+            const batchMilliseconds = Math.min(
+                remainingMilliseconds,
+                BASE_SIMULATION_BATCH_SIZE * simulationStepMilliseconds,
+            );
+            simulateTicks(batchMilliseconds, simulationStepMilliseconds, countTimePlayed);
             simulationCompletedMilliseconds += batchMilliseconds;
             notifySimulationListeners();
             await new Promise((resolve) => setTimeout(resolve, 0));
@@ -393,7 +404,7 @@ export async function simulateTime(seconds: number, countTimePlayed = true): Pro
 
 export function speedUpTimeSimulation(): void {
     if (!simulationActive) return;
-    simulationBatchSize = Math.min(MAX_SIMULATION_BATCH_SIZE, simulationBatchSize * 5);
+    simulationStepMilliseconds *= 2;
     notifySimulationListeners();
 }
 
@@ -409,7 +420,7 @@ function currentSimulationState(): TimeSimulationState {
         progress: simulationTotalMilliseconds === 0
             ? 0
             : Math.min(1, simulationCompletedMilliseconds / simulationTotalMilliseconds),
-        speed: simulationBatchSize / BASE_SIMULATION_BATCH_SIZE,
+        speed: simulationStepMilliseconds / updateRate,
     };
 }
 

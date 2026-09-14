@@ -697,6 +697,21 @@ export function floorInto(result: i32, value: i32): void {
     writeNumber(result, Math.floor(sign * magnitude));
 }
 
+export function ceilInto(result: i32, value: i32): void {
+    const sign = readSign(value);
+    const layer = readLayer(value);
+    const magnitude = readMagnitude(value);
+    if (isNaN(sign) || isNaN(layer) || isNaN(magnitude)) {
+        writeNaN(result);
+        return;
+    }
+    if (layer !== 0) {
+        writeDecimal(result, sign, layer, magnitude);
+        return;
+    }
+    writeNumber(result, Math.ceil(sign * magnitude));
+}
+
 export function roundInto(result: i32, value: i32): void {
     const sign = readSign(value);
     const layer = readLayer(value);

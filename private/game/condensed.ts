@@ -15,29 +15,29 @@ export const CONDENSED_HANDLES = {
 };
 
 const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
-    { slot: 0,  title: "Increase Mana Conduit per-purchase multipler by +0.1x", cost: [1, 0, 1] },
+    { slot: 0,  title: "Increase Mana Absorber per-purchase multipler by +0.1x", cost: [1, 0, 1] },
     { slot: 4,  title: "Increase Cast Speed power by +0.25x", cost: [1, 0, 1] },
 
-    { slot: 5,  title: "Mana Conduits produce x2 more", cost: [1, 0, 1]},
-    { slot: 6,  title: "Conduit Conjugations produce x2 more", cost: [1, 0, 2]},
-    { slot: 7,  title: "Manufacture Staffs produce 5x more", cost: [1, 0, 3]},
+    { slot: 5,  title: "Mana Absorbers produce x2 more", cost: [1, 0, 1]},
+    { slot: 6,  title: "Pylons produce x2 more", cost: [1, 0, 2]},
+    { slot: 7,  title: "Meridians produce 5x more", cost: [1, 0, 3]},
     { slot: 8,  title: "Creation Manufactories produce 2x more", cost: [1, 0, 2]},
-    { slot: 9,  title: "Conjugation Creations prdouce 2x more", cost: [1, 0, 1]},
+    { slot: 9,  title: "Conduits produce 2x more", cost: [1, 0, 1]},
 
     { slot: 10, title: "Start each reset with 1e20 mana", cost: [1, 0, 100] },
     { slot: 11, title: "Decrease cast speed cost growth to ^1.9", cost: [1, 0, 100] },
 
     { slot: 13, title: "Decrease empowerment cost growth to ^1.9", cost: [1, 0, 100] },
-    { slot: 14, title: "Start each reset at Mastery Level 2", cost: [1, 0, 100] },
+    { slot: 14, title: "Start each reset with 2 Sealed Meridians", cost: [1, 0, 100] },
 
     { slot: 15, title: "First Cast Speed is free", cost: [1, 0, 10] },
-    { slot: 16, title: "Courage duration is increased by 100%", cost: [1, 0, 10] },
+    { slot: 16, title: "Courage duration is increased by 25%", cost: [1, 0, 10] },
     { slot: 17, title: "Mana is increased based on condensed mana\n(Currently: {condensedManaBuff})", cost: [1, 0, 10] },
     { slot: 18, title: "Courage cooldown is decreased by 25%", cost: [1, 0, 10] },
-    { slot: 19, title: "Mastery magnitude effect is increased based on Crystal Matrix effect", cost: [1, 0, 10] },
+    { slot: 19, title: "Sealed Meridian magnitude is increased based on Crystal Matrix effect", cost: [1, 0, 10] },
 
     { slot: 21, title: "Empowerments are x5 stronger", cost: [1, 0, 1024] },
-    { slot: 22, title: "Cast Speed power is slightly increased based on Mastery level\n(Currently: {masteryCastPowerBuff})", cost: [1, 0, 1024] },
+    { slot: 22, title: "Cast Speed power is slightly increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff})", cost: [1, 0, 1024] },
     { slot: 23, title: "Condensed Mana boosts Courage power\n(Currently: {condensedCourageBuff})", cost: [1, 0, 1024] },
     
     {
@@ -53,7 +53,7 @@ export const CONDENSED_UPGRADES = CONDENSED_UPGRADE_DEFINITIONS.map((upgrade) =>
 export const CONDENSED_UPGRADE_COUNT = CONDENSED_UPGRADES.length;
 export const CONDENSED_UPGRADE_PLACEHOLDERS = {
     condensedManaBuff: { handle: createDecimal(1, 0, 1), prefix: "×" },
-    masteryCastPowerBuff: { handle: createDecimal(1, 0, 1), prefix: "+" },
+    sealedMeridiansCastPowerBuff: { handle: createDecimal(1, 0, 1), prefix: "+" },
     condensedCourageBuff: { handle: createDecimal(1, 0, 1), prefix: "×" },
 };
 
@@ -67,7 +67,7 @@ const condensedUpgrades = new StaticArray<u8>(CONDENSED_UPGRADE_COUNT_WASM);
 const condensedUpgradeCosts = new StaticArray<i32>(CONDENSED_UPGRADE_COUNT_WASM);
 let ascensionHallUnlocked: i32 = 0;
 let condensedManaBuff: i32 = 0;
-let masteryCastPowerBuff: i32 = 0;
+let sealedMeridiansCastPowerBuff: i32 = 0;
 let condensedCourageBuff: i32 = 0;
 
 export function initializeCondensedHandles(
@@ -78,7 +78,7 @@ export function initializeCondensedHandles(
 ): void {
     ascensionHallUnlocked = ascensionHall;
     condensedManaBuff = manaBuff;
-    masteryCastPowerBuff = castPowerBuff;
+    sealedMeridiansCastPowerBuff = castPowerBuff;
     condensedCourageBuff = courageBuff;
 }
 
@@ -96,13 +96,15 @@ export function canCondense(): bool {
 export function calculateCondenseGain(): bool {
     if (!canCondense()) return false;
     if (!player.castSpeedUsedThisCondense) unlockTierOneAchievement(21);
+    if (!player.potionUsedThisCondense) unlockTierOneAchievement(30);
+    if (!player.boostedProducerThisCondense) unlockTierOneAchievement(33);
     if (!gt(player.statistics_fastestCondense, 0)
         || gt(player.statistics_fastestCondense, player.statistics_timeThisCondense)) {
         copyInto(player.statistics_fastestCondense, player.statistics_timeThisCondense);
     }
     if (lt(player.statistics_timeThisCondense, 60)) unlockTierOneAchievement(15);
     writeNumber(scratch.productionModifier, 1);
-    if (lte(player.bolsterMultiplier, scratch.productionModifier)) unlockTierOneAchievement(17);
+    if (lte(player.purifiedMeridiansMultiplier, scratch.productionModifier)) unlockTierOneAchievement(17);
     if (eq(player.mana_circle_tier, 0)) {
         writeNumber(scratch.condenseGain, 1);
     } else {
@@ -184,7 +186,7 @@ function checkAllCondensedUpgradesAchievement(): void {
 
 export function refreshCondensedUpgradeState(): void {
     addInto(condensedManaBuff, player.condensedMana, 1);
-    divInto(masteryCastPowerBuff, player.masteryLevel, 50);
+    divInto(sealedMeridiansCastPowerBuff, player.sealedMeridians, 50);
     addInto(condensedCourageBuff, player.condensedMana, 1);
     log10Into(condensedCourageBuff, condensedCourageBuff);
     addUS(condensedCourageBuff, 1);
@@ -198,7 +200,7 @@ for (let index = 0; index < CONDENSED_UPGRADES.length; index++) {
 initializeCondensedHandles(
     CONDENSED_HANDLES.ascensionHallUnlocked,
     CONDENSED_UPGRADE_PLACEHOLDERS.condensedManaBuff.handle,
-    CONDENSED_UPGRADE_PLACEHOLDERS.masteryCastPowerBuff.handle,
+    CONDENSED_UPGRADE_PLACEHOLDERS.sealedMeridiansCastPowerBuff.handle,
     CONDENSED_UPGRADE_PLACEHOLDERS.condensedCourageBuff.handle,
 );
 refreshCondensedUpgradeState();

@@ -5,13 +5,15 @@ import { SCRATCH_HANDLES } from "@game/core/scratch.js";
 import { ACHIEVEMENTS } from "@game/game/achievements.js";
 import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/game/condensed.js";
 import { TABS } from "@game/config/tabs.js";
+import { PROGRESSION_GOALS } from "@game/config/goals.js";
 import { GUILD_RANKS, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES } from "@game/guild/guild.js";
 import { GUILD_QUESTS_BY_ID } from "@game/guild/quests.js";
 import { INVENTORY_ITEMS_BY_ID, Items, resolveItemDescription } from "@game/guild/items.js";
 import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
-import { castAll, condense, increaseMastery as increaseMasteryAction, increaseMatrix as increaseMatrixAction, subscribeToCondense } from "@game/systems/actions.js";
+import { castAll, condense, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, subscribeToCondense } from "@game/systems/actions.js";
 import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
 import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
+import { setStarManaProgress, setStarsAnimated as applyStarsAnimated, setStarsVisible as applyStarsVisible, starsAnimated as loadStarsAnimated, starsVisible as loadStarsVisible } from "@game/systems/background.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
 import GoalProgressBar from "./components/GoalProgressBar.vue";
@@ -60,6 +62,9 @@ const guildUnlocked = ref(false);
 const ascensionHallUnlocked = ref(false);
 const questActive = ref(false);
 const manaCircle = ref(0);
+const manaPerSecond = ref("0.00");
+const oomPerSecond = ref("0.00");
+const showOoMPerSecond = ref(false);
 const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
     ...upgrade,
     index,
@@ -75,11 +80,11 @@ const condensedUpgradePlaceholders = ref(Object.fromEntries(
 const nextGoal = ref("Condense");
 const nextGoalProgress = ref(0);
 const tierOneDefinitions = [
-    { name: "Mana Conduit", handle: HANDLES.count_manaConduit },
-    { name: "Conduit Conjugation", handle: HANDLES.count_conduitConjugation },
-    { name: "Conjugation Creation", handle: HANDLES.count_conjugationCreation },
-    { name: "Creation Manufactory", handle: HANDLES.count_creationManufactory },
-    { name: "Manufacture Staff", handle: HANDLES.count_manufactureStaff },
+    { name: "Mana Absorber", handle: HANDLES.count_manaConduit },
+    { name: "Pylon", handle: HANDLES.count_conduitConjugation },
+    { name: "Conduit", handle: HANDLES.count_conjugationCreation },
+    { name: "Circuit", handle: HANDLES.count_creationManufactory },
+    { name: "Meridian", handle: HANDLES.count_manufactureStaff },
 ];
 const tierOneUpgrades = ref(tierOneDefinitions.map((upgrade, index) => ({
     ...upgrade,
@@ -96,6 +101,7 @@ const tierOneUpgrades = ref(tierOneDefinitions.map((upgrade, index) => ({
     empowered: "0",
     empowerCost: "0",
     empowerVisible: false,
+    hasNextTier: false,
     affordabilityProgress: 0,
 })));
 const castSpeedSpell = ref({
@@ -108,10 +114,12 @@ const castMax = ref(false);
 const potionEffects = ref([]);
 const gameSpeed = ref("1.00");
 const gameSpeedIncreased = ref(false);
-const mastery = ref({
+const starsVisible = ref(loadStarsVisible());
+const starsAnimated = ref(loadStarsAnimated());
+const sealedMeridians = ref({
     level: "1",
     effect: "1",
-    cost: "1 Manufacture Staff",
+    cost: "1 Meridian",
     affordable: false,
     visible: false,
 });
@@ -119,7 +127,7 @@ const matrix = ref({
     level: "0",
     effect: "2.0",
     power: "0.5",
-    cost: "10 Manufacture Staff",
+    cost: "10 Meridian",
     affordable: false,
     visible: false,
 });
@@ -131,7 +139,7 @@ const courage = ref({
     cooldown: "0:00",
     multiplier: "10.00",
 });
-const bolster = ref({
+const meridianPurification = ref({
     visible: false,
     affordable: false,
     effect: "×1.01",
@@ -151,9 +159,9 @@ const combat = ref({
     shieldPercent: 1,
     freezeTurns: "0",
     spells: [
-        { index: 0, name: "Fireball", effect: "35 damage", costHandle: HANDLES.fireballCost, cost: "1e210", affordable: false },
-        { index: 1, name: "Whirlwind", effect: "60 damage", costHandle: HANDLES.whirlwindCost, cost: "1e230", affordable: false },
-        { index: 2, name: "Freeze", effect: "10 damage · freezes for 2 turns", costHandle: HANDLES.freezeCost, cost: "1e250", affordable: false },
+        { index: 0, name: "Fireball", effect: "35 damage", costHandle: HANDLES.fireballCost, cost: "1e40", affordable: false },
+        { index: 1, name: "Whirlwind", effect: "60 damage", costHandle: HANDLES.whirlwindCost, cost: "1e80", affordable: false },
+        { index: 2, name: "Freeze", effect: "10 damage · freezes for 2 turns", costHandle: HANDLES.freezeCost, cost: "1e120", affordable: false },
     ],
 });
 const resetConfirmationVisible = ref(false);
@@ -171,7 +179,11 @@ const statistics = ref({
     fastestCondense: "00:00:00",
     hasCondensed: false,
 });
-const achievements = ref(ACHIEVEMENTS.map((achievement) => ({ ...achievement, unlocked: false })));
+const achievements = ref(ACHIEVEMENTS.map((achievement) => ({
+    ...achievement,
+    wasmIndex: achievement.number - 1,
+    unlocked: false,
+})));
 let animationFrame;
 let displayErrorReported = false;
 let achievementsInitialized = false;
@@ -194,6 +206,10 @@ function displayedItemDefinition(itemId) {
     if (!definition) return undefined;
     return {
         ...definition,
+        sellPrice: [
+            namedWasm.inventoryItemSellMinimum(itemId),
+            namedWasm.inventoryItemSellMaximum(itemId),
+        ],
         description: resolveItemDescription(definition.description, {
             duration: namedWasm.potionDuration(itemId),
             effect: namedWasm.potionEffect(itemId).toFixed(2),
@@ -237,7 +253,7 @@ function updateDisplay() {
 }
 
 function updateGlobalDisplay() {
-    mana.value = formatDecimal(HANDLES.mana);
+    mana.value = formatDecimal(HANDLES.mana, 2, "Maximum");
     canCondense.value = namedWasm.canCondense();
     condensedUnlocked.value = namedWasm.hasCondensed();
     if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
@@ -247,8 +263,31 @@ function updateGlobalDisplay() {
     }
     guildUnlocked.value = namedWasm.isGuildUnlocked();
     questActive.value = namedWasm.isQuestActive();
-    nextGoalProgress.value = namedWasm.manaCondenseProgress();
+    const goal = PROGRESSION_GOALS.find((candidate) => !isProgressionGoalComplete(candidate))
+        ?? PROGRESSION_GOALS[PROGRESSION_GOALS.length - 1];
+    nextGoal.value = goal.label;
+    nextGoalProgress.value = namedWasm.manaGoalProgress(
+        goal.startExponent,
+        goal.endExponent,
+        goal.maximumBeforeCompletion,
+    );
+    setStarManaProgress(namedWasm.manaCondenseProgress());
     if (!questActive.value && activeTab.value === "quest") selectTab("guild");
+}
+
+function isProgressionGoalComplete(goal) {
+    switch (goal.completion) {
+        case "sealed-meridians":
+            return namedWasm.toNumber(HANDLES.sealedMeridians) > 1 || namedWasm.isGuildUnlocked();
+        case "meridian-purification":
+            return namedWasm.gt(HANDLES.purifiedMeridiansMultiplier, 1) || namedWasm.isGuildUnlocked();
+        case "guild-member":
+            return namedWasm.isGuildMember();
+        case "courage":
+            return namedWasm.isCourageUnlocked() || namedWasm.hasCondensed();
+        default:
+            return false;
+    }
 }
 
 function updateManaDisplay() {
@@ -263,6 +302,9 @@ function updateManaDisplay() {
         .filter((seconds) => seconds > 0);
     gameSpeed.value = formatDecimal(namedWasm.getGameSpeed());
     gameSpeedIncreased.value = namedWasm.isGameSpeedIncreased();
+    manaPerSecond.value = formatDecimal(SCRATCH_HANDLES.manaPerSecond);
+    oomPerSecond.value = formatOoMPerSecond(SCRATCH_HANDLES.oomPerSecond);
+    showOoMPerSecond.value = namedWasm.getIncType() === 1;
     potionEffects.value = potionSpeedTimers.map((seconds, index) => ({
         id: `speed-${index}`,
         text: `Potion of Speed: +${namedWasm.potionEffect(Items.POTION_SPEED_I).toFixed(2)}× Game Speed (${formatShortTimer(seconds)})`,
@@ -282,21 +324,23 @@ function updateManaDisplay() {
         upgrade.empowerCost = formatDecimal(upgrade.empowermentCostHandle);
         upgrade.empowered = formatDecimal(upgrade.empowermentHandle, 0);
         upgrade.empowerVisible = namedWasm.canEmpowerTierOne(upgrade.index);
+        upgrade.hasNextTier = upgrade.index < tierOneUpgrades.value.length - 1
+            && namedWasm.gt(namedWasm.tierOneBoughtHandle(upgrade.index + 1), 0);
         upgrade.affordabilityProgress = namedWasm.tierOneAffordabilityProgress(upgrade.index);
     }
     castSpeedSpell.value.timer = formatDuration(HANDLES.castSpeedTimer);
     castSpeedSpell.value.magnitude = `×${formatDecimal(HANDLES.castSpeedMagnitude)}`;
     castSpeedSpell.value.cost = `${formatDecimal(HANDLES.castSpeedCost)} mana`;
     castSpeedSpell.value.affordable = namedWasm.canCastSpeed();
-    mastery.value.level = formatDecimal(HANDLES.masteryLevel, 0);
-    mastery.value.effect = formatDecimal(HANDLES.masterySpeedEffect, 0);
-    mastery.value.cost = `${formatDecimal(HANDLES.masteryCost, 0)} Manufacture Staff`;
-    mastery.value.affordable = namedWasm.canIncreaseMastery();
-    mastery.value.visible = namedWasm.isMasteryVisible();
+    sealedMeridians.value.level = formatDecimal(HANDLES.sealedMeridians, 0);
+    sealedMeridians.value.effect = formatDecimal(HANDLES.sealedMeridiansSpeedEffect, 0);
+    sealedMeridians.value.cost = `${formatDecimal(HANDLES.sealMeridiansCost, 0)} Meridian${namedWasm.gt(HANDLES.sealMeridiansCost, 0) ? "s" : ""}`;
+    sealedMeridians.value.affordable = namedWasm.canSealMeridians();
+    sealedMeridians.value.visible = namedWasm.areSealedMeridiansVisible();
     matrix.value.level = formatDecimal(HANDLES.matrixOwned, 0);
     matrix.value.effect = formatDecimal(HANDLES.matrixSpeedPower, 1);
     matrix.value.power = formatDecimal(HANDLES.matrixPower, 1);
-    matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} Manufacture Staff`;
+    matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} Meridian${namedWasm.gt(HANDLES.matrixCost, 0) ? "s" : ""}`;
     matrix.value.affordable = namedWasm.canIncreaseMatrix();
     matrix.value.visible = namedWasm.isMatrixVisible();
     courage.value.visible = namedWasm.isCourageVisible();
@@ -305,12 +349,12 @@ function updateManaDisplay() {
     courage.value.timer = formatDuration(HANDLES.courageTimer);
     courage.value.cooldown = formatDuration(HANDLES.courageCooldown);
     courage.value.multiplier = formatDecimal(HANDLES.courageMultiplier);
-    bolster.value.affordable = namedWasm.canBolster();
-    bolster.value.visible = namedWasm.hasTierOneAchievement(7);
-    bolster.value.effect = `×${formatDecimal(HANDLES.bolsterEffect)}`;
-    bolster.value.relIncrease = `×${formatDecimal(SCRATCH_HANDLES.bolsterRelativeIncrease)}`;
-    bolster.value.multiplier = `×${formatDecimal(HANDLES.bolsterMultiplier)}`;
-    bolster.value.requirement = formatDecimal(HANDLES.bolsterRequirement);
+    meridianPurification.value.affordable = namedWasm.canPurifyMeridians();
+    meridianPurification.value.visible = namedWasm.hasTierOneAchievement(7);
+    meridianPurification.value.effect = `×${formatDecimal(HANDLES.meridianPurificationEffect)}`;
+    meridianPurification.value.relIncrease = `×${formatDecimal(SCRATCH_HANDLES.purificationRelativeIncrease)}`;
+    meridianPurification.value.multiplier = `×${formatDecimal(HANDLES.purifiedMeridiansMultiplier)}`;
+    meridianPurification.value.requirement = formatDecimal(HANDLES.meridianPurificationRequirement);
 }
 
 function updateGuildDisplay(subtab) {
@@ -406,7 +450,7 @@ function updateQuestDisplay() {
     combat.value.monster = activeQuest?.monster ?? "Monsters";
     combat.value.rank = GUILD_RANKS[activeQuest?.rank ?? 0] ?? "F";
     combat.value.enemyHealth = formatDecimal(HANDLES.wolfineHealth, 0);
-    combat.value.enemyMaximumHealth = String(namedWasm.enemyMaximumHealth(namedWasm.activeQuestIndex()));
+    combat.value.enemyMaximumHealth = formatDecimal(namedWasm.enemyMaximumHealth(namedWasm.activeQuestIndex()), 0);
     combat.value.enemyPercent = namedWasm.wolfineHealthPercent();
     combat.value.shield = formatDecimal(namedWasm.combatShieldHandle(), 0);
     combat.value.shieldPercent = namedWasm.combatShieldPercent();
@@ -432,7 +476,7 @@ function updateCondensedDisplay() {
 
 function updateStatisticsDisplay() {
     statistics.value.timePlayed = formatTotalTime(HANDLES.statistics_totalTimePlayed);
-    statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced);
+    statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced, 2, "Maximum");
     statistics.value.condensedManaProduced = formatDecimal(HANDLES.statistics_condensedManaProduced);
     statistics.value.condenses = formatDecimal(HANDLES.statistics_condenses, 0);
     statistics.value.timeThisCondense = formatTotalTime(HANDLES.statistics_timeThisCondense);
@@ -441,15 +485,17 @@ function updateStatisticsDisplay() {
 }
 
 function updateAchievementsDisplay() {
-    achievements.value[5].reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
+    const timePlayedAchievement = achievements.value.find((achievement) => achievement.id === "achievement_playtwohours");
+    if (timePlayedAchievement) {
+        timePlayedAchievement.reward = `Mana is increased based on time played (Currently: ×${formatDecimal(HANDLES.multiplier_timePlayedAchievement)})`;
+    }
 }
 
 function updateAchievementNotifications(force = false) {
     const revision = namedWasm.getAchievementRevision();
     if (!force && revision === displayedAchievementRevision) return;
-    for (let index = 0; index < achievements.value.length; index++) {
-        const achievement = achievements.value[index];
-        const unlocked = namedWasm.hasTierOneAchievement(index);
+    for (const achievement of achievements.value) {
+        const unlocked = namedWasm.hasTierOneAchievement(achievement.wasmIndex);
         if (achievementsInitialized && unlocked && !achievement.unlocked) {
             showNotification(`Achievement: ${achievement.title}`, { color: "#c49cff" });
         }
@@ -459,9 +505,11 @@ function updateAchievementNotifications(force = false) {
     displayedAchievementRevision = revision;
 }
 
-function formatDecimal(handle, decimals = 2) {
-    if (namedWasm.isAtInfinityBoundary(handle)) return "Infinite";
+function formatDecimal(handle, decimals = 2, boundaryLabel = "Unknown") {
+    if (namedWasm.isAtInfinityBoundary(handle)) return boundaryLabel;
     const value = namedWasm.readString(handle);
+
+    if (value === "Infinity" || value === "-Infinity" || value === "NaN") return "Unknown";
 
     if (value.includes("e")) {
         const split = value.split("e");
@@ -477,6 +525,12 @@ function formatDecimal(handle, decimals = 2) {
     return num
         .toFixed(decimals)
         .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function formatOoMPerSecond(handle) {
+    const value = namedWasm.toNumber(handle);
+    if (Number.isFinite(value) && Math.abs(value) < 0.01) return "0.00";
+    return formatDecimal(handle);
 }
 
 function formatDuration(handle) {
@@ -502,7 +556,13 @@ function formatTotalTime(handle) {
 }
 
 function setStarsVisible(visible) {
-    document.body.classList.toggle("effects-disabled", !visible);
+    starsVisible.value = visible;
+    applyStarsVisible(visible);
+}
+
+function setStarsAnimated(animated) {
+    starsAnimated.value = animated;
+    applyStarsAnimated(animated);
 }
 
 function updateTickRate(value) {
@@ -554,8 +614,8 @@ function castSpeed() {
     namedWasm.castSpeed();
 }
 
-function increaseMastery() {
-    increaseMasteryAction();
+function sealMeridians() {
+    sealMeridiansAction();
 }
 
 function increaseMatrix() {
@@ -573,16 +633,16 @@ function handleCondensed() {
 
 function buyCondensedUpgrade(index) {
     if (!namedWasm.buyCondensedUpgrade(index)) return;
-    namedWasm.applyCondensedMasteryMinimum();
-    namedWasm.refreshMasteryDerivedState();
+    namedWasm.applyCondensedSealedMeridiansMinimum();
+    namedWasm.refreshSealedMeridiansDerivedState();
     namedWasm.refreshMatrixDerivedState();
-    namedWasm.refreshMasteryDerivedState();
+    namedWasm.refreshSealedMeridiansDerivedState();
     namedWasm.refreshTierOneDerivedState();
     if (index === 11) namedWasm.resetCastSpeed();
 }
 
-function bolsterStaff() {
-    namedWasm.bolster();
+function purifyMeridians() {
+    namedWasm.purifyMeridians();
 }
 
 function applyToGuild() {
@@ -722,22 +782,25 @@ onBeforeUnmount(() => {
                 :upgrades="tierOneUpgrades"
                 :cast-speed="castSpeedSpell"
                 :cast-mode="castMax ? 'Cast Max' : 'Cast One'"
-                :mastery="mastery"
+                :sealed-meridians="sealedMeridians"
                 :matrix="matrix"
                 :courage="courage"
-                :bolster="bolster"
+                :meridian-purification="meridianPurification"
                 :potion-effects="potionEffects"
                 :game-speed="gameSpeed"
                 :game-speed-increased="gameSpeedIncreased"
+                :manaPerSecond="manaPerSecond"
+                :oom-per-second="oomPerSecond"
+                :show-oo-m-per-second="showOoMPerSecond"
                 @buy="buyTierOne"
                 @empower="empowerTierOne"
                 @buy-all="buyAllTierOne"
                 @toggle-cast-mode="toggleCastMode"
                 @cast-speed="castSpeed"
-                @increase-mastery="increaseMastery"
+                @seal-meridians="sealMeridians"
                 @increase-matrix="increaseMatrix"
                 @activate-courage="activateCourage"
-                @bolster="bolsterStaff"
+                @purify-meridians="purifyMeridians"
             />
             <StatisticsTab
                 v-else-if="activeTab === 'statistics'"
@@ -789,8 +852,11 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'options'"
                 :active-subtab="activeSubtab"
                 :update-rate="updateRate"
+                :stars-visible="starsVisible"
+                :stars-animated="starsAnimated"
                 @edit-keybinds="editKeybinds"
                 @stars-visible="setStarsVisible"
+                @stars-animated="setStarsAnimated"
                 @export-save="exportGameSave"
                 @import-save="importGameSave"
                 @reset-game="resetGame"
@@ -811,7 +877,7 @@ onBeforeUnmount(() => {
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
         <MessageTicker />
-        <footer>The Mana Paradox v0.0.7</footer>
+        <footer>The Mana Paradox v0.0.8</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

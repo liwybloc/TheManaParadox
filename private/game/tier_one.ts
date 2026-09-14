@@ -22,6 +22,7 @@ import {
 } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasCondensedUpgrade } from "./condensed.js";
+import { applyManaGainModifiers } from "./currencies.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -34,14 +35,14 @@ export const TIER_ONE_COUNT: i32 = 5;
 
 // Effect = baseMultiplier * growthBase ^ ((log10(conduits) - startExponent) / exponentInterval)
 // Next requirement = requirementMargin * 10 ^ (startExponent + exponentInterval * log_growthBase(currentEffect / baseMultiplier))
-const BOLSTER_BASE_MULTIPLIER: i32 = 16;
-const BOLSTER_GROWTH_BASE: f64 = 2.75;
-const BOLSTER_START_EXPONENT: i32 = 45;
-const BOLSTER_EXPONENT_INTERVAL: i32 = 10;
-const BOLSTER_REQUIREMENT_MARGIN: f64 = 1.01;
-const BOLSTER_MINIMUM_EFFECT: f64 = 1;
-const BOLSTER_SOFTCAP_MULTIPLIER: i32 = 350000;
-const BOLSTER_SOFTCAP_POWER: f64 = 0.5;
+const PURIFICATION_BASE_MULTIPLIER: i32 = 16;
+const PURIFICATION_GROWTH_BASE: f64 = 2.75;
+const PURIFICATION_START_EXPONENT: i32 = 45;
+const PURIFICATION_EXPONENT_INTERVAL: i32 = 10;
+const PURIFICATION_REQUIREMENT_MARGIN: f64 = 1.01;
+const PURIFICATION_MINIMUM_EFFECT: f64 = 1;
+const PURIFICATION_SOFTCAP_MULTIPLIER: i32 = 350000;
+const PURIFICATION_SOFTCAP_POWER: f64 = 0.5;
 const CONDENSED_PRODUCER_MULTIPLIER: i32 = 2;
 const CONDENSED_STAFF_MULTIPLIER: i32 = 5;
 
@@ -51,93 +52,93 @@ export function refreshTierOneDerivedState(): void {
         refreshTierOneMultiplier(index);
         refreshEmpowermentCost(index);
     }
-    refreshBolsterRequirement();
-    refreshBolsterEffect();
+    refreshMeridianPurificationRequirement();
+    refreshMeridianPurificationEffect();
 }
 
-export function refreshBolsterRequirement(): void {
-    if (!gte(player.bolsterMultiplier, BOLSTER_BASE_MULTIPLIER)) {
-        writeDecimal(player.bolsterRequirement, 1, 1, BOLSTER_START_EXPONENT);
+export function refreshMeridianPurificationRequirement(): void {
+    if (!gte(player.purifiedMeridiansMultiplier, PURIFICATION_BASE_MULTIPLIER)) {
+        writeDecimal(player.meridianPurificationRequirement, 1, 1, PURIFICATION_START_EXPONENT);
         return;
     }
-    divInto(scratch.tierOneExponent, player.bolsterMultiplier, BOLSTER_BASE_MULTIPLIER);
+    divInto(scratch.tierOneExponent, player.purifiedMeridiansMultiplier, PURIFICATION_BASE_MULTIPLIER);
     if (hasTierOneAchievement(17)) divUS(scratch.tierOneExponent, 5);
     log10Into(scratch.tierOneExponent, scratch.tierOneExponent);
-    writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
+    writeNumber(scratch.productionModifier, PURIFICATION_GROWTH_BASE);
     log10Into(scratch.productionModifier, scratch.productionModifier);
     divUS(scratch.tierOneExponent, scratch.productionModifier);
-    undoBolsterExponentSoftcap(scratch.tierOneExponent);
+    undoPurificationExponentSoftcap(scratch.tierOneExponent);
     addUS(
-        mulUS(scratch.tierOneExponent, BOLSTER_EXPONENT_INTERVAL),
-        BOLSTER_START_EXPONENT,
+        mulUS(scratch.tierOneExponent, PURIFICATION_EXPONENT_INTERVAL),
+        PURIFICATION_START_EXPONENT,
     );
-    powInto(player.bolsterRequirement, 10, scratch.tierOneExponent);
-    writeNumber(scratch.tierOneExponent, BOLSTER_REQUIREMENT_MARGIN);
-    mulUS(player.bolsterRequirement, scratch.tierOneExponent);
+    powInto(player.meridianPurificationRequirement, 10, scratch.tierOneExponent);
+    writeNumber(scratch.tierOneExponent, PURIFICATION_REQUIREMENT_MARGIN);
+    mulUS(player.meridianPurificationRequirement, scratch.tierOneExponent);
 }
 
-export function refreshBolsterEffect(): void {
+export function refreshMeridianPurificationEffect(): void {
     if (!gt(player.count_manaConduit, 0)) {
-        writeNumber(player.bolsterEffect, 1);
+        writeNumber(player.meridianPurificationEffect, 1);
         return;
     }
     log10Into(scratch.tierOneExponent, player.count_manaConduit);
-    divUS(subUS(scratch.tierOneExponent, BOLSTER_START_EXPONENT), BOLSTER_EXPONENT_INTERVAL);
-    applyBolsterExponentSoftcap(scratch.tierOneExponent);
-    writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
-    powInto(player.bolsterEffect, scratch.productionModifier, scratch.tierOneExponent);
-    mulUS(player.bolsterEffect, BOLSTER_BASE_MULTIPLIER);
-    if (hasTierOneAchievement(17)) mulUS(player.bolsterEffect, 5);
-    if (toNumber(player.bolsterEffect) < BOLSTER_MINIMUM_EFFECT) {
-        writeNumber(player.bolsterEffect, BOLSTER_MINIMUM_EFFECT);
+    divUS(subUS(scratch.tierOneExponent, PURIFICATION_START_EXPONENT), PURIFICATION_EXPONENT_INTERVAL);
+    applyPurificationExponentSoftcap(scratch.tierOneExponent);
+    writeNumber(scratch.productionModifier, PURIFICATION_GROWTH_BASE);
+    powInto(player.meridianPurificationEffect, scratch.productionModifier, scratch.tierOneExponent);
+    mulUS(player.meridianPurificationEffect, PURIFICATION_BASE_MULTIPLIER);
+    if (hasTierOneAchievement(17)) mulUS(player.meridianPurificationEffect, 5);
+    if (toNumber(player.meridianPurificationEffect) < PURIFICATION_MINIMUM_EFFECT) {
+        writeNumber(player.meridianPurificationEffect, PURIFICATION_MINIMUM_EFFECT);
     }
-    divInto(scratch.bolsterRelativeIncrease, player.bolsterEffect, player.bolsterMultiplier);
+    divInto(scratch.purificationRelativeIncrease, player.meridianPurificationEffect, player.purifiedMeridiansMultiplier);
 }
 
 // Above x350,000 total effect, exponent x follows threshold * (x / threshold)^0.5.
 // The curve never decreases, but each additional exponent contributes progressively less.
-function applyBolsterExponentSoftcap(exponent: i32): void {
-    calculateBolsterSoftcapExponent(scratch.tierOneProduction);
+function applyPurificationExponentSoftcap(exponent: i32): void {
+    calculatePurificationSoftcapExponent(scratch.tierOneProduction);
     if (!gt(exponent, scratch.tierOneProduction)) return;
     divUS(exponent, scratch.tierOneProduction);
-    writeNumber(scratch.productionModifier, BOLSTER_SOFTCAP_POWER);
+    writeNumber(scratch.productionModifier, PURIFICATION_SOFTCAP_POWER);
     powUS(exponent, scratch.productionModifier);
     mulUS(exponent, scratch.tierOneProduction);
 }
 
-function undoBolsterExponentSoftcap(exponent: i32): void {
-    calculateBolsterSoftcapExponent(scratch.tierOneProduction);
+function undoPurificationExponentSoftcap(exponent: i32): void {
+    calculatePurificationSoftcapExponent(scratch.tierOneProduction);
     if (!gt(exponent, scratch.tierOneProduction)) return;
     divUS(exponent, scratch.tierOneProduction);
     powUS(exponent, 2);
     mulUS(exponent, scratch.tierOneProduction);
 }
 
-function calculateBolsterSoftcapExponent(result: i32): void {
-    writeNumber(result, BOLSTER_SOFTCAP_MULTIPLIER);
-    divUS(result, BOLSTER_BASE_MULTIPLIER);
+function calculatePurificationSoftcapExponent(result: i32): void {
+    writeNumber(result, PURIFICATION_SOFTCAP_MULTIPLIER);
+    divUS(result, PURIFICATION_BASE_MULTIPLIER);
     if (hasTierOneAchievement(17)) divUS(result, 5);
     log10Into(result, result);
-    writeNumber(scratch.productionModifier, BOLSTER_GROWTH_BASE);
+    writeNumber(scratch.productionModifier, PURIFICATION_GROWTH_BASE);
     log10Into(scratch.productionModifier, scratch.productionModifier);
     divUS(result, scratch.productionModifier);
 }
 
-export function canBolster(): bool {
+export function canPurifyMeridians(): bool {
     if(!hasTierOneAchievement(7)) return false;
-    refreshBolsterRequirement();
-    refreshBolsterEffect();
-    return gte(player.count_manaConduit, player.bolsterRequirement) && gt(player.bolsterEffect, player.bolsterMultiplier);
+    refreshMeridianPurificationRequirement();
+    refreshMeridianPurificationEffect();
+    return gte(player.count_manaConduit, player.meridianPurificationRequirement) && gt(player.meridianPurificationEffect, player.purifiedMeridiansMultiplier);
 }
 
-export function bolster(): bool {
-    if (!canBolster()) return false;
-    copyInto(player.bolsterMultiplier, player.bolsterEffect);
+export function purifyMeridians(): bool {
+    if (!canPurifyMeridians()) return false;
+    copyInto(player.purifiedMeridiansMultiplier, player.meridianPurificationEffect);
     for (let index: i32 = 0; index < TIER_ONE_COUNT - 1; index++) {
         writeNumber(tierOneAmountHandle(index), 0);
     }
-    refreshBolsterEffect();
-    refreshBolsterRequirement();
+    refreshMeridianPurificationEffect();
+    refreshMeridianPurificationRequirement();
     for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
         refreshTierOneMultiplier(index);
     }
@@ -206,10 +207,10 @@ export function resetTierOneAmounts(): void {
     refreshTierOneDerivedState();
 }
 
-export function resetBolster(): void {
-    writeNumber(player.bolsterMultiplier, 1);
-    refreshBolsterRequirement();
-    refreshBolsterEffect();
+export function resetMeridianPurification(): void {
+    writeNumber(player.purifiedMeridiansMultiplier, 1);
+    refreshMeridianPurificationRequirement();
+    refreshMeridianPurificationEffect();
     for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
         refreshTierOneMultiplier(index);
     }
@@ -219,6 +220,7 @@ export function buyTierOne(index: i32): bool {
     if (index < 0 || index >= TIER_ONE_COUNT || !isTierOneVisible(index)) return false;
     const cost = tierOneCostHandle(index);
     if (!gte(player.mana, cost)) return false;
+    recordProducerBoost(index);
     subUS(player.mana, cost);
     addUS(tierOneAmountHandle(index), 1);
     addUS(tierOneBoughtHandle(index), 1);
@@ -236,6 +238,7 @@ export function buyMaxTierOne(index: i32): bool {
     if (index < 0 || index >= TIER_ONE_COUNT || !isTierOneVisible(index)) return false;
     const cost = tierOneCostHandle(index);
     if (!gte(player.mana, cost)) return false;
+    recordProducerBoost(index);
 
     const scalingExponent = index + 1;
     powInto(scratch.tierOneSeconds, 10, scalingExponent);
@@ -258,6 +261,12 @@ export function buyMaxTierOne(index: i32): bool {
     refreshTierOneCost(index);
     refreshTierOneMultiplier(index);
     return true;
+}
+
+function recordProducerBoost(index: i32): void {
+    if (index < TIER_ONE_COUNT - 1 && gt(tierOneBoughtHandle(index + 1), 0)) {
+        player.boostedProducerThisCondense = true;
+    }
 }
 
 export function buyMaxAllTierOne(): void {
@@ -330,6 +339,7 @@ export function tierOneDisplayMultiplierHandle(index: i32): i32 {
         tierOneMultiplierHandle(index),
         player.castSpeedMagnitude,
     );
+    if (index === 0) applyManaGainModifiers(scratch.tierOneDisplayMultiplier);
     return scratch.tierOneDisplayMultiplier;
 }
 
@@ -376,7 +386,7 @@ function refreshTierOneMultiplier(index: i32): void {
         powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneEmpowermentHandle(index));
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
     }
-    mulUS(tierOneMultiplierHandle(index), player.bolsterMultiplier);
+    mulUS(tierOneMultiplierHandle(index), player.purifiedMeridiansMultiplier);
     if (index === 4 && hasCondensedUpgrade(4)) {
         mulUS(tierOneMultiplierHandle(index), CONDENSED_STAFF_MULTIPLIER);
     } else if ((index === 0 && hasCondensedUpgrade(2))

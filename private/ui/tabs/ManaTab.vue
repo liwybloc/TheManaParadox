@@ -1,19 +1,27 @@
 <script setup>
 import UpgradeRow from "../components/UpgradeRow.vue";
 
-defineProps({
+const props = defineProps({
     upgrades: { type: Array, required: true },
     castSpeed: { type: Object, required: true },
     castMode: { type: String, required: true },
-    mastery: { type: Object, required: true },
+    sealedMeridians: { type: Object, required: true },
     matrix: { type: Object, required: true },
     courage: { type: Object, required: true },
-    bolster: { type: Object, required: true },
+    meridianPurification: { type: Object, required: true },
     potionEffects: { type: Array, required: true },
     gameSpeed: { type: String, required: true },
     gameSpeedIncreased: { type: Boolean, required: true },
+    manaPerSecond: { type: String, required: true },
+    oomPerSecond: { type: String, required: true },
+    showOoMPerSecond: { type: Boolean, required: true },
 });
-defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "increase-mastery", "increase-matrix", "activate-courage", "bolster"]);
+defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "seal-meridians", "increase-matrix", "activate-courage", "purify-meridians"]);
+
+function producerActionLabel(upgrade) {
+    if (upgrade.hasNextTier) return props.castMode === "Cast Max" ? "Boost max" : "Boost once";
+    return props.castMode === "Cast Max" ? "Cast all" : "Cast one";
+}
 </script>
 
 <template>
@@ -26,7 +34,13 @@ defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "inc
         </aside>
         <div class="cast-controls">
             <button class="cast-all" type="button" @click="$emit('buy-all')">Cast All</button>
-            <strong v-if="gameSpeedIncreased" class="current-game-speed">Current Game Speed: ×{{ gameSpeed }}</strong>
+            <div class="useful-stats">
+                <strong class="mana-per-second">
+                    Mana Per Second: {{ manaPerSecond }}
+                    <span v-if="showOoMPerSecond"> ({{ oomPerSecond }} OoM)</span>
+                </strong>
+                <strong class="current-game-speed">Current Game Speed: ×{{ gameSpeed }}</strong>
+            </div>
             <button class="cast-mode" type="button" @click="$emit('toggle-cast-mode')">{{ castMode }}</button>
         </div>
         <button
@@ -45,37 +59,39 @@ defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "inc
                 v-show="upgrade.visible"
                 :key="upgrade.id"
                 v-bind="upgrade"
-                :cast-label="castMode === 'Cast Max' ? 'Cast all' : 'Cast one'"
+                :cast-label="producerActionLabel(upgrade)"
                 :locked="!upgrade.affordable"
                 @cast="$emit('buy', upgrade.index)"
                 @empower="$emit('empower', upgrade.index)"
             />
         </div>
         <button
-            v-show="bolster.visible"
-            class="bolster-staff"
+            v-show="meridianPurification.visible"
+            class="purify-meridians"
             type="button"
-            :disabled="!bolster.affordable"
-            @click="$emit('bolster')"
+            :disabled="!meridianPurification.affordable"
+            @click="$emit('purify-meridians')"
         >
-            <strong>Bolster</strong>
-            <span>{{ bolster.affordable ? `${bolster.effect} after Bolster (${bolster.relIncrease})` : `Requires ${bolster.requirement} Mana Conduits` }}</span>
-            <small>{{ bolster.multiplier }} Total Production</small>
+            <strong>Purify Meridians</strong>
+            <span>{{ meridianPurification.affordable ? `${meridianPurification.effect} after Purification (${meridianPurification.relIncrease})` : `Requires ${meridianPurification.requirement} Mana Absorbers` }}</span>
+            <small>{{ meridianPurification.multiplier }} All Production</small>
+            <small>(Consumes all producers before Meridians)</small>
         </button>
-        <div v-show="mastery.visible" class="mastery-controls">
-            <div class="mastery-summary">Mastery Level: {{ mastery.level }} (×{{ mastery.effect }})</div>
+        <div v-show="sealedMeridians.visible" class="sealed-meridians-controls">
+            <div class="sealed-meridians-summary">Sealed Meridians: {{ sealedMeridians.level }} (×{{ sealedMeridians.effect }})</div>
             <button
-                class="increase-mastery"
+                class="seal-meridians"
                 type="button"
-                :disabled="!mastery.affordable"
-                @click="$emit('increase-mastery')"
+                :disabled="!sealedMeridians.affordable"
+                @click="$emit('seal-meridians')"
             >
-                <strong>Increase Mastery</strong>
+                <strong>Seal Meridians</strong>
                 <span>×2 Speed Magnitude</span>
-                <small>Cost: {{ mastery.cost }}</small>
+                <small>Reach: {{ sealedMeridians.cost }}</small>
+                <small>Resets everything beforehand</small>
             </button>
         </div>
-        <div v-show="matrix.visible" class="mastery-controls">
+        <div v-show="matrix.visible" class="sealed-meridians-controls">
             <div class="matrix-summary">Crystal Matrices: {{ matrix.level }} (×{{ matrix.effect }})</div>
             <button
                 class="increase-matrix"
@@ -85,7 +101,8 @@ defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "inc
             >
                 <strong>Conjure Crystal Matrix</strong>
                 <span>+{{ matrix.power }} Speed Power</span>
-                <small>Cost: {{ matrix.cost }}</small>
+                <small>Reach: {{ matrix.cost }}</small>
+                <small>Resets everything beforehand</small>
             </button>
         </div>
         <button
