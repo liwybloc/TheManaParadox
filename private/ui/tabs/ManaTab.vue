@@ -49,7 +49,7 @@ function producerActionLabel(upgrade) {
             :disabled="!castSpeed.affordable"
             @click="$emit('cast-speed')"
         >
-            <strong>Cast Speed</strong>
+            <strong>Meditate</strong>
             <span>{{ castSpeed.timer }} · {{ castSpeed.magnitude }}</span>
             <small>Cost: {{ castSpeed.cost }}</small>
         </button>
@@ -86,13 +86,13 @@ function producerActionLabel(upgrade) {
                 @click="$emit('seal-meridians')"
             >
                 <strong>Seal Meridians</strong>
-                <span>×2 Speed Magnitude</span>
+                <span>×{{ sealedMeridians.magnitude }} Meditation Magnitude</span>
                 <small>Reach: {{ sealedMeridians.cost }}</small>
                 <small>Resets everything beforehand</small>
             </button>
         </div>
         <div v-show="matrix.visible" class="sealed-meridians-controls">
-            <div class="matrix-summary">Crystal Matrices: {{ matrix.level }} (×{{ matrix.effect }})</div>
+            <div class="matrix-summary">Crystal Matrices: {{ matrix.level }} (×{{ matrix.base }} + ×{{ matrix.other }} + ×{{ matrix.effect }})</div>
             <button
                 class="increase-matrix"
                 type="button"
@@ -100,7 +100,7 @@ function producerActionLabel(upgrade) {
                 @click="$emit('increase-matrix')"
             >
                 <strong>Conjure Crystal Matrix</strong>
-                <span>+{{ matrix.power }} Speed Power</span>
+                <span>+{{ matrix.power }} Meditation Power</span>
                 <small>Reach: {{ matrix.cost }}</small>
                 <small>Resets everything beforehand</small>
             </button>

@@ -22,7 +22,7 @@ function formatSeconds(seconds) {
                 <div :style="{ width: `${simulation.progress * 100}%` }"></div>
             </div>
             <div class="simulation-actions">
-                <button type="button" @click="$emit('speed-up')">Speed Up ({{ simulation.speed }}x)</button>
+                <button type="button" @click="$emit('speed-up')">Speed Up (×{{ simulation.speed }})</button>
                 <button type="button" @click="$emit('skip')">Skip</button>
             </div>
         </section>

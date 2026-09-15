@@ -7,7 +7,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_lightning", number: 16, title: "Lightning", description: "Condense in under 1 minute.", reward: "Each tier 1 producer gains a production bonus based on its tier, from +1% to +5%.", category: "challenge" },
     { id: "achievement_matrixmanipulation", number: 21, title: "Matrix Manipulation", description: "Conjure a Crystal Matrix without sealing another Meridian.", reward: "Reduce Sealed Meridian cost scaling by 5%", category: "challenge" },
     { id: "achievement_noendgame", number: 18, title: "I don't believe in the Endgame", description: "Condense without purifying Meridians.", reward: "Purification of Meridians is ×5 stronger", category: "challenge" },
-    { id: "achievement_unnecessary", number: 22, title: "Unnecessary", description: "Condense without casting speed.", reward: "Start each Condense with 1 Crystal Matrix", category: "challenge" },
+    { id: "achievement_unnecessary", number: 22, title: "Unnecessary", description: "Condense without meditating.", reward: "Start each Condense with 1 Crystal Matrix", category: "challenge" },
 
     { id: "achievement_hatethetaste", number: 31, title: "I hate the taste!", description: "Condense without any potion effects.", reward: "Potions are ×1.25 stronger", category: "challenge"},
     { id: "achievement_lovethetaste", number: 32, title: "Actually, I love the taste!", description: "Drink 20 potions at once.", reward: "Increase potion durations by 30 seconds", category: "challenge" },
@@ -25,7 +25,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_sealmeridians", number: 7, title: "Grandmeridian", description: "Reach 5 Sealed Meridians." },
     { id: "achievement_havesixstaff", number: 8, title: "Double the Sith", description: "Have at least 12 Meridians.", reward: "Unlock Purification of Meridians" },
     { id: "achievement_produce1e50mana", number: 9, title: "100 quindecillion mana is a lot", description: "Produce 1.00e50 mana.", reward: "Reset with 500 mana" },
-    { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Cast Speed time.", reward: "Cast Speed time is increased by 5 seconds per purchase" },
+    { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Meditation time.", reward: "Meditation time is increased by 5 seconds per use" },
     { id: "achievement_centennial", number: 11, title: "Centennial", description: "Reach 1.00e100 Mana.", reward: "Increase per-boost multiplier by +0.1×" },
     { id: "achievement_circularhabits", number: 12, title: "Circular Habits", description: "Reach the limit of your mana circle.", reward: "Get 3 Potion of Speed II" },
     { id: "achievement_realnews", number: 14, title: "REAL NEWS!", description: "View 50 different ticker messages." },

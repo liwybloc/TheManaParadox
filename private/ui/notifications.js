@@ -4,11 +4,12 @@ export const notifications = ref([]);
 
 let nextNotificationId = 1;
 
-export function showNotification(message, { color = "#c49cff", duration = 4000 } = {}) {
+export function showNotification(message, { color = "#c49cff", textColor = "#fff", duration = 4000 } = {}) {
     const notification = {
         id: nextNotificationId++,
         message,
         color,
+        textColor,
         duration,
     };
     notifications.value.push(notification);

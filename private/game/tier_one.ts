@@ -95,7 +95,7 @@ export function refreshMeridianPurificationEffect(): void {
     divInto(scratch.purificationRelativeIncrease, player.meridianPurificationEffect, player.purifiedMeridiansMultiplier);
 }
 
-// Above x350,000 total effect, exponent x follows threshold * (x / threshold)^0.5.
+// Above ×350,000 total effect, exponent x follows threshold * (x / threshold)^0.5.
 // The curve never decreases, but each additional exponent contributes progressively less.
 function applyPurificationExponentSoftcap(exponent: i32): void {
     calculatePurificationSoftcapExponent(scratch.tierOneProduction);

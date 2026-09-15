@@ -8,7 +8,7 @@ export const KEYBIND_DEFINITIONS = [
     { id: "buy-tier-5", label: "Cast Max: Meridian", defaultKey: "5" },
     { id: "condense", label: "Condense", defaultKey: "c" },
     { id: "cast-all", label: "Cast Max All", defaultKey: "m" },
-    { id: "cast-speed", label: "Cast Speed", defaultKey: "s" },
+    { id: "cast-speed", label: "Meditate", defaultKey: "s" },
     { id: "matrix", label: "Buy Crystal Matrix", defaultKey: "x" },
     { id: "seal-meridians", label: "Seal Meridians", defaultKey: "y" },
 ];
@@ -48,10 +48,27 @@ export function displayKey(key: string): string {
     return key.length === 1 ? key.toUpperCase() : key;
 }
 
+const keyDown: {[key: string]: boolean} = {};
+
+export function tickKeybinds() {
+    for(const [key, value] of Object.entries(keyDown)) {
+        if(!value) continue;
+        const id = KEYBIND_DEFINITIONS.find((entry) => bindings[entry.id] === normalizeKey(key))?.id;
+        if (id) runAction(id);
+    }
+}
+
+function isInvalid(event: KeyboardEvent) {
+    return event.ctrlKey || event.altKey || event.metaKey || isEditing(event.target);
+}
+
 window.addEventListener("keydown", (event) => {
-    if (event.ctrlKey || event.altKey || event.metaKey || isEditing(event.target)) return;
-    const id = KEYBIND_DEFINITIONS.find((entry) => bindings[entry.id] === normalizeKey(event.key))?.id;
-    if (id) runAction(id);
+    if (isInvalid(event)) return;
+    keyDown[event.key] = true;
+});
+window.addEventListener('keyup', (event) => {
+    if (isInvalid(event)) return;
+    keyDown[event.key] = false;
 });
 
 function runAction(id: string): void {

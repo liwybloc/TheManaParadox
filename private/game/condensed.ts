@@ -15,29 +15,29 @@ export const CONDENSED_HANDLES = {
 };
 
 const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
-    { slot: 0,  title: "Increase Mana Absorber per-purchase multipler by +0.1x", cost: [1, 0, 1] },
-    { slot: 4,  title: "Increase Cast Speed power by +0.25x", cost: [1, 0, 1] },
+    { slot: 0,  title: "Increase Mana Absorber per-purchase multipler by +0.1×", cost: [1, 0, 1] },
+    { slot: 4,  title: "Increase Meditation power by +0.25×", cost: [1, 0, 1] },
 
-    { slot: 5,  title: "Mana Absorbers produce x2 more", cost: [1, 0, 1]},
-    { slot: 6,  title: "Pylons produce x2 more", cost: [1, 0, 2]},
-    { slot: 7,  title: "Meridians produce 5x more", cost: [1, 0, 3]},
-    { slot: 8,  title: "Creation Manufactories produce 2x more", cost: [1, 0, 2]},
-    { slot: 9,  title: "Conduits produce 2x more", cost: [1, 0, 1]},
+    { slot: 5,  title: "Mana Absorbers produce ×2 more", cost: [1, 0, 1]},
+    { slot: 6,  title: "Pylons produce ×2 more", cost: [1, 0, 2]},
+    { slot: 7,  title: "Meridians produce ×5 more", cost: [1, 0, 3]},
+    { slot: 8,  title: "Circuits produce ×2 more", cost: [1, 0, 2]},
+    { slot: 9,  title: "Conduits produce ×2 more", cost: [1, 0, 1]},
 
     { slot: 10, title: "Start each reset with 1e20 mana", cost: [1, 0, 100] },
-    { slot: 11, title: "Decrease cast speed cost growth to ^1.9", cost: [1, 0, 100] },
+    { slot: 11, title: "Decrease Meditation cost growth to ^1.9", cost: [1, 0, 100] },
 
     { slot: 13, title: "Decrease empowerment cost growth to ^1.9", cost: [1, 0, 100] },
     { slot: 14, title: "Start each reset with 2 Sealed Meridians", cost: [1, 0, 100] },
 
-    { slot: 15, title: "First Cast Speed is free", cost: [1, 0, 10] },
+    { slot: 15, title: "First Meditation is free", cost: [1, 0, 10] },
     { slot: 16, title: "Courage duration is increased by 25%", cost: [1, 0, 10] },
     { slot: 17, title: "Mana is increased based on condensed mana\n(Currently: {condensedManaBuff})", cost: [1, 0, 10] },
     { slot: 18, title: "Courage cooldown is decreased by 25%", cost: [1, 0, 10] },
     { slot: 19, title: "Sealed Meridian magnitude is increased based on Crystal Matrix effect", cost: [1, 0, 10] },
 
-    { slot: 21, title: "Empowerments are x5 stronger", cost: [1, 0, 1024] },
-    { slot: 22, title: "Cast Speed power is slightly increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff})", cost: [1, 0, 1024] },
+    { slot: 21, title: "Empowerments are ×5 stronger", cost: [1, 0, 1024] },
+    { slot: 22, title: "Meditation power is slightly increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff})", cost: [1, 0, 1024] },
     { slot: 23, title: "Condensed Mana boosts Courage power\n(Currently: {condensedCourageBuff})", cost: [1, 0, 1024] },
     
     {

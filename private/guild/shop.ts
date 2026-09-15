@@ -6,6 +6,6 @@ export const GUILD_SHOP_UPGRADES = [
     { id: 4, rank: 1, title: "Unlock a 5th quest slot", cost: 125 },
     { id: 5, rank: 1, title: "Unlock equipment (TBA)", cost: 200, unobtainable: true },
     { id: 6, rank: 2, title: "Unlock a 6th quest slot", cost: 300 },
-    { id: 7, rank: 2, title: "Unlock Auto-Casters (TBA)", cost: 75, unobtainable: true },
+    { id: 7, rank: 2, title: "Unlock Auto-Casters", cost: 75 },
     { id: 8, rank: 2, title: "Open the Gate (TBA)", cost: 10000, unobtainable: true },
 ] as const;

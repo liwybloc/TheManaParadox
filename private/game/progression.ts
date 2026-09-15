@@ -67,11 +67,13 @@ export function refreshSealedMeridiansDerivedState(): void {
     writeNumber(scratch.productionModifier, hasTierOneAchievement(20) ? 2.85 : 3);
     powInto(player.sealMeridiansCost, scratch.productionModifier, player.sealedMeridiansOwned);
     ceilInto(player.sealMeridiansCost, player.sealMeridiansCost);
-    if (hasCondensedUpgrade(15)) {
-        powInto(player.sealedMeridiansSpeedEffect, player.matrixSpeedPower, player.sealedMeridiansOwned);
-    } else {
-        powInto(player.sealedMeridiansSpeedEffect, 2, player.sealedMeridiansOwned);
-    }
+    powInto(player.sealedMeridiansSpeedEffect, sealedMeridianMagnitudeHandle(), player.sealedMeridiansOwned);
+}
+
+export function sealedMeridianMagnitudeHandle(): i32 {
+    if (hasCondensedUpgrade(15)) return player.matrixSpeedPower;
+    writeNumber(scratch.productionModifier, 2);
+    return scratch.productionModifier;
 }
 
 export function increaseMatrix(): bool {
@@ -96,13 +98,7 @@ export function isMatrixVisible(): bool {
 export function refreshMatrixDerivedState(): void {
     powInto(player.matrixCost, 10, player.matrixOwned);
     mulUS(player.matrixCost, 10);
-    writeNumber(scratch.productionModifier, 0);
-    addUS(scratch.productionModifier, player.matrixPower);
-    if (hasTierOneAchievement(12)) {
-        writeNumber(scratch.tierOneSeconds, 0.1);
-        addUS(scratch.productionModifier, scratch.tierOneSeconds);
-    }
-    multiplyInto(player.matrixSpeedPower, player.matrixOwned, scratch.productionModifier);
+    multiplyInto(player.matrixSpeedPower, player.matrixOwned, matrixMagnitudeHandle());
     addUS(player.matrixSpeedPower, 2);
     if (hasCondensedUpgrade(1)) {
         writeNumber(scratch.productionModifier, CONDENSED_CAST_SPEED_POWER_BONUS);
@@ -111,10 +107,40 @@ export function refreshMatrixDerivedState(): void {
     if (hasCondensedUpgrade(17)) {
         addInto(scratch.productionModifier, player.sealedMeridians, 0);
         writeNumber(scratch.tierOneSeconds, 50);
-        // Cast Speed power bonus = Sealed Meridians / 50.
+        // Meditation power bonus = Sealed Meridians / 50.
         divUS(scratch.productionModifier, scratch.tierOneSeconds);
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
+}
+
+export function matrixMagnitudeHandle(): i32 {
+    writeNumber(scratch.productionModifier, 0);
+    addUS(scratch.productionModifier, player.matrixPower);
+    if (hasTierOneAchievement(12)) {
+        writeNumber(scratch.tierOneSeconds, 0.1);
+        addUS(scratch.productionModifier, scratch.tierOneSeconds);
+    }
+    return scratch.productionModifier;
+}
+
+export function crystalMatrixEffectHandle(): i32 {
+    matrixMagnitudeHandle();
+    mulUS(scratch.productionModifier, player.matrixOwned);
+    return scratch.productionModifier;
+}
+
+export function matrixOtherEffectHandle(): i32 {
+    writeNumber(scratch.productionModifier, 0);
+    if (hasCondensedUpgrade(1)) {
+        writeNumber(scratch.tierOneSeconds, CONDENSED_CAST_SPEED_POWER_BONUS);
+        addUS(scratch.productionModifier, scratch.tierOneSeconds);
+    }
+    if (hasCondensedUpgrade(17)) {
+        addInto(scratch.tierOneSeconds, player.sealedMeridians, 0);
+        divUS(scratch.tierOneSeconds, 50);
+        addUS(scratch.productionModifier, scratch.tierOneSeconds);
+    }
+    return scratch.productionModifier;
 }
 
 export function resetSealedMeridians(): void {

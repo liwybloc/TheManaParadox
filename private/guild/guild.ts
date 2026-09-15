@@ -209,7 +209,6 @@ export function buyShopItem(slot: i32): bool {
 
 export function canBuyGuildShopUpgrade(index: i32): bool {
     if (index < 0 || index >= SHOP_UPGRADE_COUNT || hasGuildShopUpgrade(index)) return false;
-    if (index === 7) return false;
     const requiredRank: i32 = index < 3 ? 0 : index < 6 ? 1 : 2;
     if (<i32>toNumber(player.guildRank) < requiredRank) return false;
     writeNumber(scratch.productionModifier, guildShopUpgradeCost(index));

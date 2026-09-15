@@ -8,10 +8,11 @@ import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSea
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { simulateTime } from "./tick.js";
 import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, resetCombatSpellCosts, setGuildExperience, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
+import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod } from "../guild/autocasters.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "010";
+const CURRENT_SAVE_VERSION = "011";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -169,6 +170,15 @@ const dRankGuildFields: readonly SaveField[] = [
     )),
 ];
 const potionSpeedIIITimerFields = POTION_SPEED_III_TIMER_HANDLES.map((handle) => decimalSaveField(handle, [0, 0, 0]));
+const autocasterFields: readonly SaveField[] = Array.from({ length: 9 }, (_, index) => [
+    callbackInt32SaveField(() => autocasterTier(index), (value) => setAutocasterTier(index, value), 0),
+    callbackInt32SaveField(() => autocasterNameIndex(index), (value) => setAutocasterNameIndex(index, value), -1),
+    callbackInt32SaveField(() => autocasterAssignment(index), (value) => setAutocasterAssignment(index, value), -1),
+    callbackInt32SaveField(() => autocasterRosterPosition(index), (value) => setAutocasterRosterPosition(index, value), -1),
+    callbackNumberSaveField(() => autocasterActionCooldown(index), (value) => setAutocasterActionCooldown(index, value), 0),
+    callbackNumberSaveField(() => autocasterWageTimer(index), (value) => setAutocasterWageTimer(index, value), 0),
+    booleanSaveField(() => autocasterWorkedThisPeriod(index), (value) => setAutocasterWorkedThisPeriod(index, value)),
+]).flat();
 
 const savedFields002: readonly SaveField[] = [
     ...savedFields001,
@@ -254,6 +264,11 @@ const savedFields010: readonly SaveField[] = [
     booleanSaveField(hasCombatUsedNonFreeze, setCombatUsedNonFreeze),
 ];
 
+const savedFields011: readonly SaveField[] = [
+    ...savedFields010,
+    ...autocasterFields,
+];
+
 const condenseResetFields: readonly SaveField[] = [
     ...savedFields001,
     castSpeedTimerField,
@@ -278,10 +293,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields010));
+    const bytes = new Uint8Array(totalByteLength(savedFields011));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields010) {
+    for (const field of savedFields011) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -326,6 +341,9 @@ export async function importSave(saveData: string): Promise<void> {
         case "010":
             await importFields(encoded, savedFields010, true);
             break;
+        case "011":
+            await importFields(encoded, savedFields011, true);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
@@ -354,11 +372,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields010;
+    const currentVersionFields = fields === savedFields011;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields010) field.reset();
+    for (const field of savedFields011) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -453,7 +471,7 @@ export async function saveGame(): Promise<void> {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields010) field.reset();
+    for (const field of savedFields011) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();

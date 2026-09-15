@@ -13,14 +13,19 @@ const messages = [
 	'this is progress, apparently',
 	'the mana demands more mana',
 	'the Kernel Corn situation is crazy...',
-	'living in the mana dimension must be crazy because you need 10x more mana to make something 2x bigger',
+	'living in the mana dimension must be crazy because you need ×10 more mana to make something ×2 boosted',
     'at first i thought this was gibberish, then i realized it was actually written in parkour',
     'I be ponderin my orb',
     'mrawo :3',
     'Mr. Layer? Congrats, you\'re always on the list!',
     'woah, i see a horizon appearing! like some sort of.. New Horizons!',
     'i wish my brain looked like a #####',
-    'you ever just smell like vegetables?'
+    'you ever just smell like vegetables?',
+    'Hello Scarlet, what do you want?',
+    'what do you want... do you want pets?',
+    'oh you want food? you mother####er...',
+    'this is not newsticker suggestions',
+    'shame on your dog',
 ];
 
 messages.push(`fun fact there are ${messages.length + 1} different message tickers`);

@@ -10,6 +10,7 @@ import { GUILD_RANKS, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HAND
 import { GUILD_QUESTS_BY_ID } from "@game/guild/quests.js";
 import { INVENTORY_ITEMS_BY_ID, Items, resolveItemDescription } from "@game/guild/items.js";
 import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
+import { AUTOCASTER_NAMES, AUTOCASTER_TASKS, AUTOCASTER_TIERS, MAX_AUTOCASTERS } from "@game/config/autocasters.js";
 import { castAll, condense, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, subscribeToCondense } from "@game/systems/actions.js";
 import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
 import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
@@ -23,6 +24,7 @@ import CondensedTab from "./tabs/CondensedTab.vue";
 import ManaCircleTab from "./tabs/ManaCircleTab.vue";
 import GuildTab from "./tabs/GuildTab.vue";
 import QuestTab from "./tabs/QuestTab.vue";
+import AutobuyersTab from "./tabs/AutobuyersTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
 import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
@@ -60,6 +62,7 @@ const condensedMana = ref("0");
 const condensedUnlocked = ref(false);
 const guildUnlocked = ref(false);
 const ascensionHallUnlocked = ref(false);
+const autobuyersUnlocked = ref(false);
 const questActive = ref(false);
 const manaCircle = ref(0);
 const manaPerSecond = ref("0.00");
@@ -119,13 +122,16 @@ const starsAnimated = ref(loadStarsAnimated());
 const sealedMeridians = ref({
     level: "1",
     effect: "1",
+    magnitude: "2",
     cost: "1 Meridian",
     affordable: false,
     visible: false,
 });
 const matrix = ref({
     level: "0",
-    effect: "2.0",
+    base: "2",
+    other: "0",
+    effect: "0",
     power: "0.5",
     cost: "10 Meridian",
     affordable: false,
@@ -147,6 +153,7 @@ const meridianPurification = ref({
     requirement: "1.00e45",
 });
 const guild = ref({ member: false, rank: "F", rankIndex: 0, nextRank: "E", questActive: false, refreshTimer: "10:00", experience: 0, experienceRequirement: 25, coins: "0", wolfFur: "0", potions: "0", inventoryItems: [], shopItems: [], shopUpgrades: [] });
+const autocasters = ref({ casters: [], tasks: [], hireOptions: [] });
 const questResult = ref({ visible: false, monster: "Wolfines", items: [] });
 const guildQuests = ref(Array.from({ length: 6 }, (_, index) => ({ ...GUILD_QUESTS_BY_ID.get(index), index, rank: "F", locked: false, visible: index < 3 })));
 const combat = ref({
@@ -195,6 +202,7 @@ const visibleTabs = computed(() => TABS.filter((tab) => {
     if (tab.requiresCondensed && !condensedUnlocked.value) return false;
     if (tab.requiresGuild && !guildUnlocked.value) return false;
     if (tab.requiresQuest && !questActive.value) return false;
+    if (tab.requiresAutobuyers && !autobuyersUnlocked.value) return false;
     return true;
 }).map((tab) => ({
     ...tab,
@@ -240,6 +248,7 @@ function updateDisplay() {
             case "manacircle": manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier); break;
             case "guild": updateGuildDisplay(activeSubtab.value); break;
             case "quest": updateQuestDisplay(); break;
+            case "autobuyers": updateAutocastersDisplay(); break;
             case "achievements": updateAchievementsDisplay(); break;
             case "statistics": updateStatisticsDisplay(); break;
         }
@@ -258,11 +267,13 @@ function updateGlobalDisplay() {
     condensedUnlocked.value = namedWasm.hasCondensed();
     if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
     ascensionHallUnlocked.value = namedWasm.isAscensionHallUnlocked();
+    autobuyersUnlocked.value = namedWasm.hasGuildShopUpgrade(7);
     if (!ascensionHallUnlocked.value && activeSubtabs.value.guild === "guild-ascension-hall") {
         activeSubtabs.value.guild = "guild-main";
     }
     guildUnlocked.value = namedWasm.isGuildUnlocked();
     questActive.value = namedWasm.isQuestActive();
+    if (namedWasm.consumeAutoCondenseRequest()) condense();
     const goal = PROGRESSION_GOALS.find((candidate) => !isProgressionGoalComplete(candidate))
         ?? PROGRESSION_GOALS[PROGRESSION_GOALS.length - 1];
     nextGoal.value = goal.label;
@@ -273,6 +284,30 @@ function updateGlobalDisplay() {
     );
     setStarManaProgress(namedWasm.manaCondenseProgress());
     if (!questActive.value && activeTab.value === "quest") selectTab("guild");
+}
+
+function updateAutocastersDisplay() {
+    guild.value.coins = formatDecimal(HANDLES.coins, 0);
+    const casters = Array.from({ length: MAX_AUTOCASTERS }, (_, id) => {
+        const tier = namedWasm.autocasterTier(id);
+        if (tier === 0) return null;
+        const wageRemaining = namedWasm.autocasterWageTimer(id);
+        return {
+            id,
+            tier,
+            name: AUTOCASTER_NAMES[namedWasm.autocasterNameIndex(id)] ?? "Mysterious Caster",
+            assignment: namedWasm.autocasterAssignment(id),
+            position: namedWasm.autocasterRosterPosition(id),
+            wage: AUTOCASTER_TIERS[tier - 1].wage,
+            sellPrice: AUTOCASTER_TIERS[tier - 1].sellPrice,
+            status: wageRemaining > 0 ? `Wage due in ${formatShortTimer(wageRemaining)}` : "Waiting for activation...",
+        };
+    });
+    autocasters.value = {
+        casters,
+        tasks: AUTOCASTER_TASKS.map((task) => ({ ...task, caster: casters.find((caster) => caster?.assignment === task.id) ?? null })),
+        hireOptions: AUTOCASTER_TIERS.map((tier) => ({ ...tier, affordable: namedWasm.canHireAutocaster(tier.tier) })),
+    };
 }
 
 function isProgressionGoalComplete(goal) {
@@ -334,12 +369,14 @@ function updateManaDisplay() {
     castSpeedSpell.value.affordable = namedWasm.canCastSpeed();
     sealedMeridians.value.level = formatDecimal(HANDLES.sealedMeridians, 0);
     sealedMeridians.value.effect = formatDecimal(HANDLES.sealedMeridiansSpeedEffect, 0);
+    sealedMeridians.value.magnitude = formatDecimalCompact(namedWasm.sealedMeridianMagnitudeHandle());
     sealedMeridians.value.cost = `${formatDecimal(HANDLES.sealMeridiansCost, 0)} Meridian${namedWasm.gt(HANDLES.sealMeridiansCost, 0) ? "s" : ""}`;
     sealedMeridians.value.affordable = namedWasm.canSealMeridians();
     sealedMeridians.value.visible = namedWasm.areSealedMeridiansVisible();
     matrix.value.level = formatDecimal(HANDLES.matrixOwned, 0);
-    matrix.value.effect = formatDecimal(HANDLES.matrixSpeedPower, 1);
-    matrix.value.power = formatDecimal(HANDLES.matrixPower, 1);
+    matrix.value.other = formatDecimalCompact(namedWasm.matrixOtherEffectHandle());
+    matrix.value.effect = formatDecimalCompact(namedWasm.crystalMatrixEffectHandle());
+    matrix.value.power = formatDecimalCompact(namedWasm.matrixMagnitudeHandle());
     matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} Meridian${namedWasm.gt(HANDLES.matrixCost, 0) ? "s" : ""}`;
     matrix.value.affordable = namedWasm.canIncreaseMatrix();
     matrix.value.visible = namedWasm.isMatrixVisible();
@@ -497,7 +534,12 @@ function updateAchievementNotifications(force = false) {
     for (const achievement of achievements.value) {
         const unlocked = namedWasm.hasTierOneAchievement(achievement.wasmIndex);
         if (achievementsInitialized && unlocked && !achievement.unlocked) {
-            showNotification(`Achievement: ${achievement.title}`, { color: "#c49cff" });
+            const challenge = achievement.category === "challenge";
+            showNotification(`Achievement: ${achievement.title}`, {
+                color: "#c49cff",
+                textColor: challenge ? "#c49cff" : "#fff",
+                duration: challenge ? 8000 : 4000,
+            });
         }
         achievement.unlocked = unlocked;
     }
@@ -531,6 +573,10 @@ function formatOoMPerSecond(handle) {
     const value = namedWasm.toNumber(handle);
     if (Number.isFinite(value) && Math.abs(value) < 0.01) return "0.00";
     return formatDecimal(handle);
+}
+
+function formatDecimalCompact(handle) {
+    return formatDecimal(handle).replace(/(\.\d*?[1-9])0+(?=e|$)|\.0+(?=e|$)/, "$1");
 }
 
 function formatDuration(handle) {
@@ -627,7 +673,6 @@ function activateCourage() {
 }
 
 function handleCondensed() {
-    achievementsInitialized = false;
     castMax.value = false;
 }
 
@@ -698,6 +743,23 @@ function buyShopItem(slot) {
 
 function buyGuildShopUpgrade(index) {
     if (namedWasm.buyGuildShopUpgrade(index)) void saveGame();
+}
+
+function hireAutocaster(tier) {
+    const nameIndex = Math.floor(Math.random() * AUTOCASTER_NAMES.length);
+    if (namedWasm.hireAutocaster(tier, nameIndex) >= 0) void saveGame();
+}
+
+function assignAutocaster(caster, task) {
+    if (namedWasm.assignAutocaster(caster, task)) void saveGame();
+}
+
+function moveAutocaster(caster, position) {
+    if (namedWasm.moveAutocaster(caster, position)) void saveGame();
+}
+
+function sellAutocaster(caster) {
+    if (namedWasm.sellAutocaster(caster)) void saveGame();
 }
 
 function formatShortTimer(seconds) {
@@ -843,6 +905,15 @@ onBeforeUnmount(() => {
                 @cast="castCombatSpell"
                 @abandon="abandonGuildQuest"
             />
+            <AutobuyersTab
+                v-else-if="activeTab === 'autobuyers'"
+                :autocasters="autocasters"
+                :coins="guild.coins"
+                @hire="hireAutocaster"
+                @assign="assignAutocaster"
+                @move="moveAutocaster"
+                @sell="sellAutocaster"
+            />
             <AchievementsTab
                 v-else-if="activeTab === 'achievements'"
                 :active-subtab="activeSubtab"
@@ -877,7 +948,7 @@ onBeforeUnmount(() => {
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
         <MessageTicker />
-        <footer>The Mana Paradox v0.0.8</footer>
+        <footer>The Mana Paradox v0.0.9</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

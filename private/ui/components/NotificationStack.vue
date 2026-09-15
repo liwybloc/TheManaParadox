@@ -10,6 +10,7 @@ import { notifications } from "../notifications.js";
             class="game-notification"
             :style="{
                 '--notification-color': notification.color,
+                '--notification-text-color': notification.textColor,
                 '--notification-duration': `${notification.duration}ms`,
             }"
         >

@@ -23,6 +23,10 @@ const rankProgress = computed(() => {
     return Math.max(0, Math.min(1, props.guild.experience / requirement));
 });
 
+function coinLabel(value) {
+    return Number(value) === 1 ? "coin" : "coins";
+}
+
 function acceptQuest() {
     if (selectedQuest.value === null || props.guild.questActive) return;
     emit("accept", selectedQuest.value.index);
@@ -199,7 +203,7 @@ onBeforeUnmount(() => {
             <p v-if="guild.questActive" class="quest-active-note">Finish your active quest before accepting another.</p>
         </template>
         <template v-else-if="activeSubtab === 'guild-inventory'">
-            <div class="section-title"><h1>Guild Inventory</h1><p>You have {{ guild.coins }} coins.</p></div>
+            <div class="section-title"><h1>Guild Inventory</h1><p>You have {{ guild.coins }} {{ coinLabel(guild.coins) }}.</p></div>
             <div class="inventory-bulk-actions">
                 <button type="button" @click="$emit('sell-all-materials')">Sell All Materials</button>
                 <button type="button" @click="$emit('sell-all-items')">Sell All Items</button>
@@ -254,7 +258,7 @@ onBeforeUnmount(() => {
             <div class="section-title"><h1>Ascension Hall</h1></div>
         </template>
         <template v-else-if="activeSubtab === 'guild-shop'">
-            <div class="section-title"><h1>Guild Shop</h1><p>You have {{ guild.coins }} coins.</p></div>
+            <div class="section-title"><h1>Guild Shop</h1><p>You have {{ guild.coins }} {{ coinLabel(guild.coins) }}.</p></div>
             <div class="guild-shop-items">
                 <button
                     v-for="item in guild.shopItems"
@@ -265,7 +269,7 @@ onBeforeUnmount(() => {
                     @click="$emit('buy-shop-item', item.slot)"
                 >
                     <strong>{{ item.refreshRemaining > 0 ? "Empty" : item.name }}</strong>
-                    <small>{{ item.refreshRemaining > 0 ? `Refresh: ${Math.ceil(item.refreshRemaining)}s` : `Cost: ${item.cost} coins` }}</small>
+                    <small>{{ item.refreshRemaining > 0 ? `Refresh: ${Math.ceil(item.refreshRemaining)}s` : `Cost: ${item.cost} ${coinLabel(item.cost)}` }}</small>
                 </button>
             </div>
             <div class="guild-shop-upgrades">
@@ -280,7 +284,7 @@ onBeforeUnmount(() => {
                         @click="$emit('buy-shop-upgrade', upgrade.id)"
                     >
                         <strong>{{ upgrade.locked ? "Locked" : upgrade.title }}</strong>
-                        <small v-if="!upgrade.locked">{{ upgrade.purchased ? "Purchased" : `Cost: ${upgrade.cost} coins` }}</small>
+                        <small v-if="!upgrade.locked">{{ upgrade.purchased ? "Purchased" : `Cost: ${upgrade.cost} ${coinLabel(upgrade.cost)}` }}</small>
                     </button>
                 </div>
             </div>

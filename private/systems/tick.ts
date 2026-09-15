@@ -8,12 +8,8 @@ import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, resetCas
 import { SCRATCH_HANDLES } from "../core/scratch.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { PerformanceStats } from "./performance-stats.js";
-
-// Hello Scarlet, what do you want?
-// what do you want... do you want pets?
-// oh you want food? you motherfucker...
-// this is not newsticker suggestions
-// shame on your dog
+import { tickKeybinds } from "./keybinds.js";
+import { updateAutocasters } from "../guild/autocasters.js";
 
 /** [WASM] */
 
@@ -250,6 +246,7 @@ export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
     updatePotionEffects(secondsHandle);
     updateQuestBoard(deltaMilliseconds / 1000);
+    updateAutocasters(deltaMilliseconds / 1000);
     tickProduction(deltaMilliseconds, countTimePlayed);
     if (consumeTierOneRewardsChanged()) {
         refreshSealedMeridiansDerivedState();
@@ -457,6 +454,7 @@ function runTick(): void {
             tick(elapsedMilliseconds, true);
         }
     }
+    tickKeybinds();
     const deltaTime = performance.now() - start;
     setTimeout(runTick, Math.max(0, updateRate - deltaTime));
     PerformanceStats.end("tick");
