@@ -107,7 +107,7 @@ export function refreshMatrixDerivedState(): void {
     if (hasCondensedUpgrade(17)) {
         addInto(scratch.productionModifier, player.sealedMeridians, 0);
         writeNumber(scratch.tierOneSeconds, 50);
-        // Meditation power bonus = Sealed Meridians / 50.
+        // Meditation power bonus = Sealed Meridians / 10.
         divUS(scratch.productionModifier, scratch.tierOneSeconds);
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
@@ -137,7 +137,7 @@ export function matrixOtherEffectHandle(): i32 {
     }
     if (hasCondensedUpgrade(17)) {
         addInto(scratch.tierOneSeconds, player.sealedMeridians, 0);
-        divUS(scratch.tierOneSeconds, 50);
+        divUS(scratch.tierOneSeconds, 10);
         addUS(scratch.productionModifier, scratch.tierOneSeconds);
     }
     return scratch.productionModifier;
@@ -151,7 +151,7 @@ export function resetSealedMeridians(): void {
 }
 
 function resetTierOne(): void {
-    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 20);
+    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 50);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     resetTierOneAmounts();
     resetMeridianPurification();
@@ -165,7 +165,7 @@ export function resetCastSpeed(): void {
 }
 
 export function applyCondensedResetStartingValues(): void {
-    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 20);
+    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 50);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     writeNumber(player.matrixOwned, hasTierOneAchievement(21) ? 1 : 0);
     applyCondensedSealedMeridiansMinimum();

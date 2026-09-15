@@ -74,7 +74,7 @@ body.star-animation-disabled .star {
   overflow: hidden;
   padding: 14px 16px 12px;
   border: 1px solid var(--notification-color);
-  color: #fff;
+  color: var(--notification-text-color);
   background: #17131d;
   box-shadow: 0 3px 12px #000a;
 }

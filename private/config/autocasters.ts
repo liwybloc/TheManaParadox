@@ -30,9 +30,9 @@ export const AUTOCASTER_TASKS = [
     { id: 3, action: "Cast/Boost Circuits", minimumTier: 1, cooldown: 1, effects: ["Buys max", "Buys max and Empowers", "Buys max and Empowers; ×2 cooldown speed"] },
     { id: 4, action: "Cast/Boost Meridians", minimumTier: 1, cooldown: 1, effects: ["Buys max", "Buys max", "Buys max; ×2 cooldown speed"] },
     { id: 5, action: "Condense", minimumTier: 2, cooldown: 30, effects: [null, "Condenses", "Condenses; ×2 cooldown speed"] },
-    { id: 6, action: "Purify Meridians", minimumTier: 2, cooldown: 10, effects: [null, "Purifies Meridians", "Purifies Meridians; ×2 cooldown speed"] },
-    { id: 7, action: "Seal Meridians", minimumTier: 1, cooldown: 5, effects: ["Seals Meridians", "Seals Meridians", "Seals Meridians; ×2 cooldown speed"] },
-    { id: 8, action: "Conjure Crystal Matrix", minimumTier: 1, cooldown: 5, effects: ["Conjures a Matrix", "Conjures a Matrix", "Conjures a Matrix; ×2 cooldown speed"] },
+    { id: 6, action: "Purify Meridians", minimumTier: 2, cooldown: 3, effects: [null, "Purifies Meridians", "Purifies Meridians; ×2 cooldown speed"] },
+    { id: 7, action: "Seal Meridians", minimumTier: 1, cooldown: 3, effects: ["Seals Meridians", "Seals Meridians", "Seals Meridians; ×2 cooldown speed"] },
+    { id: 8, action: "Conjure Crystal Matrix", minimumTier: 1, cooldown: 3, effects: ["Conjures a Matrix", "Conjures a Matrix", "Conjures a Matrix; ×2 cooldown speed"] },
 ] as const;
 
 export const MAX_AUTOCASTERS = 9;

@@ -20,35 +20,45 @@ export const ACHIEVEMENTS = [
     { id: "achievement_buyconjugationcreation", number: 3, title: "The promised achievement", description: "Purchase a Conduit.", reward: "+3% mana production" },
     { id: "achievement_buycreationmanufactory", number: 4, title: "Electrical Engineering", description: "Purchase a Circuit.", reward: "+4% mana production" },
     { id: "achievement_buymanufacturestaff", number: 5, title: "There should've been 9", description: "Purchase a Meridian.", reward: "+5% mana production" },
-    
+
     { id: "achievement_playtwohours", number: 6, title: "Thanks!", description: "Play for 1 hour.", reward: "Mana is increased based on time played", dynamicReward: "time-played" },
     { id: "achievement_sealmeridians", number: 7, title: "Grandmeridian", description: "Reach 5 Sealed Meridians." },
     { id: "achievement_havesixstaff", number: 8, title: "Double the Sith", description: "Have at least 12 Meridians.", reward: "Unlock Purification of Meridians" },
     { id: "achievement_produce1e50mana", number: 9, title: "100 quindecillion mana is a lot", description: "Produce 1.00e50 mana.", reward: "Reset with 500 mana" },
     { id: "achievement_castspeedminute", number: 10, title: "This lasts like.. forever!", description: "Have over 1 minute of Meditation time.", reward: "Meditation time is increased by 5 seconds per use" },
+
     { id: "achievement_centennial", number: 11, title: "Centennial", description: "Reach 1.00e100 Mana.", reward: "Increase per-boost multiplier by +0.1×" },
     { id: "achievement_circularhabits", number: 12, title: "Circular Habits", description: "Reach the limit of your mana circle.", reward: "Get 3 Potion of Speed II" },
     { id: "achievement_realnews", number: 14, title: "REAL NEWS!", description: "View 50 different ticker messages." },
     { id: "achievement_clicker", number: 15, title: "Clicker!", description: "Click over 1,000 times.", reward: "Carpel tunnel" },
     { id: "achievement_pleasedosleep", number: 17, title: "Please do sleep", description: "Be offline for more than an hour." },
-    { id: "achievement_supercondensed", number: 19, title: "Super-Condensed", description: "Condense 50 times." },
+
+    { id: "achievement_supercondensed", number: 19, title: "Super-Condensed", description: "Condense 50 times.", reward: "Gain ×2 more condensed mana" },
     { id: "achievement_empowertwice", number: 20, title: "Wait, you can get 2 of these?!", description: "Empower any producer twice." },
     { id: "achievement_timeforthefunpart", number: 23, title: "Time for the fun part", description: "Reach 10 condensed mana." },
-    { id: "achievement_allcondensedupgrades", number: 24, title: "Is this the end of the game?", description: "Purchase every condensed upgrade." },
+    { id: "achievement_allcondensedupgrades", number: 24, title: "Is this the end of the game?", description: "Purchase every condensed upgrade?" },
     { id: "achievement_newhorizons", number: 25, title: "LilysMana: New Horizons", description: "Expand your mana circle." },
+
     { id: "achievement_unlockguild", number: 26, title: "I should've related these two!", description: "Unlock the Guild." },
     { id: "achievement_firstquest", number: 27, title: "That was a battle! Literally", description: "Complete your first quest." },
     { id: "achievement_drinkpotion", number: 28, title: "It's bitter!", description: "Drink a potion." },
     { id: "achievement_tenquests", number: 29, title: "Will I rank up?", description: "Complete 10 quests." },
     { id: "achievement_rankupe", number: 30, title: "Yes you will!", description: "Rank up to E tier." },
+
+    { id: "achievement_hireautocaster", number: 36, title: "Today's topic.", description: "Hire your first auto-caster", reward: "10 coins"},
+    { id: "achievement_imrich", number: 37, title: "I'm rich!", description: "Get 100 or more coins", reward: "The rich get richer (10 coins)" },
+    { id: "achievement_buytier3caster", number: 38, title: "Faster!!", description: "Hire a tier 3 or higher auto-caster", },
+    { id: "achievement_completeachallenge", number: 39, title: "Rough place", description: "Acquire any challenge achievement", reward: "A sense of accomplishment" },
+    { id: "achievement_beatdtier", number: 40, title: "Boi that was so Tuff", description: "Defeat a D-tier or higher enemy", reward: "5 Potion of Speed III" },
 ];
 
 export const PROGRESSION_ACHIEVEMENT_ORDER = [
     1, 2, 3, 4, 5,
     14, 15, 9, 10, 20,
     11, 7, 8, 26, 27,
-    28, 29, 30, 12, 17,
-    6, 19, 23, 24, 25,
+    28, 29, 30, 37, 12,
+    17, 39, 6, 19, 38,
+    36, 23, 24, 25, 40,
 ];
 
 declare const player: Player;
@@ -97,6 +107,11 @@ export function hasTierOneAchievement(index: i32): bool {
         case 32: return player.achievement_freezeonly;
         case 33: return player.achievement_noboosting;
         case 34: return player.achievement_sellfullinventory;
+        case 35: return player.achievement_hireautocaster;
+        case 36: return player.achievement_imrich;
+        case 37: return player.achievement_buytier3caster;
+        case 38: return player.achievement_completeachallenge;
+        case 39: return player.achievement_beatdtier;
         default: return false;
     }
 }
@@ -139,6 +154,11 @@ export function setTierOneAchievement(index: i32, unlocked: bool): void {
         case 32: player.achievement_freezeonly = unlocked; break;
         case 33: player.achievement_noboosting = unlocked; break;
         case 34: player.achievement_sellfullinventory = unlocked; break;
+        case 35: player.achievement_hireautocaster = unlocked; break;
+        case 36: player.achievement_imrich = unlocked; break;
+        case 37: player.achievement_buytier3caster = unlocked; break;
+        case 38: player.achievement_completeachallenge = unlocked; break;
+        case 39: player.achievement_beatdtier = unlocked; break;
     }
     if (previous !== unlocked) achievementRevision++;
     refreshAchievementRewards();
@@ -154,15 +174,28 @@ export function unlockTierOneAchievement(index: i32): bool {
     let changed = false;
     if (!hasTierOneAchievement(index)) {
         setTierOneAchievement(index, true);
+        if (index === 35 || index === 36) addUS(player.coins, 10);
         if (index === 11) circularHabitsRewardPending = true;
         if (index === 10 || index === 12 || index === 15 || index === 20 || index === 33) tierOneRewardsChanged = true;
         changed = true;
+        if (isChallengeAchievement(index)) unlockTierOneAchievement(38);
+        checkCoinAchievements();
     }
     if (index === 4 && gte(player.count_manufactureStaff, 12) && !hasTierOneAchievement(7)) {
         setTierOneAchievement(7, true);
         changed = true;
     }
     return changed;
+}
+
+export function checkCoinAchievements(): void {
+    writeNumber(scratch.currencyGain, 100);
+    if (gte(player.coins, scratch.currencyGain)) unlockTierOneAchievement(36);
+}
+
+function isChallengeAchievement(index: i32): bool {
+    return index === 12 || index === 15 || index === 17 || index === 20 || index === 21
+        || (index >= 30 && index <= 34);
 }
 
 export function consumeCircularHabitsReward(): bool {

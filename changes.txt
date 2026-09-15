@@ -1,10 +1,8 @@
-v0.0.8
-- renamed the tier 1 producers and updated mastery and staff bolstering to sealed meridians and purification of meridians
-- added five new challenge achievements and rewards for several existing achievements
-- added more progression goals leading up to the guild and condense
-- showed mana per second, multiplier, maximum mana, and achievement displays
-- made background stars animated
-- rebalanced courage, condensed upgrades, purification of meridians, guild combat, enemy health, spell costs, and shop prices
-- improved offline time simulation with speed up and skip controls that work now :3
-- fixed quest results, rewards, locking, and board refreshes during combat
-- optimizations and bug fixes
+v0.0.9
+- added guild auto-casters with three tiers, task assignments, wages, and configurable behavior
+- added five new achievements and rewards
+- added a discord button
+- buffed sealed meridian meditation power and the super-condensed reward
+- rebalanced several condensed upgrades, including unlocking courage earlier
+- improved achievement notifications and multiplier displays
+- balance changes and bug fixes

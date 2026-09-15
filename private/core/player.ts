@@ -116,6 +116,11 @@ export interface Player extends PlayerHandles {
     achievement_freezeonly: bool;
     achievement_noboosting: bool;
     achievement_sellfullinventory: bool;
+    achievement_hireautocaster: bool;
+    achievement_imrich: bool;
+    achievement_buytier3caster: bool;
+    achievement_completeachallenge: bool;
+    achievement_beatdtier: bool;
     meridianSealedThisReset: bool;
     castSpeedUsedThisCondense: bool;
     potionUsedThisCondense: bool;
@@ -322,6 +327,11 @@ export const player: Player = {
     achievement_freezeonly: false,
     achievement_noboosting: false,
     achievement_sellfullinventory: false,
+    achievement_hireautocaster: false,
+    achievement_imrich: false,
+    achievement_buytier3caster: false,
+    achievement_completeachallenge: false,
+    achievement_beatdtier: false,
     meridianSealedThisReset: false,
     castSpeedUsedThisCondense: false,
     potionUsedThisCondense: false,

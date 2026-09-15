@@ -1,5 +1,5 @@
-import { addInto, addUS, copyInto, createDecimal, createZero, divInto, divUS, eq, floorInto, gt, gte, log10Into, lt, lte, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
-import { unlockTierOneAchievement } from "./achievements.js";
+import { addInto, addUS, copyInto, createDecimal, createZero, divInto, divUS, eq, floorInto, gt, gte, log10Into, lt, lte, mulUS, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { isQuestActive } from "../guild/guild.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -24,21 +24,21 @@ const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
     { slot: 8,  title: "Circuits produce ×2 more", cost: [1, 0, 2]},
     { slot: 9,  title: "Conduits produce ×2 more", cost: [1, 0, 1]},
 
-    { slot: 10, title: "Start each reset with 1e20 mana", cost: [1, 0, 100] },
-    { slot: 11, title: "Decrease Meditation cost growth to ^1.9", cost: [1, 0, 100] },
+    { slot: 10, title: "Start each reset with 1e50 mana", cost: [1, 0, 20] },
+    { slot: 11, title: "Decrease Meditation cost growth to ^1.9", cost: [1, 0, 75] },
 
-    { slot: 13, title: "Decrease empowerment cost growth to ^1.9", cost: [1, 0, 100] },
-    { slot: 14, title: "Start each reset with 2 Sealed Meridians", cost: [1, 0, 100] },
+    { slot: 13, title: "Decrease empowerment cost growth to ^1.9", cost: [1, 0, 75] },
+    { slot: 14, title: "Start each reset with 2 Sealed Meridians", cost: [1, 0, 20] },
 
     { slot: 15, title: "First Meditation is free", cost: [1, 0, 10] },
     { slot: 16, title: "Courage duration is increased by 25%", cost: [1, 0, 10] },
     { slot: 17, title: "Mana is increased based on condensed mana\n(Currently: {condensedManaBuff})", cost: [1, 0, 10] },
-    { slot: 18, title: "Courage cooldown is decreased by 25%", cost: [1, 0, 10] },
+    { slot: 18, title: "Courage is unlocked 1e20 earlier", cost: [1, 0, 10] },
     { slot: 19, title: "Sealed Meridian magnitude is increased based on Crystal Matrix effect", cost: [1, 0, 10] },
 
-    { slot: 21, title: "Empowerments are ×5 stronger", cost: [1, 0, 1024] },
+    { slot: 21, title: "Empowerments are ×5 stronger", cost: [1, 0, 250] },
     { slot: 22, title: "Meditation power is slightly increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff})", cost: [1, 0, 1024] },
-    { slot: 23, title: "Condensed Mana boosts Courage power\n(Currently: {condensedCourageBuff})", cost: [1, 0, 1024] },
+    { slot: 23, title: "Condensed Mana boosts Courage power\n(Currently: {condensedCourageBuff})", cost: [1, 0, 250] },
     
     {
         slot: 12,
@@ -113,6 +113,7 @@ export function calculateCondenseGain(): bool {
         divUS(scratch.condenseGain, scratch.productionModifier);
         floorInto(scratch.condenseGain, scratch.condenseGain);
     }
+    if (hasTierOneAchievement(18)) mulUS(scratch.condenseGain, 2);
     addUS(player.statistics_condensedManaProduced, scratch.condenseGain);
     return true;
 }
@@ -186,7 +187,7 @@ function checkAllCondensedUpgradesAchievement(): void {
 
 export function refreshCondensedUpgradeState(): void {
     addInto(condensedManaBuff, player.condensedMana, 1);
-    divInto(sealedMeridiansCastPowerBuff, player.sealedMeridians, 50);
+    divInto(sealedMeridiansCastPowerBuff, player.sealedMeridians, 10);
     addInto(condensedCourageBuff, player.condensedMana, 1);
     log10Into(condensedCourageBuff, condensedCourageBuff);
     addUS(condensedCourageBuff, 1);

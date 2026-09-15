@@ -131,6 +131,12 @@ export function canPurifyMeridians(): bool {
     return gte(player.count_manaConduit, player.meridianPurificationRequirement) && gt(player.meridianPurificationEffect, player.purifiedMeridiansMultiplier);
 }
 
+export function canPurifyMeridiansAtRelativeMultiplier(minimum: f64): bool {
+    if (!canPurifyMeridians()) return false;
+    writeNumber(scratch.tierOneSeconds, Math.max(1, minimum));
+    return gte(scratch.purificationRelativeIncrease, scratch.tierOneSeconds);
+}
+
 export function purifyMeridians(): bool {
     if (!canPurifyMeridians()) return false;
     copyInto(player.purifiedMeridiansMultiplier, player.meridianPurificationEffect);

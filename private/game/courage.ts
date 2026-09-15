@@ -13,10 +13,14 @@ const COURAGE_COOLDOWN: f64 = 15;
 
 export function isCourageVisible(): bool {
     if (player.courageUnlocked) return true;
-    writeDecimal(scratch.currencyGain, 1, 1, 290);
+    writeDecimal(scratch.currencyGain, 1, 1, courageUnlockExponent());
     if (!gte(player.mana, scratch.currencyGain)) return false;
     player.courageUnlocked = true;
     return true;
+}
+
+export function courageUnlockExponent(): f64 {
+    return hasCondensedUpgrade(14) ? 270 : 290;
 }
 
 export function isCourageUnlocked(): bool {
@@ -63,8 +67,7 @@ export function updateCourage(deltaSeconds: i32): bool {
     }
 
     writeNumber(player.courageTimer, 0);
-    const cooldown = hasCondensedUpgrade(14) ? COURAGE_COOLDOWN * 0.75 : COURAGE_COOLDOWN;
-    const cooldownRemaining = cooldown - (elapsed - activeRemaining);
+    const cooldownRemaining = COURAGE_COOLDOWN - (elapsed - activeRemaining);
     writeNumber(player.courageCooldown, Math.max(0, cooldownRemaining));
     return active;
 }

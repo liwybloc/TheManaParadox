@@ -6,10 +6,12 @@ const props = defineProps({
     coins: { type: String, required: true },
 });
 
-const emit = defineEmits(["hire", "assign", "move", "sell"]);
+const emit = defineEmits(["hire", "assign", "move", "sell", "casts-max", "purify-minimum"]);
 const rosterGrid = ref(null);
 const selectedCasterId = ref(null);
 const dragging = ref(null);
+const settingsTaskId = ref(null);
+const purifyMinimumDraft = ref(1.01);
 let pendingPress = null;
 const selectedCaster = computed(() => props.autocasters.casters.find((caster) => caster?.id === selectedCasterId.value) ?? null);
 
@@ -96,6 +98,19 @@ function sellSelected() {
     selectedCasterId.value = null;
 }
 
+function toggleSettings(task) {
+    if (task.id === 6) purifyMinimumDraft.value = task.purifyMinimum;
+    settingsTaskId.value = settingsTaskId.value === task.id ? null : task.id;
+}
+
+function updatePurifyMinimum(event) {
+    purifyMinimumDraft.value = Number(event.target.value);
+}
+
+function commitPurifyMinimum() {
+    emit("purify-minimum", purifyMinimumDraft.value);
+}
+
 onBeforeUnmount(() => {
     window.removeEventListener("pointermove", trackPress);
     window.removeEventListener("pointerup", finishPress);
@@ -113,12 +128,33 @@ onBeforeUnmount(() => {
         <p class="autocaster-explanation">Wages are only collected after an auto-caster performs work.</p>
         <div class="autocaster-assignment-row">
             <article v-for="task in autocasters.tasks" :key="task.id" class="autocaster-task-slot" :class="{ occupied: task.caster }" :data-autocaster-task="task.id">
+                <button class="autocaster-settings-button" type="button" aria-label="Auto-caster settings" @click="toggleSettings(task)">⚙</button>
                 <button class="autocaster-help" type="button" :data-tooltip="taskTooltip(task)" :aria-label="taskTooltip(task)">?</button>
                 <strong>{{ task.action }}</strong><small>Tier {{ task.minimumTier }}+ · {{ task.cooldown }}s</small>
                 <div v-if="task.caster" class="assigned-caster" :style="{ visibility: dragging?.caster.id === task.caster.id ? 'hidden' : 'visible' }" @pointerdown="beginPress($event, task.caster)">
                     <span>{{ task.caster.name }}</span><small>Tier {{ task.caster.tier }}</small><small class="autocaster-timer">{{ task.caster.status }}</small>
                 </div>
                 <span v-else class="assignment-empty">Drop here</span>
+                <section v-if="settingsTaskId === task.id" class="autocaster-settings-panel">
+                    <strong>{{ task.action }} Settings</strong>
+                    <label v-if="task.id < 5" class="autocaster-toggle-setting">
+                        <input type="checkbox" :checked="task.castsMax" @change="$emit('casts-max', task.id, $event.target.checked)">
+                        Cast max
+                    </label>
+                    <label v-else-if="task.id === 6" class="autocaster-slider-setting">
+                        <span>Minimum Relative Multiplier: ×{{ purifyMinimumDraft.toFixed(2) }}</span>
+                        <input
+                            type="range"
+                            min="1.01"
+                            max="10"
+                            step="0.01"
+                            :value="purifyMinimumDraft"
+                            @input="updatePurifyMinimum"
+                            @change="commitPurifyMinimum"
+                        >
+                    </label>
+                    <span v-else>No settings available yet.</span>
+                </section>
             </article>
         </div>
         <div class="autocaster-lower-layout">

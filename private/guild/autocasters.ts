@@ -1,8 +1,9 @@
 import { addUS, gte, subUS } from "../core/break_eternity.js";
 import { canCondense } from "../game/condensed.js";
 import { increaseMatrix, sealMeridians } from "../game/progression.js";
-import { buyMaxTierOne, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
+import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplier, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
 import type { Player } from "../core/player.js";
+import { checkCoinAchievements, unlockTierOneAchievement } from "../game/achievements.js";
 
 declare const player: Player;
 
@@ -21,6 +22,8 @@ const actionCooldowns = new StaticArray<f64>(MAX_AUTOCASTERS);
 const wageTimers = new StaticArray<f64>(MAX_AUTOCASTERS);
 const workedThisPeriod = new StaticArray<u8>(MAX_AUTOCASTERS);
 let autoCondenseRequested: bool = false;
+const producerCastOne = new StaticArray<u8>(5);
+let purifyMinimumRelativeMultiplier: f64 = 1.01;
 
 export function isAutocasterHired(index: i32): bool {
     return isValidCaster(index) && tiers[index] !== 0;
@@ -52,6 +55,22 @@ export function autocasterWageTimer(index: i32): f64 {
 
 export function autocasterWorkedThisPeriod(index: i32): bool {
     return isValidCaster(index) && workedThisPeriod[index] !== 0;
+}
+
+export function producerAutocasterCastsMax(index: i32): bool {
+    return index >= 0 && index < 5 && producerCastOne[index] === 0;
+}
+
+export function setProducerAutocasterCastsMax(index: i32, value: bool): void {
+    if (index >= 0 && index < 5) producerCastOne[index] = value ? 0 : 1;
+}
+
+export function autocasterPurifyMinimumRelativeMultiplier(): f64 {
+    return purifyMinimumRelativeMultiplier;
+}
+
+export function setAutocasterPurifyMinimumRelativeMultiplier(value: f64): void {
+    purifyMinimumRelativeMultiplier = Math.max(1.01, Math.min(100, value));
 }
 
 export function autocasterHireCost(tier: i32): i32 {
@@ -89,6 +108,8 @@ export function hireAutocaster(tier: i32, nameIndex: i32): i32 {
     actionCooldowns[index] = 0;
     wageTimers[index] = 0;
     workedThisPeriod[index] = 0;
+    unlockTierOneAchievement(35);
+    if (tier >= 3) unlockTierOneAchievement(37);
     return index;
 }
 
@@ -121,6 +142,7 @@ export function sellAutocaster(caster: i32): bool {
     if (!isAutocasterHired(caster)) return false;
     const tier = tiers[caster];
     addUS(player.coins, tier === 1 ? 1 : tier === 2 ? 2 : 5);
+    checkCoinAchievements();
     dismissAutocaster(caster);
     return true;
 }
@@ -183,7 +205,7 @@ function updateAction(caster: i32, deltaSeconds: f64): void {
     let acted = false;
     if (task < 5) {
         if (tiers[caster] >= 2 && empowerTierOne(task)) acted = true;
-        if (buyMaxTierOne(task)) acted = true;
+        if (producerAutocasterCastsMax(task) ? buyMaxTierOne(task) : buyTierOne(task)) acted = true;
     } else {
         switch (task) {
             case 5:
@@ -192,7 +214,9 @@ function updateAction(caster: i32, deltaSeconds: f64): void {
                     acted = true;
                 }
                 break;
-            case 6: acted = purifyMeridians(); break;
+            case 6:
+                if (canPurifyMeridiansAtRelativeMultiplier(purifyMinimumRelativeMultiplier)) acted = purifyMeridians();
+                break;
             case 7: acted = sealMeridians(); break;
             case 8: acted = increaseMatrix(); break;
         }

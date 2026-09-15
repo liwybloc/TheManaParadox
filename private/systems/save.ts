@@ -8,7 +8,7 @@ import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSea
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { simulateTime } from "./tick.js";
 import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, resetCombatSpellCosts, setGuildExperience, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
-import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod } from "../guild/autocasters.js";
+import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterPurifyMinimumRelativeMultiplier, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, producerAutocasterCastsMax, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterPurifyMinimumRelativeMultiplier, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod, setProducerAutocasterCastsMax } from "../guild/autocasters.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
@@ -66,6 +66,7 @@ const achievementFields004 = achievementSaveFields(5, 15);
 const achievementFields007 = achievementSaveFields(5, 20);
 const achievementFields008 = achievementSaveFields(5, 25);
 const achievementFields009 = achievementSaveFields(5, 30);
+const achievementFields011 = achievementSaveFields(5, 35);
 const condensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT - 1 }, (_, index) => booleanSaveField(
     () => hasCondensedUpgrade(index),
     (purchased) => setCondensedUpgrade(index, purchased),
@@ -179,6 +180,14 @@ const autocasterFields: readonly SaveField[] = Array.from({ length: 9 }, (_, ind
     callbackNumberSaveField(() => autocasterWageTimer(index), (value) => setAutocasterWageTimer(index, value), 0),
     booleanSaveField(() => autocasterWorkedThisPeriod(index), (value) => setAutocasterWorkedThisPeriod(index, value)),
 ]).flat();
+const autocasterSettingFields: readonly SaveField[] = [
+    ...Array.from({ length: 5 }, (_, index) => booleanSaveField(
+        () => producerAutocasterCastsMax(index),
+        (value) => setProducerAutocasterCastsMax(index, value),
+        true,
+    )),
+    callbackNumberSaveField(autocasterPurifyMinimumRelativeMultiplier, setAutocasterPurifyMinimumRelativeMultiplier, 1.01),
+];
 
 const savedFields002: readonly SaveField[] = [
     ...savedFields001,
@@ -266,7 +275,9 @@ const savedFields010: readonly SaveField[] = [
 
 const savedFields011: readonly SaveField[] = [
     ...savedFields010,
+    ...achievementFields011,
     ...autocasterFields,
+    ...autocasterSettingFields,
 ];
 
 const condenseResetFields: readonly SaveField[] = [

@@ -282,3 +282,361 @@ footer {
   text-align: center;
   text-transform: uppercase;
 }
+.autobuyers-tab {
+  text-align: center;
+}
+
+.autobuyers-tab h2 {
+  margin-bottom: 6px;
+  color: #c8a8ff;
+}
+
+.autobuyers-tab p {
+  color: #9292a1;
+}
+
+.autocaster-explanation {
+  margin: 0 auto 18px;
+  font-size: 12px;
+}
+
+.autocaster-hiring,
+.autocaster-assignment-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.autocaster-hiring {
+  margin-bottom: 12px;
+}
+
+.autocaster-hiring button {
+  min-width: 150px;
+  padding: 8px;
+  border: 1px solid #7652a5;
+  color: #eee5fa;
+  background: #30213f;
+  cursor: pointer;
+}
+
+.autocaster-hiring button small {
+  display: block;
+  margin-top: 3px;
+  color: #a99bb6;
+  font-size: 9px;
+}
+
+.autocaster-hiring button:hover:not(:disabled) {
+  background: #433057;
+}
+
+.autocaster-hiring button:disabled {
+  border-color: #5b3a3a;
+  color: #776b6b;
+  background: #251b1e;
+  cursor: not-allowed;
+}
+
+.autocaster-assignment-row {
+  align-items: stretch;
+  width: calc(100vw - 24px);
+  margin-left: calc(50% - 50vw + 12px);
+}
+
+.autocaster-task-slot {
+  position: relative;
+  width: 150px;
+  min-height: 112px;
+  padding: 9px;
+  border: 1px dashed #565263;
+  background: #15141c;
+}
+
+.autocaster-task-slot.occupied {
+  border-style: solid;
+  border-color: #7652a5;
+}
+
+.autocaster-task-slot > strong,
+.autocaster-task-slot > small {
+  display: block;
+  padding: 0 16px;
+}
+
+.autocaster-task-slot > strong {
+  min-height: 30px;
+  color: #cfc4dc;
+  font-size: 11px;
+}
+
+.autocaster-task-slot > small {
+  color: #777383;
+  font-size: 9px;
+}
+
+.autocaster-help {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #756586;
+  border-radius: 50%;
+  color: #cfb5ed;
+  background: #241c2e;
+}
+
+.autocaster-settings-button {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #756586;
+  color: #cfb5ed;
+  background: #241c2e;
+  font-size: 10px;
+  line-height: 16px;
+}
+
+.autocaster-settings-button:hover {
+  background: #39294a;
+}
+
+.autocaster-settings-panel {
+  position: absolute;
+  z-index: 25;
+  top: 27px;
+  left: 5px;
+  width: 245px;
+  padding: 10px;
+  border: 1px solid #7652a5;
+  color: #cfc3dd;
+  background: #17121e;
+  box-shadow: 0 5px 16px #000b;
+  text-align: left;
+}
+
+.autocaster-settings-panel > strong,
+.autocaster-settings-panel > span {
+  display: block;
+  font-size: 11px;
+}
+
+.autocaster-settings-panel > span {
+  margin-top: 8px;
+  color: #8f8798;
+  font-size: 10px;
+}
+
+.autocaster-toggle-setting,
+.autocaster-slider-setting {
+  display: flex;
+  margin-top: 9px;
+  font-size: 10px;
+}
+
+.autocaster-toggle-setting {
+  align-items: center;
+  gap: 7px;
+}
+
+.autocaster-slider-setting {
+  flex-direction: column;
+  gap: 6px;
+}
+
+.autocaster-slider-setting input {
+  width: 100%;
+}
+
+.autocaster-help::after {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 7px);
+  right: -5px;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 30px));
+  padding: 8px 10px;
+  border: 1px solid #7652a5;
+  color: #ddd1eb;
+  background: #17121e;
+  box-shadow: 0 4px 14px #000a;
+  content: attr(data-tooltip);
+  font-size: 10px;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-line;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 100ms linear, transform 100ms linear;
+}
+
+.autocaster-help:hover::after,
+.autocaster-help:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.assigned-caster,
+.assignment-empty {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 45px;
+  margin-top: 7px;
+  border: 1px solid #60477c;
+  color: #d9bef7;
+  background: #2a2036;
+  cursor: grab;
+}
+
+.assigned-caster small {
+  margin-top: 2px;
+  color: #a794ba;
+  font-size: 9px;
+}
+
+.assigned-caster .autocaster-timer {
+  color: #c0adcF;
+  font-size: 8px;
+}
+
+.assignment-empty {
+  border-style: dashed;
+  color: #666271;
+  background: transparent;
+  cursor: default;
+}
+
+.autocaster-lower-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 18px;
+  max-width: 720px;
+  margin: 24px auto 0;
+}
+
+.autocaster-roster {
+  display: grid;
+  grid-template-columns: repeat(3, 92px);
+  grid-template-rows: repeat(3, 92px);
+  justify-content: center;
+  gap: 5px;
+}
+
+.autocaster-roster-slot {
+  border: 1px solid #3e3b48;
+  background: #111118;
+}
+
+.autocaster-roster-slot article {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 5px;
+  color: #d6bbf5;
+  background: #292035;
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.assigned-caster {
+  user-select: none;
+  touch-action: none;
+}
+
+.autocaster-drag-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border: 1px solid #8a62b5;
+  color: #e2ccfa;
+  background: #302440;
+  box-shadow: 0 5px 16px #000a;
+  text-align: center;
+}
+
+.autocaster-drag-preview strong {
+  font-size: 11px;
+}
+
+.autocaster-drag-preview span {
+  margin-top: 4px;
+  color: #aa96be;
+  font-size: 9px;
+}
+
+.autocaster-roster-slot article strong {
+  font-size: 11px;
+}
+
+.autocaster-roster-slot article span {
+  margin-top: 5px;
+  color: #9e8caf;
+  font-size: 10px;
+}
+
+.autocaster-roster-slot .autocaster-timer {
+  display: block;
+  margin-top: 5px;
+  color: #b4a2c5;
+  font-size: 8px;
+  line-height: 1.15;
+}
+
+.autocaster-inspector {
+  min-height: 282px;
+  padding: 14px;
+  border: 1px solid #484252;
+  background: #17151d;
+  text-align: left;
+}
+
+.autocaster-inspector > strong,
+.autocaster-inspector > span,
+.autocaster-inspector > small {
+  display: block;
+}
+
+.autocaster-inspector > strong {
+  color: #d6bbf5;
+  font-size: 16px;
+}
+
+.autocaster-inspector > span,
+.autocaster-inspector > small {
+  margin-top: 5px;
+  color: #8f8798;
+  font-size: 11px;
+}
+
+.autocaster-inspector button {
+  width: 100%;
+  margin-top: 7px;
+  padding: 7px;
+  border: 1px solid #684e83;
+  color: #ddd0eb;
+  background: #2b2037;
+}
+
+.autocaster-inspector .autocaster-sell {
+  border-color: #754343;
+  background: #382124;
+}
+
+@media (max-width: 700px) {
+  .autocaster-lower-layout {
+    grid-template-columns: 1fr;
+  }
+}

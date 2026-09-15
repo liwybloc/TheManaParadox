@@ -305,7 +305,12 @@ function updateAutocastersDisplay() {
     });
     autocasters.value = {
         casters,
-        tasks: AUTOCASTER_TASKS.map((task) => ({ ...task, caster: casters.find((caster) => caster?.assignment === task.id) ?? null })),
+        tasks: AUTOCASTER_TASKS.map((task) => ({
+            ...task,
+            caster: casters.find((caster) => caster?.assignment === task.id) ?? null,
+            castsMax: task.id < 5 ? namedWasm.producerAutocasterCastsMax(task.id) : false,
+            purifyMinimum: task.id === 6 ? namedWasm.autocasterPurifyMinimumRelativeMultiplier() : 1.01,
+        })),
         hireOptions: AUTOCASTER_TIERS.map((tier) => ({ ...tier, affordable: namedWasm.canHireAutocaster(tier.tier) })),
     };
 }
@@ -758,6 +763,16 @@ function moveAutocaster(caster, position) {
     if (namedWasm.moveAutocaster(caster, position)) void saveGame();
 }
 
+function setAutocasterCastsMax(task, value) {
+    namedWasm.setProducerAutocasterCastsMax(task, value);
+    void saveGame();
+}
+
+function setAutocasterPurifyMinimum(value) {
+    namedWasm.setAutocasterPurifyMinimumRelativeMultiplier(value);
+    void saveGame();
+}
+
 function sellAutocaster(caster) {
     if (namedWasm.sellAutocaster(caster)) void saveGame();
 }
@@ -809,6 +824,14 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="game-shell">
+        <a
+            class="discord-link"
+            href="https://discord.gg/KXmEYc6gxm"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Join The Mana Paradox Discord"
+            title="Join The Mana Paradox Discord"
+        ><img :src="'./img/discord.png'" alt=""></a>
         <NotificationStack />
         <TimeSimulation
             :simulation="timeSimulation"
@@ -913,6 +936,8 @@ onBeforeUnmount(() => {
                 @assign="assignAutocaster"
                 @move="moveAutocaster"
                 @sell="sellAutocaster"
+                @casts-max="setAutocasterCastsMax"
+                @purify-minimum="setAutocasterPurifyMinimum"
             />
             <AchievementsTab
                 v-else-if="activeTab === 'achievements'"

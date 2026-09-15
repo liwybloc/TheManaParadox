@@ -1,5 +1,5 @@
 import { addUS, copyInto, createZero, divUS, gt, gte, log10Into, lte, mulUS, powUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
-import { consumeCircularHabitsReward, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
+import { checkCoinAchievements, consumeCircularHabitsReward, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 import { INVENTORY_ITEMS } from "./items.js";
@@ -408,6 +408,7 @@ export function sellInventoryItem(position: i32, itemId: i32): i32 {
     if (itemId === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, 1);
     if (itemId === INVENTORY_WOLF_FUR) subUS(player.inventoryWolfFur, 1);
     addUS(player.coins, coins);
+    checkCoinAchievements();
     inventoryRevision++;
     return coins;
 }
@@ -720,9 +721,11 @@ function finishQuest(victory: bool): void {
         const completedSlot = activeQuestIndex();
         const completedQuest = questDefinitionId(completedSlot);
         if (questRank(completedSlot) >= 2 && !player.combatUsedNonFreeze) unlockTierOneAchievement(32);
+        const unlockedDRankAchievement = questRank(completedSlot) >= 2 && unlockTierOneAchievement(39);
         lastCompletedQuestDefinition = completedQuest;
         if (completedSlot >= 0 && completedSlot < QUEST_SLOT_COUNT) questSlotLocked[completedSlot] = 1;
         awardQuestRewards(completedQuest);
+        if (unlockedDRankAchievement) placeInventoryItems(INVENTORY_POTION_OF_SPEED_III, 5);
         lastWolfFurReward = rewardAmountForItem(INVENTORY_WOLF_FUR);
         lastPotionReward = rewardAmountForItem(INVENTORY_POTION_OF_SPEED);
         lastWolfFurDropped = rewardDroppedForItem(INVENTORY_WOLF_FUR);
