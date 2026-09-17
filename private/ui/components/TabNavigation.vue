@@ -5,6 +5,8 @@ const props = defineProps({
     tabs: { type: Array, required: true },
     activeTab: { type: String, required: true },
     activeSubtab: { type: String, default: undefined },
+    pingedTabs: { type: Array, default: () => [] },
+    pingedSubtabs: { type: Array, default: () => [] },
 });
 const emit = defineEmits(["select-tab", "select-subtab"]);
 const subtabs = computed(() => props.tabs.find((tab) => tab.id === props.activeTab)?.subtabs ?? []);
@@ -30,7 +32,7 @@ function navigate(event, items, active, select) {
             role="tab"
             :aria-selected="tab.id === activeTab"
             @click="emit('select-tab', tab.id)"
-        ><span class="tab-icon" aria-hidden="true">{{ tab.icon }}</span>{{ tab.label }}</button>
+        ><span class="tab-icon" aria-hidden="true">{{ tab.icon }}</span>{{ tab.label }}<span v-if="pingedTabs.includes(tab.id)" class="navigation-ping" aria-label="New">!</span></button>
     </nav>
     <nav v-if="subtabs.length" class="secondary-tabs" role="tablist" aria-label="Section pages" @keydown="navigate($event, subtabs, activeSubtab, (id) => emit('select-subtab', id))">
         <button
@@ -42,6 +44,6 @@ function navigate(event, items, active, select) {
             role="tab"
             :aria-selected="subtab.id === activeSubtab"
             @click="emit('select-subtab', subtab.id)"
-        >{{ subtab.label }}</button>
+        >{{ subtab.label }}<span v-if="pingedSubtabs.includes(subtab.id)" class="navigation-ping" aria-label="New">!</span></button>
     </nav>
 </template>

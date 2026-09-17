@@ -37,28 +37,35 @@ export const ACHIEVEMENTS = [
     { id: "achievement_empowertwice", number: 20, title: "Wait, you can get 2 of these?!", description: "Empower any producer twice." },
     { id: "achievement_timeforthefunpart", number: 23, title: "Time for the fun part", description: "Reach 10 condensed mana." },
     { id: "achievement_allcondensedupgrades", number: 24, title: "Is this the end of the game?", description: "Purchase every condensed upgrade?" },
-    { id: "achievement_newhorizons", number: 25, title: "LilysMana: New Horizons", description: "Expand your mana circle." },
-
     { id: "achievement_unlockguild", number: 26, title: "I should've related these two!", description: "Unlock the Guild." },
+
     { id: "achievement_firstquest", number: 27, title: "That was a battle! Literally", description: "Complete your first quest." },
     { id: "achievement_drinkpotion", number: 28, title: "It's bitter!", description: "Drink a potion." },
     { id: "achievement_tenquests", number: 29, title: "Will I rank up?", description: "Complete 10 quests." },
     { id: "achievement_rankupe", number: 30, title: "Yes you will!", description: "Rank up to E tier." },
-
     { id: "achievement_hireautocaster", number: 36, title: "Today's topic.", description: "Hire your first auto-caster", reward: "10 coins"},
+
     { id: "achievement_imrich", number: 37, title: "I'm rich!", description: "Get 100 or more coins", reward: "The rich get richer (10 coins)" },
     { id: "achievement_buytier3caster", number: 38, title: "Faster!!", description: "Hire a tier 3 or higher auto-caster", },
     { id: "achievement_completeachallenge", number: 39, title: "Rough place", description: "Acquire any challenge achievement", reward: "A sense of accomplishment" },
-    { id: "achievement_beatdtier", number: 40, title: "Boi that was so Tuff", description: "Defeat a D-tier or higher enemy", reward: "5 Potion of Speed III" },
+    { id: "achievement_empowerthrice", number: 42, title: "This was expected!", description: "Empower any producer thrice.", reward: "Empowerment is 10% stronger." },
+    { id: "achievement_enterascensionhall", number: 41, title: "To face the gods", description: "Enter the ascension hall...", reward: "Gain ×2 more condensed mana" },
+
+    { id: "achievement_newhorizons", circle: 2, number: 25, title: "LilysMana: New Horizons", description: "Expand your mana circle." },
+    { id: "achievement_beatdtier", circle: 2, number: 40, title: "Boi that was so Tuff", description: "Defeat a D-tier or higher enemy", reward: "5 Potion of Speed III" },
+    { id: "achievement_get1e500mana", circle: 2, number: 43, title: "Half way there!", description: "Reach 1.00e500 Mana" },
+    { id: "achievement_unlockcrystals", circle: 2, number: 44, title: "Icicles", description: "Unlock Crystals" },
+    { id: "achievement_dontevenlad", circle: 2, number: 45, title: "Don't even joke, lad", description: "Reach 1.00e6767 Mana" },
 ];
 
 export const PROGRESSION_ACHIEVEMENT_ORDER = [
-    1, 2, 3, 4, 5,
-    14, 15, 9, 10, 20,
-    11, 7, 8, 26, 27,
+     1,  2,  3,  4,  5,
+    14, 15,  9, 10, 20,
+    11,  7,  8, 26, 27,
     28, 29, 30, 37, 12,
-    17, 39, 6, 19, 38,
-    36, 23, 24, 25, 40,
+    17, 39,  6, 19, 38,
+    36, 42, 23, 24, 41,
+    25, 40, 43, 44, 45,
 ];
 
 declare const player: Player;
@@ -67,99 +74,19 @@ declare const scratch: Scratch;
 /** [WASM] */
 
 const TIER_ONE_ACHIEVEMENT_COUNT: i32 = 5;
+const ACHIEVEMENT_COUNT: i32 = 45;
+const unlockedAchievements = new StaticArray<u8>(ACHIEVEMENT_COUNT);
 let tierOneRewardsChanged = false;
 let circularHabitsRewardPending = false;
 
 export function hasTierOneAchievement(index: i32): bool {
-    switch (index) {
-        case 0: return player.achievement_buymanaconduit;
-        case 1: return player.achievement_buyconduitconjugation;
-        case 2: return player.achievement_buyconjugationcreation;
-        case 3: return player.achievement_buycreationmanufactory;
-        case 4: return player.achievement_buymanufacturestaff;
-        case 5: return player.achievement_playtwohours;
-        case 6: return player.achievement_sealmeridians;
-        case 7: return player.achievement_havesixstaff;
-        case 8: return player.achievement_produce1e50mana;
-        case 9: return player.achievement_castspeedminute;
-        case 10: return player.achievement_centennial;
-        case 11: return player.achievement_circularhabits;
-        case 12: return player.achievement_difficulty;
-        case 13: return player.achievement_realnews;
-        case 14: return player.achievement_clicker;
-        case 15: return player.achievement_lightning;
-        case 16: return player.achievement_pleasedosleep;
-        case 17: return player.achievement_noendgame;
-        case 18: return player.achievement_supercondensed;
-        case 19: return player.achievement_empowertwice;
-        case 20: return player.achievement_matrixmanipulation;
-        case 21: return player.achievement_unnecessary;
-        case 22: return player.achievement_timeforthefunpart;
-        case 23: return player.achievement_allcondensedupgrades;
-        case 24: return player.achievement_newhorizons;
-        case 25: return player.achievement_unlockguild;
-        case 26: return player.achievement_firstquest;
-        case 27: return player.achievement_drinkpotion;
-        case 28: return player.achievement_tenquests;
-        case 29: return player.achievement_rankupe;
-        case 30: return player.achievement_hatethetaste;
-        case 31: return player.achievement_lovethetaste;
-        case 32: return player.achievement_freezeonly;
-        case 33: return player.achievement_noboosting;
-        case 34: return player.achievement_sellfullinventory;
-        case 35: return player.achievement_hireautocaster;
-        case 36: return player.achievement_imrich;
-        case 37: return player.achievement_buytier3caster;
-        case 38: return player.achievement_completeachallenge;
-        case 39: return player.achievement_beatdtier;
-        default: return false;
-    }
+    return index >= 0 && index < ACHIEVEMENT_COUNT && unlockedAchievements[index] !== 0;
 }
 
 export function setTierOneAchievement(index: i32, unlocked: bool): void {
+    if (index < 0 || index >= ACHIEVEMENT_COUNT) return;
     const previous = hasTierOneAchievement(index);
-    switch (index) {
-        case 0: player.achievement_buymanaconduit = unlocked; break;
-        case 1: player.achievement_buyconduitconjugation = unlocked; break;
-        case 2: player.achievement_buyconjugationcreation = unlocked; break;
-        case 3: player.achievement_buycreationmanufactory = unlocked; break;
-        case 4: player.achievement_buymanufacturestaff = unlocked; break;
-        case 5: player.achievement_playtwohours = unlocked; break;
-        case 6: player.achievement_sealmeridians = unlocked; break;
-        case 7: player.achievement_havesixstaff = unlocked; break;
-        case 8: player.achievement_produce1e50mana = unlocked; break;
-        case 9: player.achievement_castspeedminute = unlocked; break;
-        case 10: player.achievement_centennial = unlocked; break;
-        case 11: player.achievement_circularhabits = unlocked; break;
-        case 12: player.achievement_difficulty = unlocked; break;
-        case 13: player.achievement_realnews = unlocked; break;
-        case 14: player.achievement_clicker = unlocked; break;
-        case 15: player.achievement_lightning = unlocked; break;
-        case 16: player.achievement_pleasedosleep = unlocked; break;
-        case 17: player.achievement_noendgame = unlocked; break;
-        case 18: player.achievement_supercondensed = unlocked; break;
-        case 19: player.achievement_empowertwice = unlocked; break;
-        case 20: player.achievement_matrixmanipulation = unlocked; break;
-        case 21: player.achievement_unnecessary = unlocked; break;
-        case 22: player.achievement_timeforthefunpart = unlocked; break;
-        case 23: player.achievement_allcondensedupgrades = unlocked; break;
-        case 24: player.achievement_newhorizons = unlocked; break;
-        case 25: player.achievement_unlockguild = unlocked; break;
-        case 26: player.achievement_firstquest = unlocked; break;
-        case 27: player.achievement_drinkpotion = unlocked; break;
-        case 28: player.achievement_tenquests = unlocked; break;
-        case 29: player.achievement_rankupe = unlocked; break;
-        case 30: player.achievement_hatethetaste = unlocked; break;
-        case 31: player.achievement_lovethetaste = unlocked; break;
-        case 32: player.achievement_freezeonly = unlocked; break;
-        case 33: player.achievement_noboosting = unlocked; break;
-        case 34: player.achievement_sellfullinventory = unlocked; break;
-        case 35: player.achievement_hireautocaster = unlocked; break;
-        case 36: player.achievement_imrich = unlocked; break;
-        case 37: player.achievement_buytier3caster = unlocked; break;
-        case 38: player.achievement_completeachallenge = unlocked; break;
-        case 39: player.achievement_beatdtier = unlocked; break;
-    }
+    unlockedAchievements[index] = unlocked ? 1 : 0;
     if (previous !== unlocked) achievementRevision++;
     refreshAchievementRewards();
 }
@@ -217,6 +144,10 @@ export function checkManaAchievements(): void {
     if (reachesLayerBoundary(player.mana, 0) && !gt(player.matrixOwned, 0)) unlockTierOneAchievement(12);
     writeDecimal(scratch.currencyGain, 1, 1, 100);
     if (gte(player.mana, scratch.currencyGain)) unlockTierOneAchievement(10);
+    writeDecimal(scratch.currencyGain, 1, 1, 500);
+    if (gte(player.mana, scratch.currencyGain)) unlockTierOneAchievement(42);
+    writeDecimal(scratch.currencyGain, 1, 1, 6767);
+    if (gte(player.mana, scratch.currencyGain)) unlockTierOneAchievement(44);
 }
 
 export function checkOfflineAchievement(seconds: f64): void {

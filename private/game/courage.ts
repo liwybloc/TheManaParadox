@@ -1,5 +1,5 @@
 import { addUS, gt, gte, log10Into, mulUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
-import { hasCondensedUpgrade } from "./condensed.js";
+import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -12,7 +12,7 @@ const COURAGE_DURATION: f64 = 15;
 const COURAGE_COOLDOWN: f64 = 15;
 
 export function isCourageVisible(): bool {
-    if (player.courageUnlocked) return true;
+    if (isCourageUnlocked()) return true;
     writeDecimal(scratch.currencyGain, 1, 1, courageUnlockExponent());
     if (!gte(player.mana, scratch.currencyGain)) return false;
     player.courageUnlocked = true;
@@ -20,11 +20,11 @@ export function isCourageVisible(): bool {
 }
 
 export function courageUnlockExponent(): f64 {
-    return hasCondensedUpgrade(14) ? 270 : 290;
+    return hasCondensedEffect(14) ? 270 : 290;
 }
 
 export function isCourageUnlocked(): bool {
-    return player.courageUnlocked;
+    return player.courageUnlocked || hasAscendedCondensedEffect(14);
 }
 
 export function setCourageUnlocked(unlocked: bool): void {
@@ -32,18 +32,28 @@ export function setCourageUnlocked(unlocked: bool): void {
 }
 
 export function activateCourage(): bool {
-    if (!player.courageUnlocked || isCourageActive() || gt(player.courageCooldown, 0)) return false;
-    writeNumber(player.courageTimer, hasCondensedUpgrade(12) ? COURAGE_DURATION * 1.25 : COURAGE_DURATION);
+    if (!isCourageUnlocked() || isCourageActive() || gt(player.courageCooldown, 0)) return false;
+    writeNumber(
+        player.courageTimer,
+        hasAscendedCondensedEffect(12) ? COURAGE_DURATION * 1.5
+            : hasCondensedEffect(12) ? COURAGE_DURATION * 1.25
+            : COURAGE_DURATION,
+    );
     writeNumber(player.courageCooldown, 0);
+    refreshCourageMultiplier();
+    return true;
+}
+
+export function refreshCourageMultiplier(): void {
     writeNumber(player.courageMultiplier, 10);
-    if (hasCondensedUpgrade(18)) {
+    if (hasCondensedEffect(18) || hasAscendedCondensedEffect(18)) {
         writeNumber(scratch.productionModifier, 0);
         addUS(addUS(scratch.productionModifier, player.condensedMana), 1);
         log10Into(scratch.productionModifier, scratch.productionModifier);
         addUS(scratch.productionModifier, 1);
+        if (hasAscendedCondensedEffect(18)) mulUS(scratch.productionModifier, 5);
         mulUS(player.courageMultiplier, scratch.productionModifier);
     }
-    return true;
 }
 
 export function isCourageActive(): bool {

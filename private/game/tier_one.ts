@@ -21,7 +21,7 @@ import {
     writeNumber,
 } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
-import { hasCondensedUpgrade } from "./condensed.js";
+import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
 import { applyManaGainModifiers } from "./currencies.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -161,6 +161,7 @@ export function empowerTierOne(index: i32): bool {
     writeNumber(tierOneAmountHandle(index), 0);
     addUS(tierOneEmpowermentHandle(index), 1);
     if (gte(tierOneEmpowermentHandle(index), 2)) unlockTierOneAchievement(19);
+    if (gte(tierOneEmpowermentHandle(index), 3)) unlockTierOneAchievement(41);
     refreshEmpowermentCost(index);
     refreshTierOneMultiplier(index);
     return true;
@@ -189,7 +190,7 @@ export function tierOneEmpowermentHandle(index: i32): i32 {
 }
 
 function refreshEmpowermentCost(index: i32): void {
-    writeNumber(scratch.productionModifier, hasCondensedUpgrade(9) ? 1.9 : 2);
+    writeNumber(scratch.productionModifier, hasAscendedCondensedEffect(9) ? 1.8 : hasCondensedEffect(9) ? 1.9 : 2);
     powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneEmpowermentHandle(index));
     mulUS(scratch.tierOneExponent, tierOneEmpowermentBaseExponent(index));
     powInto(tierOneEmpowermentCostHandle(index), 10, scratch.tierOneExponent);
@@ -382,28 +383,49 @@ function refreshTierOneCost(index: i32): void {
 function refreshTierOneMultiplier(index: i32): void {
     writeNumber(scratch.productionModifier, 0);
     addUS(scratch.productionModifier, player.multiplier_tierOnePerPurchase);
-    if (index === 0 && hasCondensedUpgrade(0)) {
+    if (index === 0 && hasCondensedEffect(0)) {
         writeNumber(scratch.tierOneExponent, 0.1);
+        addUS(scratch.productionModifier, scratch.tierOneExponent);
+    }
+    if (hasAscendedCondensedEffect(0)) {
+        writeNumber(scratch.tierOneExponent, 0.25);
         addUS(scratch.productionModifier, scratch.tierOneExponent);
     }
     powInto(tierOneMultiplierHandle(index), scratch.productionModifier, tierOneBoughtHandle(index));
     if (index < TIER_ONE_COUNT - 1) {
-        writeNumber(scratch.productionModifier, hasCondensedUpgrade(16) ? 50 : 10);
+        let empowermentMultiplier: f64 = hasAscendedCondensedEffect(16) ? 250 : hasCondensedEffect(16) ? 50 : 10;
+        if (hasTierOneAchievement(41)) empowermentMultiplier *= 1.1;
+        writeNumber(scratch.productionModifier, empowermentMultiplier);
         powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneEmpowermentHandle(index));
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
     }
     mulUS(tierOneMultiplierHandle(index), player.purifiedMeridiansMultiplier);
-    if (index === 4 && hasCondensedUpgrade(4)) {
+    if (index === 4 && hasCondensedEffect(4)) {
         mulUS(tierOneMultiplierHandle(index), CONDENSED_STAFF_MULTIPLIER);
-    } else if ((index === 0 && hasCondensedUpgrade(2))
-        || (index === 1 && hasCondensedUpgrade(3))
-        || (index === 2 && hasCondensedUpgrade(6))
-        || (index === 3 && hasCondensedUpgrade(5))) {
+    } else if ((index === 0 && hasCondensedEffect(2))
+        || (index === 1 && hasCondensedEffect(3))
+        || (index === 2 && hasCondensedEffect(6))
+        || (index === 3 && hasCondensedEffect(5))) {
         mulUS(tierOneMultiplierHandle(index), CONDENSED_PRODUCER_MULTIPLIER);
     }
     if (hasTierOneAchievement(15)) {
         writeNumber(scratch.tierOneExponent, 1 + <f64>(index + 1) / 100);
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
+    }
+    if (hasAscendedCondensedEffect(13)) {
+        copyInto(scratch.productionModifier, player.condensedMana);
+        addUS(scratch.productionModifier, 1);
+        mulUS(tierOneMultiplierHandle(index), scratch.productionModifier);
+    }
+    if ((index === 0 && hasAscendedCondensedEffect(2))
+        || (index === 1 && hasAscendedCondensedEffect(3))
+        || (index === 2 && hasAscendedCondensedEffect(6))
+        || (index === 3 && hasAscendedCondensedEffect(5))) {
+        writeNumber(scratch.productionModifier, 1.1);
+        powUS(tierOneMultiplierHandle(index), scratch.productionModifier);
+    } else if (index === 4 && hasAscendedCondensedEffect(4)) {
+        writeNumber(scratch.productionModifier, 1.25);
+        powUS(tierOneMultiplierHandle(index), scratch.productionModifier);
     }
 }
 

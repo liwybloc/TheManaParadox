@@ -24,6 +24,13 @@ export const TABS = [
         ],
     },
     {
+        id: "crystals",
+        label: "Crystals",
+        icon: "◇",
+        requiresCrystals: true,
+        subtabs: [{ id: "crystals-main", label: "Crystals" }],
+    },
+    {
         id: "guild",
         label: "Guild",
         icon: "⚔",

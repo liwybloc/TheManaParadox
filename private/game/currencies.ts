@@ -14,7 +14,7 @@ import {
     writeNumber,
 } from "../core/break_eternity.js";
 import { checkManaAchievements, checkTimeAchievements } from "./achievements.js";
-import { hasCondensedUpgrade } from "./condensed.js";
+import { hasCondensedEffect } from "./condensed.js";
 import { hasGuildShopUpgrade } from "../guild/guild.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -68,7 +68,7 @@ function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: b
 export function applyManaGainModifiers(amount: i32): void {
     mulUS(amount, player.multiplier_currencyGlobal);
     if (hasGuildShopUpgrade(1)) mulUS(amount, 2);
-    if (!hasCondensedUpgrade(13)) return;
+    if (!hasCondensedEffect(13)) return;
     writeNumber(scratch.productionModifier, 0);
     addUS(addUS(scratch.productionModifier, player.condensedMana), 1);
     mulUS(amount, scratch.productionModifier);

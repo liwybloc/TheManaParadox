@@ -81,46 +81,6 @@ export interface PlayerHandles {
 }
 
 export interface Player extends PlayerHandles {
-    achievement_buymanaconduit: bool;
-    achievement_buyconduitconjugation: bool;
-    achievement_buyconjugationcreation: bool;
-    achievement_buycreationmanufactory: bool;
-    achievement_buymanufacturestaff: bool;
-    achievement_playtwohours: bool;
-    achievement_sealmeridians: bool;
-    achievement_havesixstaff: bool;
-    achievement_produce1e50mana: bool;
-    achievement_castspeedminute: bool;
-    achievement_centennial: bool;
-    achievement_circularhabits: bool;
-    achievement_difficulty: bool;
-    achievement_realnews: bool;
-    achievement_clicker: bool;
-    achievement_lightning: bool;
-    achievement_pleasedosleep: bool;
-    achievement_noendgame: bool;
-    achievement_supercondensed: bool;
-    achievement_empowertwice: bool;
-    achievement_matrixmanipulation: bool;
-    achievement_unnecessary: bool;
-    achievement_timeforthefunpart: bool;
-    achievement_allcondensedupgrades: bool;
-    achievement_newhorizons: bool;
-    achievement_unlockguild: bool;
-    achievement_firstquest: bool;
-    achievement_drinkpotion: bool;
-    achievement_tenquests: bool;
-    achievement_rankupe: bool;
-    achievement_hatethetaste: bool;
-    achievement_lovethetaste: bool;
-    achievement_freezeonly: bool;
-    achievement_noboosting: bool;
-    achievement_sellfullinventory: bool;
-    achievement_hireautocaster: bool;
-    achievement_imrich: bool;
-    achievement_buytier3caster: bool;
-    achievement_completeachallenge: bool;
-    achievement_beatdtier: bool;
     meridianSealedThisReset: bool;
     castSpeedUsedThisCondense: bool;
     potionUsedThisCondense: bool;
@@ -292,46 +252,6 @@ export const player: Player = {
     inventoryWolfFurPosition: 0,
     inventoryPotionPosition: 0,
     potionSpeedTimer: 0,
-    achievement_buymanaconduit: false,
-    achievement_buyconduitconjugation: false,
-    achievement_buyconjugationcreation: false,
-    achievement_buycreationmanufactory: false,
-    achievement_buymanufacturestaff: false,
-    achievement_playtwohours: false,
-    achievement_sealmeridians: false,
-    achievement_havesixstaff: false,
-    achievement_produce1e50mana: false,
-    achievement_castspeedminute: false,
-    achievement_centennial: false,
-    achievement_circularhabits: false,
-    achievement_difficulty: false,
-    achievement_realnews: false,
-    achievement_clicker: false,
-    achievement_lightning: false,
-    achievement_pleasedosleep: false,
-    achievement_noendgame: false,
-    achievement_supercondensed: false,
-    achievement_empowertwice: false,
-    achievement_matrixmanipulation: false,
-    achievement_unnecessary: false,
-    achievement_timeforthefunpart: false,
-    achievement_allcondensedupgrades: false,
-    achievement_newhorizons: false,
-    achievement_unlockguild: false,
-    achievement_firstquest: false,
-    achievement_drinkpotion: false,
-    achievement_tenquests: false,
-    achievement_rankupe: false,
-    achievement_hatethetaste: false,
-    achievement_lovethetaste: false,
-    achievement_freezeonly: false,
-    achievement_noboosting: false,
-    achievement_sellfullinventory: false,
-    achievement_hireautocaster: false,
-    achievement_imrich: false,
-    achievement_buytier3caster: false,
-    achievement_completeachallenge: false,
-    achievement_beatdtier: false,
     meridianSealedThisReset: false,
     castSpeedUsedThisCondense: false,
     potionUsedThisCondense: false,

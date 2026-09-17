@@ -5,6 +5,7 @@ import { PROGRESSION_ACHIEVEMENT_ORDER } from "@game/game/achievements.js";
 const props = defineProps({
     activeSubtab: { type: String, required: true },
     achievements: { type: Array, required: true },
+    manaCircle: { type: Number, required: true },
 });
 
 const visibleAchievements = computed(() => {
@@ -22,6 +23,10 @@ function useFallbackImage(event) {
     image.dataset.fallback = "true";
     image.src = "./img/achievement_0.png";
 }
+
+function isBeyondManaCircle(achievement) {
+    return (achievement.circle ?? 1) > props.manaCircle;
+}
 </script>
 
 <template>
@@ -30,9 +35,10 @@ function useFallbackImage(event) {
             v-for="(achievement, displayIndex) in visibleAchievements"
             :key="achievement.id"
             class="achievement-entry"
-            :class="{ unlocked: achievement.unlocked }"
+            :class="{ unlocked: achievement.unlocked && !isBeyondManaCircle(achievement), 'beyond-mana-circle': isBeyondManaCircle(achievement) }"
             tabindex="0"
         >
+            <template v-if="!isBeyondManaCircle(achievement)">
             <img
                 class="achievement-art"
                 :src="`./img/achievement_${achievement.number}.png`"
@@ -48,6 +54,8 @@ function useFallbackImage(event) {
                 <span>{{ achievement.description }}</span>
                 <span v-if="achievement.reward" class="achievement-reward">Reward: {{ achievement.reward }}</span>
             </div>
+            </template>
+            <span v-else class="unknown-achievement" aria-label="Achievement from a future mana circle">?</span>
         </div>
     </section>
 </template>

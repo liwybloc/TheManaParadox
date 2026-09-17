@@ -133,3 +133,124 @@
     .guild-shop-upgrade-row { grid-template-columns: 34px 1fr; }
     .guild-shop-rank { grid-row: 1 / 4; }
 }
+.ascension-hall-scene {
+  position: relative;
+  width: min(1100px, calc(100vw - 24px));
+  height: min(650px, calc(100vh - 210px));
+  min-height: 430px;
+  margin-left: 50%;
+  overflow: hidden;
+  border: 1px solid #51405e;
+  background: #09070d;
+  transform: translateX(-50%);
+}
+
+.ascension-hall-unavailable {
+  display: grid;
+  width: min(900px, calc(100vw - 32px));
+  min-height: 360px;
+  margin: 20px auto;
+  place-items: center;
+  border: 1px solid #51405e;
+  color: #aa91b9;
+  background: radial-gradient(circle at center, #261a2d 0, #100c14 42%, #08070b 100%);
+  box-shadow: inset 0 0 80px #000b;
+  font-size: clamp(15px, 2vw, 22px);
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.ascension-hall-scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.ascension-hall-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 90px 35px #000c;
+  pointer-events: none;
+}
+
+.ascension-hall-title {
+  position: absolute;
+  top: 14px;
+  left: 50%;
+  padding: 7px 16px;
+  border: 1px solid #5e496d88;
+  color: #d6c2e3;
+  background: #0c0910bb;
+  text-align: center;
+  transform: translateX(-50%);
+}
+
+.ascension-hall-title strong,
+.ascension-hall-title span {
+  display: block;
+}
+
+.ascension-hall-title span {
+  margin-top: 3px;
+  color: #8f8199;
+  font-size: 9px;
+}
+
+.ascension-hall-scene > button {
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  min-width: 190px;
+  padding: 9px 16px;
+  border: 1px solid #806297;
+  color: #e3d6ec;
+  background: #201726dd;
+  cursor: pointer;
+  transform: translateX(-50%);
+  user-select: none;
+  touch-action: none;
+}
+
+.ascension-hall-scene > button:hover,
+.ascension-hall-scene > button:active {
+  background: #35243fdd;
+}
+
+.ascension-hall-scene > button small {
+  display: block;
+  margin-top: 3px;
+  color: #9685a1;
+  font-size: 9px;
+}
+
+.mana-circle-expansion {
+  position: fixed;
+  z-index: 10000;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mana-circle-expansion canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.mana-circle-expansion strong {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: #f0d8ff;
+  font-size: clamp(18px, 4vw, 50px);
+  letter-spacing: 0.18em;
+  text-align: center;
+  text-shadow: 0 0 8px #fff, 0 0 28px #c477ff, 0 0 70px #7f2fb8;
+  transform: translate(-50%, -50%);
+  animation: mana-circle-expansion-title 2.6s ease-in-out both;
+}
+
+@keyframes mana-circle-expansion-title {
+  0%, 18% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  42%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+}

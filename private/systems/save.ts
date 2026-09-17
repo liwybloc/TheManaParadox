@@ -2,7 +2,7 @@ import { getLayer, getMagnitude, getSign, writeDecimal } from "../core/break_ete
 import { checkOfflineAchievement, hasBoostedProducerThisCondense, hasCombatUsedNonFreeze, hasPotionUsedThisCondense, hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setBoostedProducerThisCondense, setCombatUsedNonFreeze, setPotionUsedThisCondense, setTierOneAchievement } from "../game/achievements.js";
 import { clampManaToInfinityBoundary } from "../game/currencies.js";
 import { isCourageUnlocked, setCourageUnlocked } from "../game/courage.js";
-import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCondensedUpgrade, setHasCondensed } from "../game/condensed.js";
+import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCircleTwoCondensedUpgrade, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCircleTwoCondensedUpgrade, setCondensedUpgrade, setHasCondensed } from "../game/condensed.js";
 import { HANDLES } from "../core/player.js";
 import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSealedMeridianThisReset, refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, setCastSpeedUsedThisCondense, setSealedMeridianThisReset } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
@@ -12,7 +12,7 @@ import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, au
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "011";
+const CURRENT_SAVE_VERSION = "012";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -67,6 +67,12 @@ const achievementFields007 = achievementSaveFields(5, 20);
 const achievementFields008 = achievementSaveFields(5, 25);
 const achievementFields009 = achievementSaveFields(5, 30);
 const achievementFields011 = achievementSaveFields(5, 35);
+const ascensionAchievementFields011 = achievementSaveFields(2, 40);
+const achievementFields012 = achievementSaveFields(3, 42);
+const circleTwoCondensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT }, (_, index) => booleanSaveField(
+    () => hasCircleTwoCondensedUpgrade(index),
+    (purchased) => setCircleTwoCondensedUpgrade(index, purchased),
+));
 const condensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT - 1 }, (_, index) => booleanSaveField(
     () => hasCondensedUpgrade(index),
     (purchased) => setCondensedUpgrade(index, purchased),
@@ -276,8 +282,15 @@ const savedFields010: readonly SaveField[] = [
 const savedFields011: readonly SaveField[] = [
     ...savedFields010,
     ...achievementFields011,
+    ...ascensionAchievementFields011,
     ...autocasterFields,
     ...autocasterSettingFields,
+];
+
+const savedFields012: readonly SaveField[] = [
+    ...savedFields011,
+    ...achievementFields012,
+    ...circleTwoCondensedUpgradeFields,
 ];
 
 const condenseResetFields: readonly SaveField[] = [
@@ -288,7 +301,6 @@ const condenseResetFields: readonly SaveField[] = [
     sealedMeridiansOwnedField,
     matrixOwnedField,
     matrixPowerField,
-    infinityBreakIndexField,
     ...empowermentFields,
     purifiedMeridiansMultiplierField,
     courageUnlockedField,
@@ -304,10 +316,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields011));
+    const bytes = new Uint8Array(totalByteLength(savedFields012));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields011) {
+    for (const field of savedFields012) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -355,6 +367,9 @@ export async function importSave(saveData: string): Promise<void> {
         case "011":
             await importFields(encoded, savedFields011, true);
             break;
+        case "012":
+            await importFields(encoded, savedFields012, true);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
@@ -383,11 +398,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields011;
+    const currentVersionFields = fields === savedFields012;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields011) field.reset();
+    for (const field of savedFields012) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -482,7 +497,7 @@ export async function saveGame(): Promise<void> {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields011) field.reset();
+    for (const field of savedFields012) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();

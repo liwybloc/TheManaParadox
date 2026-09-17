@@ -1,8 +1,6 @@
-v0.0.9
-- added guild auto-casters with three tiers, task assignments, wages, and configurable behavior
-- added five new achievements and rewards
-- added a discord button
-- buffed sealed meridian meditation power and the super-condensed reward
-- rebalanced several condensed upgrades, including unlocking courage earlier
-- improved achievement notifications and multiplier displays
-- balance changes and bug fixes
+v0.0.10
+- balance changes
+- added ascension hall and mana circle expansion
+- added ascended upgrades that replace old condensed upgrades
+- new achievements and ordering
+- optimizations and bug fixes

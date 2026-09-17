@@ -49,7 +49,7 @@ function producerActionLabel(upgrade) {
             :disabled="!castSpeed.affordable"
             @click="$emit('cast-speed')"
         >
-            <strong>Meditate</strong>
+            <strong>Meditate<span v-if="castSpeed.showPower"> (×{{ castSpeed.power }} per meditate)</span></strong>
             <span>{{ castSpeed.timer }} · {{ castSpeed.magnitude }}</span>
             <small>Cost: {{ castSpeed.cost }}</small>
         </button>

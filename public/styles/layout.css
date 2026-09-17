@@ -95,10 +95,31 @@
 }
 .tab-button,
 .subtab-button {
+  position: relative;
   border: 1px solid #454555;
   color: #c5c5ce;
   background: #181822;
   cursor: pointer;
+}
+.navigation-ping {
+  display: inline-grid;
+  width: 15px;
+  height: 15px;
+  margin-left: 7px;
+  border: 1px solid #f3d45f;
+  border-radius: 50%;
+  color: #fff0a1;
+  background: #4b3d0f;
+  box-shadow: 0 0 5px #f6d94b, 0 0 11px #dba92899;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  place-items: center;
+  animation: navigation-ping-glow 1.5s ease-in-out infinite alternate;
+}
+@keyframes navigation-ping-glow {
+  from { box-shadow: 0 0 3px #f6d94b, 0 0 7px #dba92866; }
+  to { box-shadow: 0 0 7px #fff09b, 0 0 15px #e6b62dbb; }
 }
 .tab-button {
   width: auto;
@@ -194,7 +215,7 @@
 .condense-button small {
   margin-top: 4px;
   color: #bfa7d8;
-  font-size: 10px;
+  font-size: 12px;
 }
 .condense-button:hover:not(:disabled) {
   border-color: #c49cff;

@@ -1,16 +1,18 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from "vue";
+import AscensionHall from "../components/AscensionHall.vue";
 
 const props = defineProps({
     activeSubtab: { type: String, required: true },
     guild: { type: Object, required: true },
     quests: { type: Array, required: true },
     questResult: { type: Object, required: true },
+    manaCircle: { type: Number, required: true },
 });
 const emit = defineEmits([
     "apply", "accept", "dismiss-result", "move-item", "use-item", "sell-item",
     "sell-all-materials", "sell-all-items", "drink-all-potions",
-    "buy-shop-item", "buy-shop-upgrade",
+    "buy-shop-item", "buy-shop-upgrade", "ascend",
 ]);
 const selectedQuest = ref(null);
 const selectedItem = ref(null);
@@ -255,7 +257,10 @@ onBeforeUnmount(() => {
             </div>
         </template>
         <template v-else-if="activeSubtab === 'guild-ascension-hall'">
-            <div class="section-title"><h1>Ascension Hall</h1></div>
+            <div v-if="manaCircle > 0" class="ascension-hall-unavailable">
+                <strong>The Ascension Hall is not ready for you...</strong>
+            </div>
+            <AscensionHall v-else @ascend="$emit('ascend')" />
         </template>
         <template v-else-if="activeSubtab === 'guild-shop'">
             <div class="section-title"><h1>Guild Shop</h1><p>You have {{ guild.coins }} {{ coinLabel(guild.coins) }}.</p></div>

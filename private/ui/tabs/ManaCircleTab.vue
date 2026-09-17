@@ -14,8 +14,15 @@ const props = defineProps({
 });
 
 const circleClass = computed(() => {
-    return 'mana' + props.manaCircle;
+    return `mana-${props.manaCircle}`;
 });
+const manaMax = computed(() => {
+    switch(props.manaCircle) {
+        case 0: return "1.79e308";
+        case 1: return "e9.00e15";
+        default: return "I forgor";
+    }
+})
 </script>
 
 <template>
@@ -25,6 +32,7 @@ const circleClass = computed(() => {
       class="section-title"
     >
       <h1>Current Mana Circle</h1>
+      <p>Mana Maximum: {{ manaMax }}</p>
 
       <div class="mana-stage">
         <div

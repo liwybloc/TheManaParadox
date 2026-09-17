@@ -22,6 +22,7 @@ import TabNavigation from "./components/TabNavigation.vue";
 import ManaTab from "./tabs/ManaTab.vue";
 import CondensedTab from "./tabs/CondensedTab.vue";
 import ManaCircleTab from "./tabs/ManaCircleTab.vue";
+import CrystalsTab from "./tabs/CrystalsTab.vue";
 import GuildTab from "./tabs/GuildTab.vue";
 import QuestTab from "./tabs/QuestTab.vue";
 import AutobuyersTab from "./tabs/AutobuyersTab.vue";
@@ -32,6 +33,7 @@ import NotificationStack from "./components/NotificationStack.vue";
 import TimeSimulation from "./components/TimeSimulation.vue";
 import KeybindMenu from "./components/KeybindMenu.vue";
 import MessageTicker from "./components/MessageTicker.vue";
+import ManaCircleExpansion from "./components/ManaCircleExpansion.vue";
 import { showNotification } from "./notifications.js";
 
 function tabDefinition(tabId) {
@@ -56,7 +58,6 @@ const activeTab = ref(startTab);
 const activeSubtabs = ref(startingSubtabs);
 const mana = ref("0");
 const canCondense = ref(false);
-const brokenInfinity = ref(false);
 const condenseManaGained = ref("0");
 const condensedMana = ref("0");
 const condensedUnlocked = ref(false);
@@ -65,6 +66,10 @@ const ascensionHallUnlocked = ref(false);
 const autobuyersUnlocked = ref(false);
 const questActive = ref(false);
 const manaCircle = ref(0);
+const manaCircleExpansionVisible = ref(false);
+const crystalsUnlocked = ref(false);
+const pingedTabs = ref([]);
+const pingedSubtabs = ref([]);
 const manaPerSecond = ref("0.00");
 const oomPerSecond = ref("0.00");
 const showOoMPerSecond = ref(false);
@@ -75,6 +80,8 @@ const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
     amount: "0",
     effect: "1",
     purchased: false,
+    circleTwoPurchased: false,
+    circleTwoAvailable: false,
     affordable: false,
 })));
 const condensedUpgradePlaceholders = ref(Object.fromEntries(
@@ -110,6 +117,8 @@ const tierOneUpgrades = ref(tierOneDefinitions.map((upgrade, index) => ({
 const castSpeedSpell = ref({
     timer: "0:00",
     magnitude: "×1.00",
+    power: "2",
+    showPower: false,
     cost: "1,000.00 mana",
     affordable: false,
 });
@@ -196,6 +205,9 @@ let displayErrorReported = false;
 let achievementsInitialized = false;
 let displayedAchievementRevision = -1;
 let displayedInventoryRevision = -1;
+const knownTabIds = new Set();
+const knownSubtabIds = new Set();
+let navigationUnlocksInitialized = false;
 
 const activeSubtab = computed(() => activeSubtabs.value[activeTab.value]);
 const visibleTabs = computed(() => TABS.filter((tab) => {
@@ -203,6 +215,7 @@ const visibleTabs = computed(() => TABS.filter((tab) => {
     if (tab.requiresGuild && !guildUnlocked.value) return false;
     if (tab.requiresQuest && !questActive.value) return false;
     if (tab.requiresAutobuyers && !autobuyersUnlocked.value) return false;
+    if (tab.requiresCrystals && !crystalsUnlocked.value) return false;
     return true;
 }).map((tab) => ({
     ...tab,
@@ -228,6 +241,7 @@ function displayedItemDefinition(itemId) {
 function selectTab(id) {
     if (!isValidTab(id)) return;
     activeTab.value = id;
+    pingedTabs.value = pingedTabs.value.filter((tabId) => tabId !== id);
     localStorage.setItem("selectedTab", id);
     localStorage.setItem("selectedSubTab", activeSubtabs.value[id]);
 }
@@ -235,6 +249,7 @@ function selectTab(id) {
 function selectSubtab(id) {
     if (!isValidSubTab(activeTab.value, id)) return;
     activeSubtabs.value[activeTab.value] = id;
+    pingedSubtabs.value = pingedSubtabs.value.filter((subtabId) => subtabId !== id);
     localStorage.setItem("selectedSubTab", id);
 }
 
@@ -267,9 +282,18 @@ function updateGlobalDisplay() {
     condensedUnlocked.value = namedWasm.hasCondensed();
     if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
     ascensionHallUnlocked.value = namedWasm.isAscensionHallUnlocked();
+    manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier);
+    crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
+    if (manaCircle.value > 0 && canCondense.value) {
+        namedWasm.refreshCondenseGain();
+        condenseManaGained.value = formatDecimal(SCRATCH_HANDLES.condenseGain, 2);
+    }
     autobuyersUnlocked.value = namedWasm.hasGuildShopUpgrade(7);
     if (!ascensionHallUnlocked.value && activeSubtabs.value.guild === "guild-ascension-hall") {
         activeSubtabs.value.guild = "guild-main";
+    }
+    if (activeTab.value === "guild" && activeSubtab.value === "guild-ascension-hall") {
+        namedWasm.enterAscensionHall();
     }
     guildUnlocked.value = namedWasm.isGuildUnlocked();
     questActive.value = namedWasm.isQuestActive();
@@ -284,6 +308,42 @@ function updateGlobalDisplay() {
     );
     setStarManaProgress(namedWasm.manaCondenseProgress());
     if (!questActive.value && activeTab.value === "quest") selectTab("guild");
+    updateNavigationUnlockPings();
+}
+
+function pingTab(id) {
+    if (!pingedTabs.value.includes(id)) pingedTabs.value = [...pingedTabs.value, id];
+}
+
+function pingSubtab(tabId, subtabId) {
+    pingTab(tabId);
+    if (!pingedSubtabs.value.includes(subtabId)) {
+        pingedSubtabs.value = [...pingedSubtabs.value, subtabId];
+    }
+}
+
+function updateNavigationUnlockPings() {
+    const tabs = visibleTabs.value;
+    if (!navigationUnlocksInitialized) {
+        for (const tab of tabs) {
+            knownTabIds.add(tab.id);
+            for (const subtab of tab.subtabs ?? []) knownSubtabIds.add(subtab.id);
+        }
+        navigationUnlocksInitialized = true;
+        return;
+    }
+    for (const tab of tabs) {
+        const tabWasKnown = knownTabIds.has(tab.id);
+        if (!tabWasKnown) {
+            knownTabIds.add(tab.id);
+            pingTab(tab.id);
+        }
+        for (const subtab of tab.subtabs ?? []) {
+            if (knownSubtabIds.has(subtab.id)) continue;
+            knownSubtabIds.add(subtab.id);
+            if (tabWasKnown) pingSubtab(tab.id, subtab.id);
+        }
+    }
 }
 
 function updateAutocastersDisplay() {
@@ -325,6 +385,8 @@ function isProgressionGoalComplete(goal) {
             return namedWasm.isGuildMember();
         case "courage":
             return namedWasm.isCourageUnlocked() || namedWasm.hasCondensed();
+        case "first-circle-expanded":
+            return manaCircle.value > 0;
         default:
             return false;
     }
@@ -370,6 +432,8 @@ function updateManaDisplay() {
     }
     castSpeedSpell.value.timer = formatDuration(HANDLES.castSpeedTimer);
     castSpeedSpell.value.magnitude = `×${formatDecimal(HANDLES.castSpeedMagnitude)}`;
+    castSpeedSpell.value.power = formatDecimalCompact(HANDLES.matrixSpeedPower);
+    castSpeedSpell.value.showPower = !namedWasm.eq(HANDLES.matrixSpeedPower, 2);
     castSpeedSpell.value.cost = `${formatDecimal(HANDLES.castSpeedCost)} mana`;
     castSpeedSpell.value.affordable = namedWasm.canCastSpeed();
     sealedMeridians.value.level = formatDecimal(HANDLES.sealedMeridians, 0);
@@ -390,6 +454,7 @@ function updateManaDisplay() {
     courage.value.available = namedWasm.toNumber(HANDLES.courageCooldown) <= 0;
     courage.value.timer = formatDuration(HANDLES.courageTimer);
     courage.value.cooldown = formatDuration(HANDLES.courageCooldown);
+    namedWasm.refreshCourageMultiplier();
     courage.value.multiplier = formatDecimal(HANDLES.courageMultiplier);
     meridianPurification.value.affordable = namedWasm.canPurifyMeridians();
     meridianPurification.value.visible = namedWasm.hasTierOneAchievement(7);
@@ -506,10 +571,17 @@ function updateQuestDisplay() {
 function updateCondensedDisplay() {
     namedWasm.refreshCondensedUpgradeState();
     for (const upgrade of condensedUpgrades.value) {
-        upgrade.cost = formatDecimal(upgrade.costHandle, 0);
+        const finalUpgrade = upgrade.index === condensedUpgrades.value.length - 1;
+        const circleTwoUnlocked = !finalUpgrade || namedWasm.canSeeCircleTwoFinalUpgrade();
+        upgrade.circleTwoAvailable = manaCircle.value > 0
+            && circleTwoUnlocked
+            && namedWasm.hasCondensedUpgrade(upgrade.index);
+        upgrade.circleTwoPurchased = namedWasm.hasCircleTwoCondensedUpgrade(upgrade.index);
+        const costHandle = upgrade.circleTwoAvailable ? upgrade.circleTwo.costHandle : upgrade.costHandle;
+        upgrade.cost = formatDecimal(costHandle, 0);
         upgrade.purchased = namedWasm.hasCondensedUpgrade(upgrade.index);
         upgrade.affordable = namedWasm.canBuyCondensedUpgrade(upgrade.index);
-        upgrade.visible = upgrade.index !== condensedUpgrades.value.length - 1 || namedWasm.canSeeAscensionHallUpgrade();
+        upgrade.visible = !finalUpgrade || manaCircle.value > 0 || namedWasm.canSeeAscensionHallUpgrade();
     }
     for (const [key, placeholder] of Object.entries(CONDENSED_UPGRADE_PLACEHOLDERS)) {
         condensedUpgradePlaceholders.value[key] = `${placeholder.prefix}${formatDecimal(placeholder.handle)}`;
@@ -538,7 +610,8 @@ function updateAchievementNotifications(force = false) {
     if (!force && revision === displayedAchievementRevision) return;
     for (const achievement of achievements.value) {
         const unlocked = namedWasm.hasTierOneAchievement(achievement.wasmIndex);
-        if (achievementsInitialized && unlocked && !achievement.unlocked) {
+        const beyondManaCircle = (achievement.circle ?? 1) > manaCircle.value + 1;
+        if (achievementsInitialized && unlocked && !achievement.unlocked && !beyondManaCircle) {
             const challenge = achievement.category === "challenge";
             showNotification(`Achievement: ${achievement.title}`, {
                 color: "#c49cff",
@@ -558,10 +631,7 @@ function formatDecimal(handle, decimals = 2, boundaryLabel = "Unknown") {
 
     if (value === "Infinity" || value === "-Infinity" || value === "NaN") return "Unknown";
 
-    if (value.includes("e")) {
-        const split = value.split("e");
-        return Number(split[0]).toFixed(2) + "e" + split[1];   
-    }
+    if (value.includes("e")) return formatScientificDecimal(value);
 
     const num = Number(value);
 
@@ -572,6 +642,22 @@ function formatDecimal(handle, decimals = 2, boundaryLabel = "Unknown") {
     return num
         .toFixed(decimals)
         .replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+function formatScientificDecimal(value) {
+    const match = value.match(/^(-?)(e*)(\d+(?:\.\d+)?)e(-?\d+)$/);
+    if (!match) return value;
+    const [, sign, layerPrefix] = match;
+    let mantissa = Number(match[3]);
+    let exponent = Number(match[4]);
+    const decimals = 2;
+    const roundingScale = 10 ** decimals;
+    mantissa = Math.round(mantissa * roundingScale) / roundingScale;
+    if (mantissa >= 10) {
+        mantissa /= 10;
+        exponent++;
+    }
+    return `${sign}${layerPrefix}${mantissa.toFixed(decimals)}e${exponent}`;
 }
 
 function formatOoMPerSecond(handle) {
@@ -689,6 +775,16 @@ function buyCondensedUpgrade(index) {
     namedWasm.refreshSealedMeridiansDerivedState();
     namedWasm.refreshTierOneDerivedState();
     if (index === 11) namedWasm.resetCastSpeed();
+}
+
+function expandManaCircle() {
+    if (!namedWasm.expandManaCircle()) return;
+    manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier);
+    selectTab("mana");
+    pingTab("mana");
+    pingTab("condensed");
+    manaCircleExpansionVisible.value = true;
+    void saveGame();
 }
 
 function purifyMeridians() {
@@ -833,6 +929,10 @@ onBeforeUnmount(() => {
             title="Join The Mana Paradox Discord"
         ><img :src="'./img/discord.png'" alt=""></a>
         <NotificationStack />
+        <ManaCircleExpansion
+            v-if="manaCircleExpansionVisible"
+            @complete="manaCircleExpansionVisible = false"
+        />
         <TimeSimulation
             :simulation="timeSimulation"
             @speed-up="speedUpTimeSimulation"
@@ -840,14 +940,14 @@ onBeforeUnmount(() => {
         />
         <GameHeader :mana="mana" />
         <button
-            v-if="canCondense || brokenInfinity"
+            v-if="canCondense || manaCircle > 0"
             class="condense-button"
             type="button"
             :disabled="!canCondense"
             @click="condense"
         >
             <strong>Condense</strong>
-            <small v-if="brokenInfinity && canCondense"><br>for {{ condenseManaGained }} condensed mana</small>
+            <small v-if="manaCircle > 0 && canCondense"><br>for {{ condenseManaGained }} condensed mana</small>
         </button>
         <div v-if="condensedUnlocked" class="condensed-mana-display">
             <span>You have</span>
@@ -858,6 +958,8 @@ onBeforeUnmount(() => {
             :tabs="visibleTabs"
             :active-tab="activeTab"
             :active-subtab="activeSubtab"
+            :pinged-tabs="pingedTabs"
+            :pinged-subtabs="pingedSubtabs"
             @select-tab="selectTab"
             @select-subtab="selectSubtab"
         />
@@ -897,12 +999,17 @@ onBeforeUnmount(() => {
                 :condensed-mana="condensedMana"
                 :upgrades="condensedUpgrades"
                 :placeholders="condensedUpgradePlaceholders"
+                :isAscended="manaCircle > 0"
                 @buy="buyCondensedUpgrade"
             />
             <ManaCircleTab
                 v-else-if="activeTab === 'manacircle'"
                 :active-subtab="activeSubtab"
-                :manaCircle="manaCircle"
+                :mana-circle="manaCircle"
+            />
+            <CrystalsTab
+                v-else-if="activeTab === 'crystals'"
+                :active-subtab="activeSubtab"
             />
             <GuildTab
                 v-else-if="activeTab === 'guild'"
@@ -910,6 +1017,7 @@ onBeforeUnmount(() => {
                 :guild="guild"
                 :quests="guildQuests"
                 :quest-result="questResult"
+                :mana-circle="manaCircle"
                 @apply="applyToGuild"
                 @accept="acceptGuildQuest"
                 @dismiss-result="dismissQuestResult"
@@ -921,6 +1029,7 @@ onBeforeUnmount(() => {
                 @drink-all-potions="drinkAllPotions"
                 @buy-shop-item="buyShopItem"
                 @buy-shop-upgrade="buyGuildShopUpgrade"
+                @ascend="expandManaCircle"
             />
             <QuestTab
                 v-else-if="activeTab === 'quest'"
@@ -943,6 +1052,7 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'achievements'"
                 :active-subtab="activeSubtab"
                 :achievements="achievements"
+                :mana-circle="manaCircle + 1"
             />
             <OptionsTab
                 v-else-if="activeTab === 'options'"
@@ -973,7 +1083,7 @@ onBeforeUnmount(() => {
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
         <MessageTicker />
-        <footer>The Mana Paradox v0.0.9</footer>
+        <footer>The Mana Paradox v0.0.10</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

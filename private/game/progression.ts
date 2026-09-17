@@ -1,6 +1,6 @@
 import { addInto, addUS, ceilInto, divInto, divUS, gt, gte, multiplyInto, mulUS, powInto, powUS, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { checkCastSpeedAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
-import { hasCondensedUpgrade } from "./condensed.js";
+import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 import { resetMeridianPurification, resetTierOneAmounts } from "./tier_one.js";
@@ -15,17 +15,20 @@ const CONDENSED_CAST_SPEED_POWER_BONUS: f64 = 0.25;
 export function castSpeed(): bool {
     if (!canCastSpeed()) return false;
     player.castSpeedUsedThisCondense = true;
+    const meditationActive = gt(player.castSpeedTimer, 0);
     subUS(player.mana, player.castSpeedCost);
-    if (!gt(player.castSpeedTimer, 0)) {
+    if (!meditationActive) {
         multiplyInto(player.castSpeedMagnitude, player.sealedMeridiansSpeedEffect, player.matrixSpeedPower);
     } else {
         mulUS(player.castSpeedMagnitude, player.matrixSpeedPower);
     }
     addUS(player.castSpeedTimer, hasTierOneAchievement(9) ? 20 : 15);
-    if (hasCondensedUpgrade(11) && !gt(player.castSpeedCost, 0)) {
+    if (hasAscendedCondensedEffect(11) && !gt(player.castSpeedCost, 0)) {
+        if (meditationActive) writeNumber(player.castSpeedCost, 1000);
+    } else if (hasCondensedEffect(11) && !gt(player.castSpeedCost, 0)) {
         writeNumber(player.castSpeedCost, 1000);
     } else {
-        writeNumber(scratch.productionModifier, hasCondensedUpgrade(8) ? 1.9 : 2);
+        writeNumber(scratch.productionModifier, hasAscendedCondensedEffect(8) ? 1.8 : hasCondensedEffect(8) ? 1.9 : 2);
         powUS(player.castSpeedCost, scratch.productionModifier);
     }
     checkCastSpeedAchievements();
@@ -71,7 +74,13 @@ export function refreshSealedMeridiansDerivedState(): void {
 }
 
 export function sealedMeridianMagnitudeHandle(): i32 {
-    if (hasCondensedUpgrade(15)) return player.matrixSpeedPower;
+    if (hasAscendedCondensedEffect(15)) {
+        crystalMatrixEffectHandle();
+        mulUS(scratch.productionModifier, 2);
+        addUS(scratch.productionModifier, 2);
+        return scratch.productionModifier;
+    }
+    if (hasCondensedEffect(15)) return player.matrixSpeedPower;
     writeNumber(scratch.productionModifier, 2);
     return scratch.productionModifier;
 }
@@ -100,17 +109,18 @@ export function refreshMatrixDerivedState(): void {
     mulUS(player.matrixCost, 10);
     multiplyInto(player.matrixSpeedPower, player.matrixOwned, matrixMagnitudeHandle());
     addUS(player.matrixSpeedPower, 2);
-    if (hasCondensedUpgrade(1)) {
+    if (hasCondensedEffect(1)) {
         writeNumber(scratch.productionModifier, CONDENSED_CAST_SPEED_POWER_BONUS);
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
-    if (hasCondensedUpgrade(17)) {
+    if (hasCondensedEffect(17) || hasAscendedCondensedEffect(17)) {
         addInto(scratch.productionModifier, player.sealedMeridians, 0);
-        writeNumber(scratch.tierOneSeconds, 50);
-        // Meditation power bonus = Sealed Meridians / 10.
+        writeNumber(scratch.tierOneSeconds, 10);
         divUS(scratch.productionModifier, scratch.tierOneSeconds);
+        if (hasAscendedCondensedEffect(17)) mulUS(scratch.productionModifier, 3);
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
+    if (hasAscendedCondensedEffect(1)) mulUS(player.matrixSpeedPower, 2);
 }
 
 export function matrixMagnitudeHandle(): i32 {
@@ -131,27 +141,29 @@ export function crystalMatrixEffectHandle(): i32 {
 
 export function matrixOtherEffectHandle(): i32 {
     writeNumber(scratch.productionModifier, 0);
-    if (hasCondensedUpgrade(1)) {
+    if (hasCondensedEffect(1)) {
         writeNumber(scratch.tierOneSeconds, CONDENSED_CAST_SPEED_POWER_BONUS);
         addUS(scratch.productionModifier, scratch.tierOneSeconds);
     }
-    if (hasCondensedUpgrade(17)) {
+    if (hasCondensedEffect(17) || hasAscendedCondensedEffect(17)) {
         addInto(scratch.tierOneSeconds, player.sealedMeridians, 0);
         divUS(scratch.tierOneSeconds, 10);
+        if (hasAscendedCondensedEffect(17)) mulUS(scratch.tierOneSeconds, 3);
         addUS(scratch.productionModifier, scratch.tierOneSeconds);
     }
     return scratch.productionModifier;
 }
 
 export function resetSealedMeridians(): void {
-    writeNumber(player.sealedMeridiansOwned, hasCondensedUpgrade(10) ? 1 : 0);
+    writeNumber(player.sealedMeridiansOwned, hasAscendedCondensedEffect(10) ? 2 : hasCondensedEffect(10) ? 1 : 0);
     refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
     refreshSealedMeridiansDerivedState();
 }
 
 function resetTierOne(): void {
-    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 50);
+    if (hasAscendedCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 100);
+    else if (hasCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 50);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     resetTierOneAmounts();
     resetMeridianPurification();
@@ -161,20 +173,27 @@ function resetTierOne(): void {
 export function resetCastSpeed(): void {
     writeNumber(player.castSpeedTimer, 0);
     writeNumber(player.castSpeedMagnitude, 1);
-    writeNumber(player.castSpeedCost, hasCondensedUpgrade(11) ? 0 : 1000);
+    writeNumber(player.castSpeedCost, hasCondensedEffect(11) || hasAscendedCondensedEffect(11) ? 0 : 1000);
 }
 
 export function applyCondensedResetStartingValues(): void {
-    if (hasCondensedUpgrade(7)) writeDecimal(player.mana, 1, 1, 50);
+    if (hasAscendedCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 100);
+    else if (hasCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 50);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
-    writeNumber(player.matrixOwned, hasTierOneAchievement(21) ? 1 : 0);
+    writeNumber(player.matrixOwned, hasAscendedCondensedEffect(10) || hasTierOneAchievement(21) ? 1 : 0);
     applyCondensedSealedMeridiansMinimum();
     refreshMatrixDerivedState();
     refreshSealedMeridiansDerivedState();
 }
 
 export function applyCondensedSealedMeridiansMinimum(): void {
-    if (hasCondensedUpgrade(10) && !gt(player.sealedMeridiansOwned, 0)) {
+    if (hasAscendedCondensedEffect(10)) {
+        if (!gte(player.sealedMeridiansOwned, 2)) writeNumber(player.sealedMeridiansOwned, 2);
+        if (!gte(player.matrixOwned, 1)) writeNumber(player.matrixOwned, 1);
+        refreshSealedMeridiansDerivedState();
+        refreshMatrixDerivedState();
+        refreshSealedMeridiansDerivedState();
+    } else if (hasCondensedEffect(10) && !gt(player.sealedMeridiansOwned, 0)) {
         writeNumber(player.sealedMeridiansOwned, 1);
         refreshSealedMeridiansDerivedState();
         refreshMatrixDerivedState();
