@@ -262,6 +262,11 @@ onBeforeUnmount(() => {
             </div>
             <AscensionHall v-else @ascend="$emit('ascend')" />
         </template>
+        <template v-else-if="activeSubtab === 'guild-library'">
+            <div class="section-title">
+                <h1>Guild's Library</h1>
+            </div>
+        </template>
         <template v-else-if="activeSubtab === 'guild-shop'">
             <div class="section-title"><h1>Guild Shop</h1><p>You have {{ guild.coins }} {{ coinLabel(guild.coins) }}.</p></div>
             <div class="guild-shop-items">

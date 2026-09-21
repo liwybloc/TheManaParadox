@@ -1,5 +1,7 @@
 import { addUS, copyInto, createZero, divUS, gt, gte, log10Into, lte, mulUS, powUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { checkCoinAchievements, consumeCircularHabitsReward, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
+import { isProducerOnlyCrystalActive } from "../game/crystals.js";
+import { focusGameSpeedMultiplier, isFocusing } from "../game/memories.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 import { INVENTORY_ITEMS } from "./items.js";
@@ -388,7 +390,7 @@ export function drinkSpeedPotion(position: i32): bool {
 }
 
 export function drinkPotion(position: i32, itemId: i32): bool {
-    if (position < 0 || position >= INVENTORY_SIZE || inventorySlots[position] !== itemId) return false;
+    if (isProducerOnlyCrystalActive() || position < 0 || position >= INVENTORY_SIZE || inventorySlots[position] !== itemId) return false;
     if (!applyPotionEffect(itemId)) return false;
     clearInventoryItem(position, <u8>itemId);
     if (itemId === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, 1);
@@ -555,8 +557,13 @@ function potionTimer(itemId: i32, index: i32): i32 {
 }
 
 export function getGameSpeed(): i32 {
+    if (isProducerOnlyCrystalActive()) {
+        writeNumber(scratch.effectiveGameSpeed, 1);
+        return scratch.effectiveGameSpeed;
+    }
     copyInto(scratch.effectiveGameSpeed, scratch.gameSpeed);
     if (gt(player.courageTimer, 0)) mulUS(scratch.effectiveGameSpeed, player.courageMultiplier);
+    if (isFocusing()) mulUS(scratch.effectiveGameSpeed, focusGameSpeedMultiplier());
     return scratch.effectiveGameSpeed;
 }
 

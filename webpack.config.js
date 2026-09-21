@@ -10,6 +10,10 @@ const { DefinePlugin } = webpack;
 
 export default {
     cache: false,
+    experiments: {
+        css: true,
+        experimentalInlineMatchResource: true,
+    },
     entry: path.resolve(projectDir, '.wasmscript/private/index.js'),
     mode: 'development',
     output: {
@@ -19,7 +23,11 @@ export default {
         publicPath: './js/',
     },
     module: {
-        rules: [{ test: /\.vue$/, loader: 'vue-loader' }],
+        rules: [{
+            test: /\.vue$/,
+            loader: 'vue-loader',
+            options: { experimentalInlineMatchResource: true },
+        }],
     },
     resolve: {
         alias: {

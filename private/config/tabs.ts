@@ -12,6 +12,7 @@ export const TABS = [
         requiresCondensed: true,
         subtabs: [
             { id: "condensed-upgrades", label: "Condensed Upgrades" },
+            { id: "memories", label: "Memories", requiresMemory: true },
         ],
     },
     {
@@ -39,6 +40,7 @@ export const TABS = [
             { id: "guild-main", label: "Board" },
             { id: "guild-inventory", label: "Inventory" },
             { id: "guild-shop", label: "Shop" },
+            { id: "guild-library", label: "Library", requiresLibrary: true },
             { id: "guild-ascension-hall", label: "Ascension Hall", requiresAscensionHall: true },
         ],
     },

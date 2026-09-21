@@ -4,6 +4,7 @@ import { clampManaToInfinityBoundary } from "../game/currencies.js";
 import { HANDLES } from "../core/player.js";
 import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
+import { setTotalMemories } from "../game/memories.js";
 
 (globalThis as any).readValue = (value: keyof typeof HANDLES) => {
     return readString(HANDLES[value] ?? HANDLES.mana);
@@ -28,3 +29,7 @@ import { refreshTierOneDerivedState } from "../game/tier_one.js";
     refreshSealedMeridiansDerivedState();
     refreshTierOneDerivedState();
 };
+
+(globalThis as any).assignMemories = (number: number) => {
+    return setTotalMemories(number);
+}

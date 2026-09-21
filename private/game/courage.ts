@@ -1,5 +1,7 @@
 import { addUS, gt, gte, log10Into, mulUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
+import { isProducerOnlyCrystalActive } from "./crystals.js";
+import { hasMemoryMilestone } from "./memories.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -32,7 +34,7 @@ export function setCourageUnlocked(unlocked: bool): void {
 }
 
 export function activateCourage(): bool {
-    if (!isCourageUnlocked() || isCourageActive() || gt(player.courageCooldown, 0)) return false;
+    if (isProducerOnlyCrystalActive() || !isCourageUnlocked() || isCourageActive() || gt(player.courageCooldown, 0)) return false;
     writeNumber(
         player.courageTimer,
         hasAscendedCondensedEffect(12) ? COURAGE_DURATION * 1.5
@@ -46,6 +48,7 @@ export function activateCourage(): bool {
 
 export function refreshCourageMultiplier(): void {
     writeNumber(player.courageMultiplier, 10);
+    if (hasMemoryMilestone(3)) mulUS(player.courageMultiplier, 2);
     if (hasCondensedEffect(18) || hasAscendedCondensedEffect(18)) {
         writeNumber(scratch.productionModifier, 0);
         addUS(addUS(scratch.productionModifier, player.condensedMana), 1);

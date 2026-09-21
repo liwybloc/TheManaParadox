@@ -9,7 +9,10 @@ defineProps({
         <header class="stat-header basic-header">
             <h2>Basic</h2>
             <p>Total time played: <strong>{{ statistics.timePlayed }}</strong></p>
+            <p>Game time played: <strong>{{ statistics.gameTimePlayed }}</strong></p>
             <p>Total mana produced: <strong>{{ statistics.manaProduced }}</strong></p>
+            <p>Message tickers seen: <strong>{{ statistics.messageTickersSeen }}</strong></p>
+            <p>Unique message tickers seen: <strong>{{ statistics.uniqueMessageTickersSeen }}</strong></p>
         </header>
         <header v-if="statistics.hasCondensed" class="stat-header condense-header">
             <h2>Condense</h2>

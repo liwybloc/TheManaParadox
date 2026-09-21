@@ -22,6 +22,7 @@ import {
 } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
+import { crystalRewardHandle, hasCompletedCrystal, isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isSpecificCrystalActive } from "./crystals.js";
 import { applyManaGainModifiers } from "./currencies.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -125,7 +126,7 @@ function calculatePurificationSoftcapExponent(result: i32): void {
 }
 
 export function canPurifyMeridians(): bool {
-    if(!hasTierOneAchievement(7)) return false;
+    if (isProducerOnlyCrystalActive() || isManaAbsorberOnlyCrystalActive() || !hasTierOneAchievement(7)) return false;
     refreshMeridianPurificationRequirement();
     refreshMeridianPurificationEffect();
     return gte(player.count_manaConduit, player.meridianPurificationRequirement) && gt(player.meridianPurificationEffect, player.purifiedMeridiansMultiplier);
@@ -152,7 +153,8 @@ export function purifyMeridians(): bool {
 }
 
 export function canEmpowerTierOne(index: i32): bool {
-    return index >= 0 && index < TIER_ONE_COUNT - 1
+    return !isSpecificCrystalActive(1) && !isProducerOnlyCrystalActive()
+        && index >= 0 && index < TIER_ONE_COUNT - 1
         && gte(tierOneAmountHandle(index), tierOneEmpowermentCostHandle(index));
 }
 
@@ -315,6 +317,7 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
 }
 
 export function isTierOneVisible(index: i32): bool {
+    if (isManaAbsorberOnlyCrystalActive()) return index === 0;
     return index === 0 || (index > 0 && index < TIER_ONE_COUNT && gt(tierOneBoughtHandle(index - 1), 0));
 }
 
@@ -396,10 +399,14 @@ function refreshTierOneMultiplier(index: i32): void {
         let empowermentMultiplier: f64 = hasAscendedCondensedEffect(16) ? 250 : hasCondensedEffect(16) ? 50 : 10;
         if (hasTierOneAchievement(41)) empowermentMultiplier *= 1.1;
         writeNumber(scratch.productionModifier, empowermentMultiplier);
+        if (hasCompletedCrystal(1)) mulUS(scratch.productionModifier, crystalRewardHandle(1, 0));
         powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneEmpowermentHandle(index));
         mulUS(tierOneMultiplierHandle(index), scratch.tierOneExponent);
     }
     mulUS(tierOneMultiplierHandle(index), player.purifiedMeridiansMultiplier);
+    if (index === 0 && hasCompletedCrystal(3)) {
+        mulUS(tierOneMultiplierHandle(index), crystalRewardHandle(3, 0));
+    }
     if (index === 4 && hasCondensedEffect(4)) {
         mulUS(tierOneMultiplierHandle(index), CONDENSED_STAFF_MULTIPLIER);
     } else if ((index === 0 && hasCondensedEffect(2))

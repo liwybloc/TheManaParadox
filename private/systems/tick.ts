@@ -1,7 +1,7 @@
 import { gt, lte, mulUS, multiplyInto, subUS, writeNumber } from "../core/break_eternity.js";
 import { consumeTierOneRewardsChanged } from "../game/achievements.js";
 import { updateCourage } from "../game/courage.js";
-import { addPlayerTime, gainProductionCurrency } from "../game/currencies.js";
+import { addCondenseTime, addGameTime, addPlayerTime, gainProductionCurrency } from "../game/currencies.js";
 import { getGameSpeed, isQuestActive, updatePotionEffects, updateQuestBoard } from "../guild/guild.js";
 import { HANDLES } from "../core/player.js";
 import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, resetCastSpeed } from "../game/progression.js";
@@ -143,7 +143,10 @@ function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
     writeNumber(updatesPerSecondHandle, 1000 / deltaMilliseconds);
     if (countTimePlayed) addPlayerTime(secondsHandle);
+    else addCondenseTime(secondsHandle);
     updateCourage(secondsHandle);
+    multiplyInto(modifierHandle, secondsHandle, getGameSpeed());
+    addGameTime(modifierHandle);
     applyCastSpeed();
     mulUS(secondsHandle, getGameSpeed());
     for (let entity: i32 = 0; entity < productionEntityCount; entity++) {

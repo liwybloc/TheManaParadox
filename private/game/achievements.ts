@@ -56,6 +56,12 @@ export const ACHIEVEMENTS = [
     { id: "achievement_get1e500mana", circle: 2, number: 43, title: "Half way there!", description: "Reach 1.00e500 Mana" },
     { id: "achievement_unlockcrystals", circle: 2, number: 44, title: "Icicles", description: "Unlock Crystals" },
     { id: "achievement_dontevenlad", circle: 2, number: 45, title: "Don't even joke, lad", description: "Reach 1.00e6767 Mana" },
+
+    { id: "achievement_shattercrystal", circle: 2, number: 46, title: "Shattered Hearts", description: "Shatter a Crystal" },
+    { id: "achievement_get25memories", circle: 2, number: 47, title: "Remembrance", description: "Gain 25 memories" },
+    { id: "achievement_shatter15crystal", circle: 2, number: 48, title: "Into the Abyss", description: "Shatter the first 15 Crystals" },
+    { id: "achievement_loopabyss", circle: 2, number: 49, title: "Déjà vu", description: "Loop the abyss" },
+    { id: "achievement_defeatctier", circle: 2, number: 50, title: "C your way out of this", description: "Defeat a C tier enemy" },
 ];
 
 export const PROGRESSION_ACHIEVEMENT_ORDER = [
@@ -66,6 +72,7 @@ export const PROGRESSION_ACHIEVEMENT_ORDER = [
     17, 39,  6, 19, 38,
     36, 42, 23, 24, 41,
     25, 40, 43, 44, 45,
+    46, 47, 48, 49, 50,
 ];
 
 declare const player: Player;
@@ -74,7 +81,7 @@ declare const scratch: Scratch;
 /** [WASM] */
 
 const TIER_ONE_ACHIEVEMENT_COUNT: i32 = 5;
-const ACHIEVEMENT_COUNT: i32 = 45;
+const ACHIEVEMENT_COUNT: i32 = 50;
 const unlockedAchievements = new StaticArray<u8>(ACHIEVEMENT_COUNT);
 let tierOneRewardsChanged = false;
 let circularHabitsRewardPending = false;

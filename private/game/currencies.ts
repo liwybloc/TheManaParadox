@@ -15,6 +15,8 @@ import {
 } from "../core/break_eternity.js";
 import { checkManaAchievements, checkTimeAchievements } from "./achievements.js";
 import { hasCondensedEffect } from "./condensed.js";
+import { applyCrystalManaGainModifiers, clampManaToActiveCrystalGoal } from "./crystals.js";
+import { hasMemoryMilestone, memoryManaMultiplierHandle } from "./memories.js";
 import { hasGuildShopUpgrade } from "../guild/guild.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -59,6 +61,7 @@ function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: b
             }
         }
         clampManaToInfinityBoundary();
+        clampManaToActiveCrystalGoal();
         checkManaAchievements();
         return;
     }
@@ -67,11 +70,14 @@ function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: b
 
 export function applyManaGainModifiers(amount: i32): void {
     mulUS(amount, player.multiplier_currencyGlobal);
+    if (hasMemoryMilestone(5)) mulUS(amount, memoryManaMultiplierHandle());
     if (hasGuildShopUpgrade(1)) mulUS(amount, 2);
-    if (!hasCondensedEffect(13)) return;
-    writeNumber(scratch.productionModifier, 0);
-    addUS(addUS(scratch.productionModifier, player.condensedMana), 1);
-    mulUS(amount, scratch.productionModifier);
+    if (hasCondensedEffect(13)) {
+        writeNumber(scratch.productionModifier, 0);
+        addUS(addUS(scratch.productionModifier, player.condensedMana), 1);
+        mulUS(amount, scratch.productionModifier);
+    }
+    applyCrystalManaGainModifiers(amount);
 }
 
 export function clampManaToInfinityBoundary(): void {
@@ -100,8 +106,16 @@ export function manaGoalProgress(startExponent: f64, endExponent: f64, maximum: 
 
 export function addPlayerTime(amount: i32): void {
     addUS(player.statistics_totalTimePlayed, amount);
-    addUS(player.statistics_timeThisCondense, amount);
+    addCondenseTime(amount);
     checkTimeAchievements();
+}
+
+export function addCondenseTime(amount: i32): void {
+    addUS(player.statistics_timeThisCondense, amount);
+}
+
+export function addGameTime(amount: i32): void {
+    addUS(player.statistics_gameTimePlayed, amount);
 }
 
 export function cheatSomeCookies(): void {

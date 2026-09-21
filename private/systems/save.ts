@@ -1,5 +1,8 @@
 import { getLayer, getMagnitude, getSign, writeDecimal } from "../core/break_eternity.js";
 import { checkOfflineAchievement, hasBoostedProducerThisCondense, hasCombatUsedNonFreeze, hasPotionUsedThisCondense, hasTierOneAchievement as hasAchievement, refreshAchievementRewards, setBoostedProducerThisCondense, setCombatUsedNonFreeze, setPotionUsedThisCondense, setTierOneAchievement } from "../game/achievements.js";
+import { getTotalMessageTickersSeen, hasSeenMessageTicker, MESSAGE_TICKER_COUNT, setSeenMessageTicker, setTotalMessageTickersSeen } from "../game/message_tickers.js";
+import { getTotalMemories, isFocusing, setFocusing, setTotalMemories } from "../game/memories.js";
+import { CRYSTALS, getActiveCrystal, getFastestCrystalShatter, hasCompletedCrystal, setActiveCrystal, setCompletedCrystal, setFastestCrystalShatter } from "../game/crystals.js";
 import { clampManaToInfinityBoundary } from "../game/currencies.js";
 import { isCourageUnlocked, setCourageUnlocked } from "../game/courage.js";
 import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCircleTwoCondensedUpgrade, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCircleTwoCondensedUpgrade, setCondensedUpgrade, setHasCondensed } from "../game/condensed.js";
@@ -12,7 +15,7 @@ import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, au
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "012";
+const CURRENT_SAVE_VERSION = "015";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -69,6 +72,25 @@ const achievementFields009 = achievementSaveFields(5, 30);
 const achievementFields011 = achievementSaveFields(5, 35);
 const ascensionAchievementFields011 = achievementSaveFields(2, 40);
 const achievementFields012 = achievementSaveFields(3, 42);
+const achievementFields015 = achievementSaveFields(5, 45);
+const messageTickerFields: readonly SaveField[] = [
+    callbackNumberSaveField(getTotalMessageTickersSeen, setTotalMessageTickersSeen),
+    ...Array.from({ length: MESSAGE_TICKER_COUNT }, (_, index) => booleanSaveField(
+        () => hasSeenMessageTicker(index),
+        (seen) => setSeenMessageTicker(index, seen),
+    )),
+];
+const crystalFields: readonly SaveField[] = [
+    callbackInt32SaveField(getActiveCrystal, setActiveCrystal, -1),
+    ...CRYSTALS.map((_, index) => booleanSaveField(
+        () => hasCompletedCrystal(index),
+        (completed) => setCompletedCrystal(index, completed),
+    )),
+];
+const crystalShatterTimeFields: readonly SaveField[] = CRYSTALS.map((_, index) => callbackNumberSaveField(
+    () => getFastestCrystalShatter(index),
+    (seconds) => setFastestCrystalShatter(index, seconds),
+));
 const circleTwoCondensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT }, (_, index) => booleanSaveField(
     () => hasCircleTwoCondensedUpgrade(index),
     (purchased) => setCircleTwoCondensedUpgrade(index, purchased),
@@ -79,6 +101,11 @@ const condensedUpgradeFields = Array.from({ length: CONDENSED_UPGRADE_COUNT - 1 
 ));
 const totalManaProducedField = decimalSaveField(HANDLES.statistics_totalManaProduced, [0, 0, 0]);
 const totalTimePlayedField = decimalSaveField(HANDLES.statistics_totalTimePlayed, [0, 0, 0]);
+const gameTimePlayedField = decimalSaveField(HANDLES.statistics_gameTimePlayed, [0, 0, 0]);
+const memoryFields: readonly SaveField[] = [
+    callbackInt32SaveField(getTotalMemories, setTotalMemories),
+    booleanSaveField(isFocusing, setFocusing),
+];
 const totalClicksField = decimalSaveField(HANDLES.statistics_totalClicks, [0, 0, 0]);
 const ascensionHallUnlockedField = decimalSaveField(CONDENSED_HANDLES.ascensionHallUnlocked, [0, 0, 0]);
 const totalCondensesField = decimalSaveField(HANDLES.statistics_condenses, [0, 0, 0]);
@@ -293,6 +320,24 @@ const savedFields012: readonly SaveField[] = [
     ...circleTwoCondensedUpgradeFields,
 ];
 
+const savedFields013: readonly SaveField[] = [
+    ...savedFields012,
+    ...messageTickerFields,
+];
+
+const savedFields014: readonly SaveField[] = [
+    ...savedFields013,
+    ...crystalFields,
+];
+
+const savedFields015: readonly SaveField[] = [
+    ...savedFields014,
+    ...crystalShatterTimeFields,
+    ...achievementFields015,
+    gameTimePlayedField,
+    ...memoryFields,
+];
+
 const condenseResetFields: readonly SaveField[] = [
     ...savedFields001,
     castSpeedTimerField,
@@ -316,10 +361,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields012));
+    const bytes = new Uint8Array(totalByteLength(savedFields015));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields012) {
+    for (const field of savedFields015) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -370,6 +415,15 @@ export async function importSave(saveData: string): Promise<void> {
         case "012":
             await importFields(encoded, savedFields012, true);
             break;
+        case "013":
+            await importFields(encoded, savedFields013, true);
+            break;
+        case "014":
+            await importFields(encoded, savedFields014, true);
+            break;
+        case "015":
+            await importFields(encoded, savedFields015, true);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
@@ -398,11 +452,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields012;
+    const currentVersionFields = fields === savedFields015;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields012) field.reset();
+    for (const field of savedFields015) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -497,7 +551,7 @@ export async function saveGame(): Promise<void> {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields012) field.reset();
+    for (const field of savedFields015) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();

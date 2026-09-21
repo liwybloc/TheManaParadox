@@ -4,6 +4,7 @@ export interface PlayerHandles {
     mana: i32;
     statistics_totalManaProduced: i32;
     statistics_totalTimePlayed: i32;
+    statistics_gameTimePlayed: i32;
     statistics_totalClicks: i32;
     statistics_condensedManaProduced: i32;
     statistics_condenses: i32;
@@ -96,6 +97,7 @@ export const HANDLES: PlayerHandles = {
     mana: createDecimal(1, 0, 10),
     statistics_totalManaProduced: createZero(),
     statistics_totalTimePlayed: createZero(),
+    statistics_gameTimePlayed: createZero(),
     statistics_totalClicks: createZero(),
     statistics_condensedManaProduced: createZero(),
     statistics_condenses: createZero(),
@@ -178,6 +180,7 @@ export const player: Player = {
     mana: 0,
     statistics_totalManaProduced: 0,
     statistics_totalTimePlayed: 0,
+    statistics_gameTimePlayed: 0,
     statistics_totalClicks: 0,
     statistics_condensedManaProduced: 0,
     statistics_condenses: 0,
@@ -267,6 +270,7 @@ export function initializeCoreHandles(
     mana: i32,
     totalManaProduced: i32,
     totalTimePlayed: i32,
+    gameTimePlayed: i32,
     totalClicks: i32,
     infinityBreakIndex: i32,
     globalMultiplier: i32,
@@ -277,6 +281,7 @@ export function initializeCoreHandles(
     player.mana = mana;
     player.statistics_totalManaProduced = totalManaProduced;
     player.statistics_totalTimePlayed = totalTimePlayed;
+    player.statistics_gameTimePlayed = gameTimePlayed;
     player.statistics_totalClicks = totalClicks;
     player.mana_circle_tier = infinityBreakIndex;
     player.multiplier_currencyGlobal = globalMultiplier;
@@ -405,6 +410,7 @@ initializeCoreHandles(
     HANDLES.mana,
     HANDLES.statistics_totalManaProduced,
     HANDLES.statistics_totalTimePlayed,
+    HANDLES.statistics_gameTimePlayed,
     HANDLES.statistics_totalClicks,
     HANDLES.mana_circle_tier,
     HANDLES.multiplier_currencyGlobal,

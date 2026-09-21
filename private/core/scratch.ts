@@ -5,6 +5,7 @@ export interface Scratch {
     tierOneSeconds: i32;
     tierOneProduction: i32;
     tierOneExponent: i32;
+    manaExponent: i32;
     productionModifier: i32;
     purificationRelativeIncrease: i32;
     tierOneDisplayMultiplier: i32;
@@ -22,6 +23,7 @@ export const SCRATCH_HANDLES: Scratch = {
     tierOneSeconds: createZero(),
     tierOneProduction: createZero(),
     tierOneExponent: createZero(),
+    manaExponent: createZero(),
     productionModifier: createZero(),
     purificationRelativeIncrease: createZero(),
     tierOneDisplayMultiplier: createDecimal(1, 0, 1),
@@ -41,6 +43,7 @@ export const scratch: Scratch = {
     tierOneSeconds: 0,
     tierOneProduction: 0,
     tierOneExponent: 0,
+    manaExponent: 0,
     productionModifier: 0,
     purificationRelativeIncrease: 0,
     tierOneDisplayMultiplier: 0,
@@ -58,6 +61,7 @@ export function initializeScratch(
     tierOneSeconds: i32,
     tierOneProduction: i32,
     tierOneExponent: i32,
+    manaExponent: i32,
     productionModifier: i32,
     purificationRelativeIncrease: i32,
     tierOneDisplayMultiplier: i32,
@@ -73,6 +77,7 @@ export function initializeScratch(
     scratch.tierOneSeconds = tierOneSeconds;
     scratch.tierOneProduction = tierOneProduction;
     scratch.tierOneExponent = tierOneExponent;
+    scratch.manaExponent = manaExponent;
     scratch.productionModifier = productionModifier;
     scratch.purificationRelativeIncrease = purificationRelativeIncrease;
     scratch.tierOneDisplayMultiplier = tierOneDisplayMultiplier;
@@ -92,6 +97,7 @@ initializeScratch(
     SCRATCH_HANDLES.tierOneSeconds,
     SCRATCH_HANDLES.tierOneProduction,
     SCRATCH_HANDLES.tierOneExponent,
+    SCRATCH_HANDLES.manaExponent,
     SCRATCH_HANDLES.productionModifier,
     SCRATCH_HANDLES.purificationRelativeIncrease,
     SCRATCH_HANDLES.tierOneDisplayMultiplier,

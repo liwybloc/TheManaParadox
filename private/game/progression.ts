@@ -1,9 +1,10 @@
 import { addInto, addUS, ceilInto, divInto, divUS, gt, gte, multiplyInto, mulUS, powInto, powUS, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { checkCastSpeedAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
+import { isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isSpecificCrystalActive, refreshCrystalRewardEffects } from "./crystals.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
-import { resetMeridianPurification, resetTierOneAmounts } from "./tier_one.js";
+import { refreshTierOneDerivedState, resetMeridianPurification, resetTierOneAmounts } from "./tier_one.js";
 
 declare const player: Player;
 declare const scratch: Scratch;
@@ -36,7 +37,7 @@ export function castSpeed(): bool {
 }
 
 export function canCastSpeed(): bool {
-    return gte(player.mana, player.castSpeedCost);
+    return !isProducerOnlyCrystalActive() && gte(player.mana, player.castSpeedCost);
 }
 
 export function castSpeedMax(): void {
@@ -58,10 +59,15 @@ export function sealMeridians(): bool {
 }
 
 export function canSealMeridians(): bool {
-    return gte(player.count_manufactureStaff, player.sealMeridiansCost);
+    if (isProducerOnlyCrystalActive()) return false;
+    return gte(
+        isManaAbsorberOnlyCrystalActive() ? player.count_manaConduit : player.count_manufactureStaff,
+        player.sealMeridiansCost,
+    );
 }
 
 export function areSealedMeridiansVisible(): bool {
+    if (isManaAbsorberOnlyCrystalActive()) return gt(player.bought_manaConduit, 0);
     return gt(player.sealedMeridiansOwned, 0) || gt(player.bought_manufactureStaff, 0);
 }
 
@@ -70,7 +76,9 @@ export function refreshSealedMeridiansDerivedState(): void {
     writeNumber(scratch.productionModifier, hasTierOneAchievement(20) ? 2.85 : 3);
     powInto(player.sealMeridiansCost, scratch.productionModifier, player.sealedMeridiansOwned);
     ceilInto(player.sealMeridiansCost, player.sealMeridiansCost);
+    if (isManaAbsorberOnlyCrystalActive()) mulUS(player.sealMeridiansCost, 10);
     powInto(player.sealedMeridiansSpeedEffect, sealedMeridianMagnitudeHandle(), player.sealedMeridiansOwned);
+    refreshCrystalRewardEffects();
 }
 
 export function sealedMeridianMagnitudeHandle(): i32 {
@@ -97,7 +105,12 @@ export function increaseMatrix(): bool {
 }
 
 export function canIncreaseMatrix(): bool {
-    return gte(player.count_manufactureStaff, player.matrixCost);
+    return !isSpecificCrystalActive(1)
+        && !isProducerOnlyCrystalActive()
+        && gte(
+            isManaAbsorberOnlyCrystalActive() ? player.count_manaConduit : player.count_manufactureStaff,
+            player.matrixCost,
+        );
 }
 
 export function isMatrixVisible(): bool {
@@ -107,6 +120,7 @@ export function isMatrixVisible(): bool {
 export function refreshMatrixDerivedState(): void {
     powInto(player.matrixCost, 10, player.matrixOwned);
     mulUS(player.matrixCost, 10);
+    if (isManaAbsorberOnlyCrystalActive()) mulUS(player.matrixCost, 10);
     multiplyInto(player.matrixSpeedPower, player.matrixOwned, matrixMagnitudeHandle());
     addUS(player.matrixSpeedPower, 2);
     if (hasCondensedEffect(1)) {
@@ -121,6 +135,7 @@ export function refreshMatrixDerivedState(): void {
         addUS(player.matrixSpeedPower, scratch.productionModifier);
     }
     if (hasAscendedCondensedEffect(1)) mulUS(player.matrixSpeedPower, 2);
+    refreshCrystalRewardEffects();
 }
 
 export function matrixMagnitudeHandle(): i32 {
@@ -162,7 +177,8 @@ export function resetSealedMeridians(): void {
 }
 
 function resetTierOne(): void {
-    if (hasAscendedCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 100);
+    if (isManaAbsorberOnlyCrystalActive()) writeNumber(player.mana, 10);
+    else if (hasAscendedCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 100);
     else if (hasCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 50);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     resetTierOneAmounts();
@@ -177,13 +193,16 @@ export function resetCastSpeed(): void {
 }
 
 export function applyCondensedResetStartingValues(): void {
-    if (hasAscendedCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 100);
+    if (isManaAbsorberOnlyCrystalActive()) writeNumber(player.mana, 10);
+    else if (hasAscendedCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 100);
     else if (hasCondensedEffect(7)) writeDecimal(player.mana, 1, 1, 50);
     else writeNumber(player.mana, hasTierOneAchievement(8) ? 500 : 10);
     writeNumber(player.matrixOwned, hasAscendedCondensedEffect(10) || hasTierOneAchievement(21) ? 1 : 0);
     applyCondensedSealedMeridiansMinimum();
+    if (isSpecificCrystalActive(1)) writeNumber(player.matrixOwned, 0);
     refreshMatrixDerivedState();
     refreshSealedMeridiansDerivedState();
+    refreshTierOneDerivedState();
 }
 
 export function applyCondensedSealedMeridiansMinimum(): void {

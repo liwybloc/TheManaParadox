@@ -6,29 +6,9 @@ import {
     onBeforeUnmount,
     watch
 } from 'vue';
+import { MESSAGE_TICKERS, recordMessageTicker } from '@game/game/message_tickers.js';
 
-const messages = [
-    'yay another incremental',
-	'probably should buy something',
-	'this is progress, apparently',
-	'the mana demands more mana',
-	'the Kernel Corn situation is crazy...',
-	'living in the mana dimension must be crazy because you need ×10 more mana to make something ×2 boosted',
-    'at first i thought this was gibberish, then i realized it was actually written in parkour',
-    'I be ponderin my orb',
-    'mrawo :3',
-    'Mr. Layer? Congrats, you\'re always on the list!',
-    'woah, i see a horizon appearing! like some sort of.. New Horizons!',
-    'i wish my brain looked like a #####',
-    'you ever just smell like vegetables?',
-    'Hello Scarlet, what do you want?',
-    'what do you want... do you want pets?',
-    'oh you want food? you mother####er...',
-    'this is not newsticker suggestions',
-    'shame on your dog',
-];
-
-messages.push(`fun fact there are ${messages.length + 1} different message tickers`);
+const emit = defineEmits(['message-displayed']);
 
 const config = {
     fontSize: 24,
@@ -57,18 +37,26 @@ function getHoldTime() {
     );
 }
 
-function getRandomMessage() {
-    return messages[Math.floor(Math.random() * messages.length)];;
+function getRandomMessageIndex() {
+    return Math.floor(Math.random() * MESSAGE_TICKERS.length);
 }
-const message = ref(getRandomMessage());
+let messageIndex = getRandomMessageIndex();
+const message = ref(MESSAGE_TICKERS[messageIndex]);
 let timer;
 
+function recordDisplayedMessage() {
+    const statistics = recordMessageTicker(messageIndex);
+    emit('message-displayed', statistics);
+}
+
 function nextMessage() {
-    let next;
+    let nextIndex;
     do {
-        next = getRandomMessage();
-    } while (next === message.value);
-    message.value = next;
+        nextIndex = getRandomMessageIndex();
+    } while (nextIndex === messageIndex);
+    messageIndex = nextIndex;
+    message.value = MESSAGE_TICKERS[messageIndex];
+    recordDisplayedMessage();
     beginNextMessage();
 }
 
@@ -76,7 +64,10 @@ function beginNextMessage() {
     timer = setTimeout(nextMessage, getMessageDuration())
 }
 
-onMounted(beginNextMessage);
+onMounted(() => {
+    recordDisplayedMessage();
+    beginNextMessage();
+});
 onUnmounted(() => {
     clearTimeout(timer);
 });

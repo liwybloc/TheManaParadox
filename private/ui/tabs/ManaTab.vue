@@ -15,6 +15,7 @@ const props = defineProps({
     manaPerSecond: { type: String, required: true },
     oomPerSecond: { type: String, required: true },
     showOoMPerSecond: { type: Boolean, required: true },
+    producersOnly: Boolean,
 });
 defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "seal-meridians", "increase-matrix", "activate-courage", "purify-meridians"]);
 
@@ -26,7 +27,7 @@ function producerActionLabel(upgrade) {
 
 <template>
     <section class="tab-panel mana-panel">
-        <aside v-if="potionEffects.length" class="potion-effects">
+        <aside v-if="!producersOnly && potionEffects.length" class="potion-effects">
             <template v-if="potionEffects.length">
                 <strong>Potion Effects:</strong>
                 <span v-for="effect in potionEffects" :key="effect.id">{{ effect.text }}</span>
@@ -44,6 +45,7 @@ function producerActionLabel(upgrade) {
             <button class="cast-mode" type="button" @click="$emit('toggle-cast-mode')">{{ castMode }}</button>
         </div>
         <button
+            v-if="!producersOnly"
             class="cast-speed"
             type="button"
             :disabled="!castSpeed.affordable"
@@ -66,6 +68,7 @@ function producerActionLabel(upgrade) {
             />
         </div>
         <button
+            v-if="!producersOnly"
             v-show="meridianPurification.visible"
             class="purify-meridians"
             type="button"
@@ -77,7 +80,7 @@ function producerActionLabel(upgrade) {
             <small>{{ meridianPurification.multiplier }} All Production</small>
             <small>(Consumes all producers before Meridians)</small>
         </button>
-        <div v-show="sealedMeridians.visible" class="sealed-meridians-controls">
+        <div v-if="!producersOnly" v-show="sealedMeridians.visible" class="sealed-meridians-controls">
             <div class="sealed-meridians-summary">Sealed Meridians: {{ sealedMeridians.level }} (×{{ sealedMeridians.effect }})</div>
             <button
                 class="seal-meridians"
@@ -91,8 +94,8 @@ function producerActionLabel(upgrade) {
                 <small>Resets everything beforehand</small>
             </button>
         </div>
-        <div v-show="matrix.visible" class="sealed-meridians-controls">
-            <div class="matrix-summary">Crystal Matrices: {{ matrix.level }} (×{{ matrix.base }} + ×{{ matrix.other }} + ×{{ matrix.effect }})</div>
+        <div v-if="!producersOnly" v-show="matrix.visible" class="sealed-meridians-controls">
+            <div class="matrix-summary">Crystal Matrices: {{ matrix.level }} (+{{ matrix.effect }}×)</div>
             <button
                 class="increase-matrix"
                 type="button"
@@ -106,6 +109,7 @@ function producerActionLabel(upgrade) {
             </button>
         </div>
         <button
+            v-if="!producersOnly"
             v-show="courage.visible"
             class="courage-button"
             :class="{ 'is-active': courage.active }"

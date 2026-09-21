@@ -1,6 +1,8 @@
 import { addInto, addUS, ceilInto, copyInto, createDecimal, createZero, divInto, divUS, eq, gt, gte, log10Into, lt, lte, mulUS, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { isQuestActive } from "../guild/guild.js";
+import { isCrystalActive } from "./crystals.js";
+import { hasMemoryMilestone } from "./memories.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -112,7 +114,7 @@ export function initializeCircleTwoCondensedUpgradeCost(index: i32, costHandle: 
 }
 
 export function canCondense(): bool {
-    if (isQuestActive()) return false;
+    if (isQuestActive() || isCrystalActive()) return false;
     writeDecimal(scratch.productionModifier, 1, 1, 308.25471555991675);
     return gte(player.mana, scratch.productionModifier);
 }
@@ -127,6 +129,7 @@ export function refreshCondenseGain(): void {
     }
     if (hasTierOneAchievement(18)) mulUS(scratch.condenseGain, 2);
     if (hasTierOneAchievement(40)) mulUS(scratch.condenseGain, 2);
+    if (hasMemoryMilestone(1)) mulUS(scratch.condenseGain, 2);
 }
 
 export function calculateCondenseGain(): bool {
