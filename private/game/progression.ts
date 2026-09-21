@@ -76,7 +76,6 @@ export function refreshSealedMeridiansDerivedState(): void {
     writeNumber(scratch.productionModifier, hasTierOneAchievement(20) ? 2.85 : 3);
     powInto(player.sealMeridiansCost, scratch.productionModifier, player.sealedMeridiansOwned);
     ceilInto(player.sealMeridiansCost, player.sealMeridiansCost);
-    if (isManaAbsorberOnlyCrystalActive()) mulUS(player.sealMeridiansCost, 10);
     powInto(player.sealedMeridiansSpeedEffect, sealedMeridianMagnitudeHandle(), player.sealedMeridiansOwned);
     refreshCrystalRewardEffects();
 }
@@ -120,7 +119,6 @@ export function isMatrixVisible(): bool {
 export function refreshMatrixDerivedState(): void {
     powInto(player.matrixCost, 10, player.matrixOwned);
     mulUS(player.matrixCost, 10);
-    if (isManaAbsorberOnlyCrystalActive()) mulUS(player.matrixCost, 10);
     multiplyInto(player.matrixSpeedPower, player.matrixOwned, matrixMagnitudeHandle());
     addUS(player.matrixSpeedPower, 2);
     if (hasCondensedEffect(1)) {
