@@ -15,6 +15,7 @@ import { equippedItem, setEquippedItem } from "../guild/equipment.js";
 import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterPurifyMinimumRelativeMultiplier, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, producerAutocasterCastsMax, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterPurifyMinimumRelativeMultiplier, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod, setProducerAutocasterCastsMax } from "../guild/autocasters.js";
 
 const STORAGE_KEY = "saveData";
+const RECOVERY_STORAGE_KEY = "saveDataRecovery";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
 const CURRENT_SAVE_VERSION = "017";
 const SAVE_SUFFIX = "EndOfSaveData";
@@ -22,6 +23,7 @@ const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
 export const development = window.location.href.includes("localhost");
 let pendingSave: Promise<void> = Promise.resolve();
+let savingEnabled = true;
 
 export interface SaveValue<T> {
     value: T;
@@ -570,6 +572,7 @@ export function numberSaveField(state: SaveValue<number>, defaultValue = 0): Sav
 }
 
 export async function saveGame(): Promise<void> {
+    if (!savingEnabled) return;
     pendingSave = pendingSave.then(async () => {
         localStorage.setItem(STORAGE_KEY, await exportSave());
     }).catch((error) => {
@@ -579,6 +582,7 @@ export async function saveGame(): Promise<void> {
 }
 
 export function resetGame(): void {
+    savingEnabled = true;
     for (const field of savedFields017) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
@@ -610,10 +614,12 @@ export function resetForCondense(): void {
 export async function loadGame(): Promise<boolean> {
     const saveData = localStorage.getItem(STORAGE_KEY);
     if (!saveData) return false;
+    localStorage.setItem(RECOVERY_STORAGE_KEY, saveData);
     try {
         await importSave(saveData);
         return true;
     } catch (error) {
+        savingEnabled = false;
         console.error("Failed to load The Mana Paradox save", error);
         return false;
     }
@@ -673,7 +679,9 @@ function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
     return buffer;
 }
 
-await loadGame();
+const hadStoredSave = localStorage.getItem(STORAGE_KEY) !== null;
+const loadedStoredSave = await loadGame();
+if (hadStoredSave && !loadedStoredSave) savingEnabled = false;
 (window as any).saveGame = saveGame;
 window.setInterval(saveGame, AUTOSAVE_INTERVAL);
 window.addEventListener("pagehide", saveGame);
