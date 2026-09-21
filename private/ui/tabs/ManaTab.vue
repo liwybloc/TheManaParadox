@@ -55,12 +55,14 @@ function producerActionLabel(upgrade) {
             <span>{{ castSpeed.timer }} · {{ castSpeed.magnitude }}</span>
             <small>Cost: {{ castSpeed.cost }}</small>
         </button>
+        <p v-if="upgrades.some(upgrade => upgrade.boughtGT10000)" class="cost-increase-warning">Costs start increasing exponentially after 10,000 purchases.</p>
         <div class="upgrade-list">
             <UpgradeRow
                 v-for="upgrade in upgrades"
                 v-show="upgrade.visible"
                 :key="upgrade.id"
                 v-bind="upgrade"
+                :bought="upgrade.bought"
                 :cast-label="producerActionLabel(upgrade)"
                 :locked="!upgrade.affordable"
                 @cast="$emit('buy', upgrade.index)"

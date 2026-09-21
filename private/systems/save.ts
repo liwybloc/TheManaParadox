@@ -10,12 +10,13 @@ import { HANDLES } from "../core/player.js";
 import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSealedMeridianThisReset, refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, setCastSpeedUsedThisCondense, setSealedMeridianThisReset } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { simulateTime } from "./tick.js";
-import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, resetCombatSpellCosts, setGuildExperience, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
+import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getGuildExperienceForQuestRank, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, repairGuildCurrency, resetCombatSpellCosts, setGuildExperience, setGuildExperienceForQuestRank, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
+import { equippedItem, setEquippedItem } from "../guild/equipment.js";
 import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterPurifyMinimumRelativeMultiplier, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, producerAutocasterCastsMax, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterPurifyMinimumRelativeMultiplier, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod, setProducerAutocasterCastsMax } from "../guild/autocasters.js";
 
 const STORAGE_KEY = "saveData";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "015";
+const CURRENT_SAVE_VERSION = "017";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -139,7 +140,7 @@ const guildFields: readonly SaveField[] = [
     guildMemberField,
     decimalSaveField(HANDLES.guildRank, [0, 0, 0]),
     decimalSaveField(HANDLES.activeQuest, [-1, 0, 1]),
-    decimalSaveField(HANDLES.wolfineHealth, [0, 0, 0]),
+    decimalSaveField(HANDLES.enemyHealth, [0, 0, 0]),
     decimalSaveField(HANDLES.combatShieldMaximum, [0, 0, 0]),
     decimalSaveField(HANDLES.combatFreezeTurns, [0, 0, 0]),
     decimalSaveField(HANDLES.fireballCost, [1, 1, 40]),
@@ -338,6 +339,26 @@ const savedFields015: readonly SaveField[] = [
     ...memoryFields,
 ];
 
+const savedFields016: readonly SaveField[] = [
+    ...savedFields015,
+    ...Array.from({ length: 9 }, (_, rank) => callbackNumberSaveField(
+        () => getGuildExperienceForQuestRank(rank),
+        (experience) => setGuildExperienceForQuestRank(rank, experience),
+    )),
+];
+
+const savedFields017: readonly SaveField[] = [
+    ...savedFields016,
+    ...Array.from({ length: 4 }, (_, slot) => callbackUint8SaveField(
+        () => equippedItem(slot),
+        (item) => setEquippedItem(slot, item),
+    )),
+    ...Array.from({ length: 3 }, (_, offset) => booleanSaveField(
+        () => hasGuildShopUpgrade(offset + 9),
+        (purchased) => setGuildShopUpgrade(offset + 9, purchased),
+    )),
+];
+
 const condenseResetFields: readonly SaveField[] = [
     ...savedFields001,
     castSpeedTimerField,
@@ -361,10 +382,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields015));
+    const bytes = new Uint8Array(totalByteLength(savedFields017));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields015) {
+    for (const field of savedFields017) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -424,6 +445,12 @@ export async function importSave(saveData: string): Promise<void> {
         case "015":
             await importFields(encoded, savedFields015, true);
             break;
+        case "016":
+            await importFields(encoded, savedFields016, true);
+            break;
+        case "017":
+            await importFields(encoded, savedFields017, true);
+            break;
         default:
             throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
@@ -435,6 +462,7 @@ export async function importSave(saveData: string): Promise<void> {
     resetCombatSpellCosts();
     ensureInventoryPlacements();
     ensureShopItems();
+    repairGuildCurrency();
     refreshPotionEffectState();
     clampManaToInfinityBoundary();
     simulateOfflineTime();
@@ -452,11 +480,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields015;
+    const currentVersionFields = fields === savedFields017;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields015) field.reset();
+    for (const field of savedFields017) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -551,7 +579,7 @@ export async function saveGame(): Promise<void> {
 }
 
 export function resetGame(): void {
-    for (const field of savedFields015) field.reset();
+    for (const field of savedFields017) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();

@@ -1,9 +1,7 @@
-v0.0.11
-- added Crystals, including the first four challenges and their rewards
-- added Crystal completion times, challenge visuals, shattering, and persistent progress
-- added Memories, Focus, memory milestones, and the Guild Library
-- added five achievements and made Real News track unique message tickers
-- added persistent total and unique message ticker statistics
-- added game time played and improved Condense and Crystal time displays
-- added new message tickers and moved ticker data into its own module
-- balance changes, optimizations, and bug fixes
+v0.0.12
+- implemented equipment
+- added Crystal 5
+- added additional Guild content
+- implemented Autocaster improvements
+- more message tickers
+- optimizations, balancing, and bug fixes

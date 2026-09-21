@@ -12,7 +12,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_hatethetaste", number: 31, title: "I hate the taste!", description: "Condense without any potion effects.", reward: "Potions are ×1.25 stronger", category: "challenge"},
     { id: "achievement_lovethetaste", number: 32, title: "Actually, I love the taste!", description: "Drink 20 potions at once.", reward: "Increase potion durations by 30 seconds", category: "challenge" },
     { id: "achievement_freezeonly", number: 33, title: "Where's my supa suit!", description: "Defeat a D-rank or stronger enemy using only Freeze.", reward: "Freeze scales by 1e20 less per cast", category: "challenge" },
-    { id: "achievement_noboosting", number: 34, title: "Booster? I hardly know 'er!", description: "Condense without boosting any producer.", reward: "Increase per-boost multiplier by +0.1×", category: "challenge" },
+    { id: "achievement_noboosting", number: 34, title: "Booster? I hardly know 'er!", description: "Condense without boosting any producer.", reward: "Increase per-boost multiplier by +0.01×", category: "challenge" },
     { id: "achievement_sellfullinventory", number: 35, title: "Will this be enough?", description: "Sell an entire inventory of items.", reward: "+50% Sell price", category: "challenge" },
 
     { id: "achievement_buymanaconduit", number: 1, title: "Something feels.. familiar", description: "Purchase a Mana Absorber.", reward: "+1% mana production" },
@@ -46,7 +46,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_hireautocaster", number: 36, title: "Today's topic.", description: "Hire your first auto-caster", reward: "10 coins"},
 
     { id: "achievement_imrich", number: 37, title: "I'm rich!", description: "Get 100 or more coins", reward: "The rich get richer (10 coins)" },
-    { id: "achievement_buytier3caster", number: 38, title: "Faster!!", description: "Hire a tier 3 or higher auto-caster", },
+    { id: "achievement_buytier3caster", number: 38, title: "Faster!!", description: "Hire a tier 3 or higher auto-caster", reward: "Autocasters work ×2 faster" },
     { id: "achievement_completeachallenge", number: 39, title: "Rough place", description: "Acquire any challenge achievement", reward: "A sense of accomplishment" },
     { id: "achievement_empowerthrice", number: 42, title: "This was expected!", description: "Empower any producer thrice.", reward: "Empowerment is 10% stronger." },
     { id: "achievement_enterascensionhall", number: 41, title: "To face the gods", description: "Enter the ascension hall...", reward: "Gain ×2 more condensed mana" },
@@ -203,7 +203,7 @@ export function refreshAchievementRewards(): void {
         addUS(player.multiplier_tierOnePerPurchase, scratch.currencyGain);
     }
     if (hasTierOneAchievement(33)) {
-        writeNumber(scratch.currencyGain, 0.1);
+        writeNumber(scratch.currencyGain, 0.01);
         addUS(player.multiplier_tierOnePerPurchase, scratch.currencyGain);
     }
 }

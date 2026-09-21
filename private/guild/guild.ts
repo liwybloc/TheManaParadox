@@ -1,4 +1,4 @@
-import { addUS, copyInto, createZero, divUS, gt, gte, log10Into, lte, mulUS, powUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import { addUS, copyInto, createDecimal, createZero, divUS, gt, gte, log10Into, lte, mulUS, powUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { checkCoinAchievements, consumeCircularHabitsReward, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
 import { isProducerOnlyCrystalActive } from "../game/crystals.js";
 import { focusGameSpeedMultiplier, isFocusing } from "../game/memories.js";
@@ -7,12 +7,21 @@ import type { Scratch } from "../core/scratch.js";
 import { INVENTORY_ITEMS } from "./items.js";
 import { GUILD_QUESTS } from "./quests.js";
 import { GUILD_SHOP_UPGRADES } from "./shop.js";
+import { equipmentBattleDamageMultiplier, equipmentDamageTakenMultiplier, equipmentGameSpeedMultiplier, equipmentMaximumShieldMultiplier, equippedItem, hasMireguardSetBonus, setEquippedItem } from "./equipment.js";
+import { refreshMatrixDerivedState } from "../game/progression.js";
 
 type Num10 = [number, number, number, number, number, number, number, number, number, number];
+type Num3 = [number, number, number];
 export const GUILD_RANKS = ["F", "E", "D", "C", "B", "A", "S", "SS", "SSS"];
+export const GUILD_RANK_EXPERIENCE_REQUIREMENTS = [25, 200, 750, 2_500, 10_000, 100_000, 250_000, 1_000_000] as const;
 export const POTION_SPEED_TIMER_HANDLES: Num10 = Array.from({ length: 10 }, () => createZero()) as Num10;
 export const POTION_SPEED_II_TIMER_HANDLES: Num10 = Array.from({ length: 10 }, () => createZero()) as Num10;
 export const POTION_SPEED_III_TIMER_HANDLES: Num10 = Array.from({ length: 10 }, () => createZero()) as Num10;
+export const ADVANCED_COMBAT_SPELL_COST_HANDLES: Num3 = [
+    createDecimal(1, 1, 160),
+    createDecimal(1, 1, 220),
+    createDecimal(1, 1, 300),
+];
 declare const player: Player;
 declare const scratch: Scratch;
 
@@ -26,12 +35,18 @@ const INVENTORY_WOLF_FUR: u8 = 1;
 const INVENTORY_POTION_OF_SPEED: u8 = 2;
 const INVENTORY_POTION_OF_SPEED_II: u8 = 19;
 const INVENTORY_POTION_OF_SPEED_III: u8 = 20;
+const INVENTORY_ARMOR_START: i32 = 26;
+const INVENTORY_ARMOR_ITEM_COUNT: i32 = 40;
+const INVENTORY_ARMOR_ITEMS_PER_SET: i32 = 4;
+const EQUIPMENT_SLOT_COUNT: i32 = 4;
 const INVENTORY_CONTINUATION: u8 = 255;
-const MAX_QUEST_REWARDS: i32 = 3;
-const QUEST_DEFINITION_COUNT: i32 = 22;
+const MAX_QUEST_REWARDS: i32 = 4;
+const QUEST_DEFINITION_COUNT: i32 = 37;
 const QUEST_SLOT_COUNT: i32 = 6;
+const GUILD_RANK_COUNT: i32 = 9;
 const SHOP_ITEM_COUNT: i32 = 3;
-const SHOP_UPGRADE_COUNT: i32 = 9;
+const SHOP_UPGRADE_COUNT: i32 = 12;
+const COMBAT_SPELL_COUNT: i32 = 6;
 const inventorySlots = new StaticArray<u8>(INVENTORY_SIZE);
 const inventoryItemWidths = new StaticArray<u8>(256);
 const inventoryItemHeights = new StaticArray<u8>(256);
@@ -39,11 +54,14 @@ const inventoryItemSellMinimums = new StaticArray<u8>(256);
 const inventoryItemSellMaximums = new StaticArray<u8>(256);
 const questSlotLocked = new StaticArray<u8>(QUEST_SLOT_COUNT);
 const questDefinitionIds = new StaticArray<i32>(QUEST_SLOT_COUNT);
+const guildRankExperienceRequirements = new StaticArray<f64>(GUILD_RANK_COUNT);
+const guildExperienceByQuestRank = new StaticArray<f64>(GUILD_RANK_COUNT);
 const shopItemIds = new StaticArray<i32>(SHOP_ITEM_COUNT);
 const shopItemCosts = new StaticArray<i32>(SHOP_ITEM_COUNT);
 const shopItemRefreshTimers = new StaticArray<f64>(SHOP_ITEM_COUNT);
 const shopUpgrades = new StaticArray<u8>(SHOP_UPGRADE_COUNT);
 const shopUpgradeCosts = new StaticArray<i32>(SHOP_UPGRADE_COUNT);
+const advancedCombatSpellCosts = new StaticArray<i32>(3);
 const potionSpeedTimers = new StaticArray<i32>(10);
 const potionSpeedIITimers = new StaticArray<i32>(10);
 const potionSpeedIIITimers = new StaticArray<i32>(10);
@@ -53,6 +71,7 @@ const QUEST_REFRESH_TIME = 180;
 let inventoryRevision: i32 = 0;
 let questRefreshRemaining: f64 = QUEST_REFRESH_TIME;
 let guildExperience: f64 = 0;
+let guildRankExperienceRequirementCount: i32 = 0;
 let combatRandomState: u32 = 0x6d2b79f5;
 let questResultPending = false;
 let lastWolfFurReward: i32 = 0;
@@ -119,9 +138,26 @@ export function setGuildExperience(experience: f64): void {
     guildExperience = Math.max(0, experience);
 }
 
+export function getGuildExperienceForQuestRank(rank: i32): f64 {
+    return rank >= 0 && rank < GUILD_RANK_COUNT ? guildExperienceByQuestRank[rank] : 0;
+}
+
+export function setGuildExperienceForQuestRank(rank: i32, experience: f64): void {
+    if (rank < 0 || rank >= GUILD_RANK_COUNT) return;
+    guildExperienceByQuestRank[rank] = Math.max(0, experience);
+}
+
+export function configureGuildRankExperienceRequirement(rank: i32, requirement: f64): void {
+    if (rank < 0 || rank >= GUILD_RANK_COUNT) return;
+    guildRankExperienceRequirements[rank] = requirement;
+    if (guildRankExperienceRequirementCount <= rank) guildRankExperienceRequirementCount = rank + 1;
+}
+
 export function guildExperienceRequirement(): f64 {
     const rank = <i32>toNumber(player.guildRank);
-    return rank === 0 ? 25 : rank === 1 ? 200 : Infinity;
+    return rank >= 0 && rank < guildRankExperienceRequirementCount
+        ? guildRankExperienceRequirements[rank]
+        : Infinity;
 }
 
 export function isQuestActive(): bool {
@@ -150,6 +186,12 @@ export function updateQuestBoard(deltaSeconds: f64): void {
     if (!player.guildMember || deltaSeconds <= 0) return;
     updateShopItemRefreshes(deltaSeconds);
     if (isQuestActive()) return;
+    if (!questDefinitionsMatchCurrentRank()) {
+        for (let index: i32 = 0; index < QUEST_SLOT_COUNT; index++) questSlotLocked[index] = 0;
+        refreshQuestDefinitions();
+        questRefreshRemaining = QUEST_REFRESH_TIME;
+        return;
+    }
     questRefreshRemaining -= deltaSeconds;
     if (questRefreshRemaining > 0) return;
     for (let index: i32 = 0; index < QUEST_SLOT_COUNT; index++) questSlotLocked[index] = 0;
@@ -180,6 +222,10 @@ export function visibleQuestSlotCount(): i32 {
     return 3 + (hasGuildShopUpgrade(2) ? 1 : 0) + (hasGuildShopUpgrade(4) ? 1 : 0) + (hasGuildShopUpgrade(6) ? 1 : 0);
 }
 
+export function isEquipmentUnlocked(): bool {
+    return hasGuildShopUpgrade(5);
+}
+
 export function shopItemId(slot: i32): i32 { return slot >= 0 && slot < SHOP_ITEM_COUNT ? shopItemIds[slot] : 0; }
 export function shopItemCost(slot: i32): i32 { return slot >= 0 && slot < SHOP_ITEM_COUNT ? shopItemCosts[slot] : 0; }
 export function shopItemRefreshTimer(slot: i32): f64 { return slot >= 0 && slot < SHOP_ITEM_COUNT ? shopItemRefreshTimers[slot] : 0; }
@@ -195,6 +241,10 @@ export function ensureShopItems(): void {
     }
 }
 
+export function repairGuildCurrency(): void {
+    if (!gte(player.coins, 0)) writeNumber(player.coins, 0);
+}
+
 export function canBuyShopItem(slot: i32): bool {
     if (slot < 0 || slot >= SHOP_ITEM_COUNT || shopItemIds[slot] <= 0 || shopItemRefreshTimers[slot] > 0) return false;
     writeNumber(scratch.productionModifier, shopItemCosts[slot]);
@@ -203,7 +253,8 @@ export function canBuyShopItem(slot: i32): bool {
 
 export function buyShopItem(slot: i32): bool {
     if (!canBuyShopItem(slot)) return false;
-    subUS(player.coins, shopItemCosts[slot]);
+    writeNumber(scratch.productionModifier, shopItemCosts[slot]);
+    subUS(player.coins, scratch.productionModifier);
     placeInventoryItems(<u8>shopItemIds[slot], 1);
     shopItemRefreshTimers[slot] = 30;
     return true;
@@ -211,15 +262,22 @@ export function buyShopItem(slot: i32): bool {
 
 export function canBuyGuildShopUpgrade(index: i32): bool {
     if (index < 0 || index >= SHOP_UPGRADE_COUNT || hasGuildShopUpgrade(index)) return false;
-    const requiredRank: i32 = index < 3 ? 0 : index < 6 ? 1 : 2;
-    if (<i32>toNumber(player.guildRank) < requiredRank) return false;
+    if (<i32>toNumber(player.guildRank) < guildShopUpgradeRank(index)) return false;
     writeNumber(scratch.productionModifier, guildShopUpgradeCost(index));
     return gte(player.coins, scratch.productionModifier);
 }
 
+function guildShopUpgradeRank(index: i32): i32 {
+    if (index < 3) return 0;
+    if (index < 6) return 1;
+    if (index < 9) return 2;
+    return 3;
+}
+
 export function buyGuildShopUpgrade(index: i32): bool {
     if (!canBuyGuildShopUpgrade(index)) return false;
-    subUS(player.coins, guildShopUpgradeCost(index));
+    writeNumber(scratch.productionModifier, guildShopUpgradeCost(index));
+    subUS(player.coins, scratch.productionModifier);
     setGuildShopUpgrade(index, true);
     refreshPotionEffectState();
     inventoryRevision++;
@@ -259,15 +317,23 @@ export function combatShieldHandle(): i32 {
 }
 
 export function wolfineHealthPercent(): f64 {
-    copyInto(scratch.currencyGain, player.wolfineHealth);
+    copyInto(scratch.currencyGain, player.enemyHealth);
     divUS(scratch.currencyGain, enemyMaximumHealth(activeQuestIndex()));
     return Math.max(0, Math.min(1, toNumber(scratch.currencyGain)));
 }
 
 export function enemyMaximumHealth(questSlot: i32): i32 {
-    const rank = questRank(questSlot);
-    writeNumber(scratch.enemyMaximumHealth, rank <= 0 ? 150 : rank === 1 ? 250 : 500);
+    writeNumber(scratch.enemyMaximumHealth, enemyHealthForRank(questRank(questSlot)));
     return scratch.enemyMaximumHealth;
+}
+
+function enemyHealthForRank(rank: i32): f64 {
+    if (rank <= 0) return 150;
+    if (rank === 1) return 250;
+    if (rank === 2) return 500;
+    if (rank === 3) return 2500;
+    if (rank === 4) return 15000;
+    return 100000;
 }
 
 export function combatShieldPercent(): f64 {
@@ -279,7 +345,15 @@ export function combatShieldPercent(): f64 {
 }
 
 export function canCastCombatSpell(index: i32): bool {
-    return isQuestActive() && index >= 0 && index < 3 && gte(player.mana, combatSpellCost(index));
+    if (!isQuestActive() || index < 0 || index >= COMBAT_SPELL_COUNT) return false;
+    if (index >= 3 && !hasGuildShopUpgrade(index + 6)) return false;
+    return gte(player.mana, combatSpellCost(index));
+}
+
+export function initializeAdvancedCombatSpellCosts(lightning: i32, meteor: i32, arcaneNova: i32): void {
+    advancedCombatSpellCosts[0] = lightning;
+    advancedCombatSpellCosts[1] = meteor;
+    advancedCombatSpellCosts[2] = arcaneNova;
 }
 
 export function hasQuestResult(): bool {
@@ -356,6 +430,30 @@ export function getInventoryRevision(): i32 {
     return inventoryRevision;
 }
 
+export function equipInventoryItem(position: i32, slot: i32): bool {
+    if (!hasGuildShopUpgrade(5) || slot < 0 || slot >= EQUIPMENT_SLOT_COUNT) return false;
+    const item = inventoryItemAt(position);
+    if (item < INVENTORY_ARMOR_START || (item - INVENTORY_ARMOR_START) % INVENTORY_ARMOR_ITEMS_PER_SET !== slot) return false;
+    clearInventoryItem(position, <u8>item);
+    const replacedItem = equippedItem(slot);
+    setEquippedItem(slot, item);
+    if (replacedItem !== INVENTORY_EMPTY) placeInventoryItem(position, <u8>replacedItem);
+    refreshMatrixDerivedState();
+    inventoryRevision++;
+    return true;
+}
+
+export function unequipInventoryItem(slot: i32, position: i32): bool {
+    if (slot < 0 || slot >= EQUIPMENT_SLOT_COUNT) return false;
+    const item = equippedItem(slot);
+    if (item === INVENTORY_EMPTY || !inventoryPositionFits(<u8>item, position, -1)) return false;
+    setEquippedItem(slot, INVENTORY_EMPTY);
+    placeInventoryItem(position, <u8>item);
+    refreshMatrixDerivedState();
+    inventoryRevision++;
+    return true;
+}
+
 export function packedInventorySlots(index: i32): i32 {
     if (index < 0 || index >= 25) return 0;
     const offset = index * 4;
@@ -421,7 +519,7 @@ export function sellAllInventoryItems(includePotions: bool): i32 {
     for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
         const item = inventorySlots[position];
         if (!isInventoryItem(item)) continue;
-        if (!includePotions && isPotion(item)) continue;
+        if (!includePotions && (isPotion(item) || isArmor(item))) continue;
         coins += sellInventoryItem(position, item);
     }
     if (soldFullInventory) unlockTierOneAchievement(34);
@@ -562,6 +660,8 @@ export function getGameSpeed(): i32 {
         return scratch.effectiveGameSpeed;
     }
     copyInto(scratch.effectiveGameSpeed, scratch.gameSpeed);
+    writeNumber(scratch.productionModifier, equipmentGameSpeedMultiplier());
+    mulUS(scratch.effectiveGameSpeed, scratch.productionModifier);
     if (gt(player.courageTimer, 0)) mulUS(scratch.effectiveGameSpeed, player.courageMultiplier);
     if (isFocusing()) mulUS(scratch.effectiveGameSpeed, focusGameSpeedMultiplier());
     return scratch.effectiveGameSpeed;
@@ -655,36 +755,46 @@ function storedInventoryShapeIsValid(position: i32, item: u8): bool {
 
 export function questRank(index: i32): i32 {
     const id = questDefinitionId(index);
-    return id >= 17 ? 2 : id >= 12 ? 1 : 0;
+    if (id >= 32) return 5;
+    if (id >= 27) return 4;
+    if (id >= 22) return 3;
+    if (id >= 17) return 2;
+    if (id >= 12) return 1;
+    return 0;
 }
 
 export function acceptGuildQuest(index: i32): bool {
     if (!player.guildMember || isQuestActive() || index < 0 || index >= visibleQuestSlotCount() || isQuestSlotLocked(index)) return false;
     questResultPending = false;
     writeNumber(player.activeQuest, index);
-    copyInto(player.wolfineHealth, enemyMaximumHealth(index));
+    copyInto(player.enemyHealth, enemyMaximumHealth(index));
     writeNumber(player.combatFreezeTurns, 0);
     player.combatUsedNonFreeze = false;
     log10Into(player.combatShieldMaximum, player.mana);
+    writeNumber(scratch.productionModifier, equipmentMaximumShieldMultiplier());
+    mulUS(player.combatShieldMaximum, scratch.productionModifier);
     log10Into(player.combatShield, player.mana);
+    copyInto(player.combatShield, player.combatShieldMaximum);
     resetCombatSpellCosts();
     return true;
 }
 
 export function castCombatSpell(index: i32): bool {
-    if (!isQuestActive() || index < 0 || index >= 3) return false;
+    if (!canCastCombatSpell(index)) return false;
     const cost = combatSpellCost(index);
-    if (!gte(player.mana, cost)) return false;
     divUS(player.mana, cost);
     if (index !== 2) player.combatUsedNonFreeze = true;
     writeNumber(scratch.productionModifier, 1.1);
     powUS(cost, scratch.productionModifier);
-    const scalingExponent = index === 0 ? 10 : index === 1 ? 20 : hasTierOneAchievement(32) ? 10 : 30;
+    const scalingExponent = combatSpellScalingExponent(index);
     writeDecimal(scratch.productionModifier, 1, 1, scalingExponent);
     mulUS(cost, scratch.productionModifier);
-    subUS(player.wolfineHealth, combatSpellDamage(index));
+    writeNumber(scratch.currencyGain, combatSpellDamage(index));
+    writeNumber(scratch.productionModifier, equipmentBattleDamageMultiplier());
+    mulUS(scratch.currencyGain, scratch.productionModifier);
+    subUS(player.enemyHealth, scratch.currencyGain);
     if (index === 2) writeNumber(player.combatFreezeTurns, 2);
-    if (lte(player.wolfineHealth, 0)) {
+    if (lte(player.enemyHealth, 0)) {
         finishQuest(true);
         return true;
     }
@@ -711,7 +821,8 @@ function wolfineTurn(): void {
     }
     const rankMultiplier = 1 << questRank(activeQuestIndex());
     const damage = (20 + nextCombatRandom(31)) * rankMultiplier;
-    subUS(player.combatShield, damage);
+    writeNumber(scratch.productionModifier, <f64>damage * equipmentDamageTakenMultiplier());
+    subUS(player.combatShield, scratch.productionModifier);
     if (lte(player.combatShield, 0)) finishQuest(false);
 }
 
@@ -729,9 +840,11 @@ function finishQuest(victory: bool): void {
         const completedQuest = questDefinitionId(completedSlot);
         if (questRank(completedSlot) >= 2 && !player.combatUsedNonFreeze) unlockTierOneAchievement(32);
         const unlockedDRankAchievement = questRank(completedSlot) >= 2 && unlockTierOneAchievement(39);
+        if (questRank(completedSlot) >= 3) unlockTierOneAchievement(49);
         lastCompletedQuestDefinition = completedQuest;
         if (completedSlot >= 0 && completedSlot < QUEST_SLOT_COUNT) questSlotLocked[completedSlot] = 1;
         awardQuestRewards(completedQuest);
+        awardQuestEquipment(questRank(completedSlot));
         if (unlockedDRankAchievement) placeInventoryItems(INVENTORY_POTION_OF_SPEED_III, 5);
         lastWolfFurReward = rewardAmountForItem(INVENTORY_WOLF_FUR);
         lastPotionReward = rewardAmountForItem(INVENTORY_POTION_OF_SPEED);
@@ -739,11 +852,12 @@ function finishQuest(victory: bool): void {
         lastPotionDropped = rewardDroppedForItem(INVENTORY_POTION_OF_SPEED);
         questResultPending = true;
         addUS(player.statistics_questsCompleted, 1);
-        guildExperience += Math.pow(2, questRank(completedSlot) + 1);
         const currentRank = <i32>toNumber(player.guildRank);
-        const requirement = currentRank === 0 ? 25 : currentRank === 1 ? 200 : Infinity;
+        addGuildExperience(questRank(completedSlot), currentRank);
+        const requirement = guildExperienceRequirement();
         if (guildExperience >= requirement) {
             writeNumber(player.guildRank, currentRank + 1);
+            resetGuildExperienceByQuestRank();
             unlockTierOneAchievement(29);
             refreshQuestDefinitions();
         }
@@ -751,22 +865,75 @@ function finishQuest(victory: bool): void {
         if (gte(player.statistics_questsCompleted, 10)) unlockTierOneAchievement(28);
     }
     writeNumber(player.activeQuest, NO_ACTIVE_QUEST);
-    writeNumber(player.wolfineHealth, 0);
-    writeNumber(player.combatShield, 0);
+    writeNumber(player.enemyHealth, 0);
+    if (victory && hasMireguardSetBonus()) {
+        copyInto(player.combatShield, player.combatShieldMaximum);
+        writeNumber(scratch.productionModifier, 0.2);
+        mulUS(player.combatShield, scratch.productionModifier);
+    } else {
+        writeNumber(player.combatShield, 0);
+    }
     writeNumber(player.combatFreezeTurns, 0);
     player.combatUsedNonFreeze = false;
     resetCombatSpellCosts();
 }
 
+function addGuildExperience(completedQuestRank: i32, currentRank: i32): void {
+    const earnedExperience = Math.pow(2, completedQuestRank + 1);
+    if (completedQuestRank >= currentRank) {
+        guildExperience += earnedExperience;
+        return;
+    }
+    const requirement = guildExperienceRequirement();
+    const maximumContribution = requirement * (completedQuestRank === currentRank - 1 ? 0.5 : 0.25);
+    const availableContribution = Math.max(0, maximumContribution - guildExperienceByQuestRank[completedQuestRank]);
+    const awardedExperience = Math.min(earnedExperience, availableContribution);
+    guildExperienceByQuestRank[completedQuestRank] += awardedExperience;
+    guildExperience += awardedExperience;
+}
+
+function resetGuildExperienceByQuestRank(): void {
+    for (let rank: i32 = 0; rank < GUILD_RANK_COUNT; rank++) guildExperienceByQuestRank[rank] = 0;
+}
+
 function refreshQuestDefinitions(): void {
     const rank = <i32>toNumber(player.guildRank);
-    const maximumId = rank >= 2 ? 21 : rank >= 1 ? 16 : 11;
+    const minimumId = minimumQuestDefinitionId(rank);
+    const maximumId = maximumQuestDefinitionId(rank);
     for (let slot: i32 = 0; slot < QUEST_SLOT_COUNT; slot++) {
         let id: i32;
-        do id = nextCombatRandom(maximumId + 1);
+        do id = minimumId + nextCombatRandom(maximumId - minimumId + 1);
         while (questDefinitionAlreadyUsed(slot, id));
         questDefinitionIds[slot] = id;
     }
+}
+
+function questDefinitionsMatchCurrentRank(): bool {
+    const rank = <i32>toNumber(player.guildRank);
+    const minimumId = minimumQuestDefinitionId(rank);
+    const maximumId = maximumQuestDefinitionId(rank);
+    for (let slot: i32 = 0; slot < QUEST_SLOT_COUNT; slot++) {
+        const id = questDefinitionIds[slot];
+        if (id < minimumId || id > maximumId) return false;
+    }
+    return true;
+}
+
+function minimumQuestDefinitionId(rank: i32): i32 {
+    if (rank >= 6) return 27;
+    if (rank >= 5) return 22;
+    if (rank >= 4) return 17;
+    if (rank >= 3) return 12;
+    return 0;
+}
+
+function maximumQuestDefinitionId(rank: i32): i32 {
+    if (rank >= 5) return 36;
+    if (rank >= 4) return 31;
+    if (rank >= 3) return 26;
+    if (rank >= 2) return 21;
+    if (rank >= 1) return 16;
+    return 11;
 }
 
 function questDefinitionAlreadyUsed(slot: i32, id: i32): bool {
@@ -790,6 +957,28 @@ function awardQuestRewards(quest: i32): void {
         lastRewardAmounts[reward] = amount;
         lastRewardDropped[reward] = amount - placeInventoryItems(<u8>item, amount);
     }
+}
+
+function awardQuestEquipment(completedQuestRank: i32): void {
+    if (completedQuestRank < 1 || !hasGuildShopUpgrade(5)) return;
+    const reward = MAX_QUEST_REWARDS - 1;
+    const item = randomEquipmentForQuestRank(completedQuestRank);
+    lastRewardItems[reward] = item;
+    lastRewardAmounts[reward] = 1;
+    lastRewardDropped[reward] = 1 - placeInventoryItems(<u8>item, 1);
+}
+
+function randomEquipmentForQuestRank(completedQuestRank: i32): i32 {
+    if (completedQuestRank >= 8) {
+        return INVENTORY_ARMOR_START + 8 * INVENTORY_ARMOR_ITEMS_PER_SET
+            + nextCombatRandom(2 * INVENTORY_ARMOR_ITEMS_PER_SET);
+    }
+    if (completedQuestRank === 7) {
+        return INVENTORY_ARMOR_START + 6 * INVENTORY_ARMOR_ITEMS_PER_SET
+            + nextCombatRandom(2 * INVENTORY_ARMOR_ITEMS_PER_SET);
+    }
+    return INVENTORY_ARMOR_START + (completedQuestRank - 1) * INVENTORY_ARMOR_ITEMS_PER_SET
+        + nextCombatRandom(INVENTORY_ARMOR_ITEMS_PER_SET);
 }
 
 function questRewardItem(quest: i32, reward: i32): i32 {
@@ -875,7 +1064,14 @@ function clearInventoryItem(position: i32, item: u8): void {
 }
 
 function isInventoryItem(item: u8): bool {
-    return item >= INVENTORY_WOLF_FUR && item <= 25;
+    return item !== INVENTORY_EMPTY
+        && inventoryItemWidths[item] > 0
+        && inventoryItemHeights[item] > 0;
+}
+
+function isArmor(item: u8): bool {
+    const itemId = <i32>item;
+    return itemId >= INVENTORY_ARMOR_START && itemId < INVENTORY_ARMOR_START + INVENTORY_ARMOR_ITEM_COUNT;
 }
 
 export function inventoryItemSellMinimum(item: i32): i32 {
@@ -919,6 +1115,9 @@ function combatSpellCost(index: i32): i32 {
         case 0: return player.fireballCost;
         case 1: return player.whirlwindCost;
         case 2: return player.freezeCost;
+        case 3: return advancedCombatSpellCosts[0];
+        case 4: return advancedCombatSpellCosts[1];
+        case 5: return advancedCombatSpellCosts[2];
         default: return 0;
     }
 }
@@ -928,22 +1127,41 @@ function combatSpellDamage(index: i32): i32 {
         case 0: return 35;
         case 1: return 60;
         case 2: return 10;
+        case 3: return 120;
+        case 4: return 250;
+        case 5: return 500;
         default: return 0;
     }
+}
+
+function combatSpellScalingExponent(index: i32): f64 {
+    if (index === 0) return 10;
+    if (index === 1) return 20;
+    if (index === 2) return hasTierOneAchievement(32) ? 10 : 30;
+    if (index === 3) return 30;
+    if (index === 4) return 40;
+    return 50;
 }
 
 export function resetCombatSpellCosts(): void {
     writeDecimal(player.fireballCost, 1, 1, 40);
     writeDecimal(player.whirlwindCost, 1, 1, 80);
     writeDecimal(player.freezeCost, 1, 1, 120);
+    writeDecimal(advancedCombatSpellCosts[0], 1, 1, 160);
+    writeDecimal(advancedCombatSpellCosts[1], 1, 1, 220);
+    writeDecimal(advancedCombatSpellCosts[2], 1, 1, 300);
 }
 
 /** [/WASM] */
 
+GUILD_RANK_EXPERIENCE_REQUIREMENTS.forEach((requirement, rank) => {
+    configureGuildRankExperienceRequirement(rank, requirement);
+});
 initializeQuestBoard();
 initializePotionSpeedTimers(...POTION_SPEED_TIMER_HANDLES);
 initializePotionSpeedIITimers(...POTION_SPEED_II_TIMER_HANDLES);
 initializePotionSpeedIIITimers(...POTION_SPEED_III_TIMER_HANDLES);
+initializeAdvancedCombatSpellCosts(...ADVANCED_COMBAT_SPELL_COST_HANDLES);
 for (const item of INVENTORY_ITEMS) {
     configureInventoryItem(item.id, item.width, item.height);
     configureInventoryItemSellPrice(item.id, item.sellPrice[0], item.sellPrice[1]);

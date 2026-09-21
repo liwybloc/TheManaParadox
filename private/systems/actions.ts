@@ -76,8 +76,8 @@ export function buyMaxAllTierOne(): void {
 }
 
 export function castAll(): void {
-    namedWasm.castSpeedMax();
     namedWasm.buyMaxAllTierOne();
+    namedWasm.castSpeedMax();
 }
 
 export function sealMeridians(): void {

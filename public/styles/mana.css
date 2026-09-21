@@ -5,8 +5,14 @@
   gap: 12px;
   margin-bottom: 10px;
 }
-.cast-controls .cast-all { grid-column: 1; justify-self: start; }
-.cast-controls .cast-mode { grid-column: 3; justify-self: end; }
+.cast-controls .cast-all {
+  grid-column: 1;
+  justify-self: start;
+}
+.cast-controls .cast-mode {
+  grid-column: 3;
+  justify-self: end;
+}
 .useful-stats {
   grid-column: 2;
   display: flex;
@@ -15,7 +21,10 @@
   justify-self: center;
   text-align: center;
 }
-.current-game-speed { color: #b9ddfa; font-size: 12px; }
+.current-game-speed {
+  color: #b9ddfa;
+  font-size: 12px;
+}
 .mana-per-second {
   color: #c49cff;
   font-size: 16px;
@@ -267,13 +276,34 @@
   box-shadow: 0 0 5px #39baff;
   animation: courage-spark 1.6s linear infinite;
 }
-.courage-sparks i:nth-child(1) { left: 9%; animation-delay: -0.2s; }
-.courage-sparks i:nth-child(2) { left: 23%; animation-delay: -1.1s; }
-.courage-sparks i:nth-child(3) { left: 38%; animation-delay: -0.6s; }
-.courage-sparks i:nth-child(4) { left: 51%; animation-delay: -1.4s; }
-.courage-sparks i:nth-child(5) { left: 65%; animation-delay: -0.9s; }
-.courage-sparks i:nth-child(6) { left: 79%; animation-delay: -0.4s; }
-.courage-sparks i:nth-child(7) { left: 91%; animation-delay: -1.25s; }
+.courage-sparks i:nth-child(1) {
+  left: 9%;
+  animation-delay: -0.2s;
+}
+.courage-sparks i:nth-child(2) {
+  left: 23%;
+  animation-delay: -1.1s;
+}
+.courage-sparks i:nth-child(3) {
+  left: 38%;
+  animation-delay: -0.6s;
+}
+.courage-sparks i:nth-child(4) {
+  left: 51%;
+  animation-delay: -1.4s;
+}
+.courage-sparks i:nth-child(5) {
+  left: 65%;
+  animation-delay: -0.9s;
+}
+.courage-sparks i:nth-child(6) {
+  left: 79%;
+  animation-delay: -0.4s;
+}
+.courage-sparks i:nth-child(7) {
+  left: 91%;
+  animation-delay: -1.25s;
+}
 @keyframes courage-aura-pulse {
   from {
     opacity: 0.42;
@@ -291,13 +321,17 @@
     opacity: 0;
     transform: translate(0, 4px) scale(0.6);
   }
-  20% { opacity: 1; }
+  20% {
+    opacity: 1;
+  }
   100% {
     opacity: 0;
     transform: translate(8px, -34px) scale(0);
   }
 }
-.mana-panel { position: relative; }
+.mana-panel {
+  position: relative;
+}
 .potion-effects {
   position: absolute;
   top: 0;
@@ -311,12 +345,22 @@
   color: #b9ddfa;
   font-size: 11px;
 }
-.potion-effects strong { color: #d5ebff; font-size: 12px; }
-.potion-effects span { line-height: 1.35; }
+.potion-effects strong {
+  color: #d5ebff;
+  font-size: 12px;
+}
+.potion-effects span {
+  line-height: 1.35;
+}
 @media (max-width: 1480px) {
   .potion-effects {
     position: static;
     width: min(100%, 360px);
     margin: 0 0 12px;
   }
+}
+
+.cost-increase-warning {
+  text-align: center;
+  color: #766cff;
 }

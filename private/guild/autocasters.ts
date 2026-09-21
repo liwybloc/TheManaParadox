@@ -3,7 +3,7 @@ import { canCondense } from "../game/condensed.js";
 import { increaseMatrix, sealMeridians } from "../game/progression.js";
 import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplier, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
 import type { Player } from "../core/player.js";
-import { checkCoinAchievements, unlockTierOneAchievement } from "../game/achievements.js";
+import { checkCoinAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
 
 declare const player: Player;
 
@@ -199,7 +199,8 @@ function updateWage(caster: i32, deltaSeconds: f64): void {
 }
 
 function updateAction(caster: i32, deltaSeconds: f64): void {
-    actionCooldowns[caster] = Math.max(0, actionCooldowns[caster] - deltaSeconds);
+    const speedMultiplier: f64 = hasTierOneAchievement(37) ? 2 : 1;
+    actionCooldowns[caster] = Math.max(0, actionCooldowns[caster] - deltaSeconds * speedMultiplier);
     if (actionCooldowns[caster] > 0) return;
     const task = assignments[caster];
     let acted = false;

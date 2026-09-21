@@ -12,6 +12,8 @@ export interface InventoryItemDefinition {
     readonly height: number;
     readonly style: string;
     readonly sellPrice: readonly [number, number];
+    readonly equipmentSlot?: number;
+    readonly armorSet?: string;
     readonly use?: InventoryItemUse;
 }
 
@@ -49,20 +51,88 @@ export enum Items {
     PHANTOM_SILK = 23,
     ARCANE_CRYSTAL = 24,
     DRAGON_GLASS = 25,
+
+    APPRENTICE_HELMET = 26,
+    APPRENTICE_CHESTPLATE = 27,
+    APPRENTICE_LEGGINGS = 28,
+    APPRENTICE_BOOTS = 29,
+    IRONBARK_HELMET = 30,
+    IRONBARK_CHESTPLATE = 31,
+    IRONBARK_LEGGINGS = 32,
+    IRONBARK_BOOTS = 33,
+    WOLFINE_HELMET = 34,
+    WOLFINE_CHESTPLATE = 35,
+    WOLFINE_LEGGINGS = 36,
+    WOLFINE_BOOTS = 37,
+    MIREGUARD_HELMET = 38,
+    MIREGUARD_CHESTPLATE = 39,
+    MIREGUARD_LEGGINGS = 40,
+    MIREGUARD_BOOTS = 41,
+    RUNESTONE_HELMET = 42,
+    RUNESTONE_CHESTPLATE = 43,
+    RUNESTONE_LEGGINGS = 44,
+    RUNESTONE_BOOTS = 45,
+    WISPWEAVE_HELMET = 46,
+    WISPWEAVE_CHESTPLATE = 47,
+    WISPWEAVE_LEGGINGS = 48,
+    WISPWEAVE_BOOTS = 49,
+    ARCANE_HELMET = 50,
+    ARCANE_CHESTPLATE = 51,
+    ARCANE_LEGGINGS = 52,
+    ARCANE_BOOTS = 53,
+    PHANTOM_HELMET = 54,
+    PHANTOM_CHESTPLATE = 55,
+    PHANTOM_LEGGINGS = 56,
+    PHANTOM_BOOTS = 57,
+    WYRMSCALE_HELMET = 58,
+    WYRMSCALE_CHESTPLATE = 59,
+    WYRMSCALE_LEGGINGS = 60,
+    WYRMSCALE_BOOTS = 61,
+    DRAGON_GLASS_HELMET = 62,
+    DRAGON_GLASS_CHESTPLATE = 63,
+    DRAGON_GLASS_LEGGINGS = 64,
+    DRAGON_GLASS_BOOTS = 65,
+
+    ENCHANTED_THREAD = 66,
+    SOUL_FRAGMENT = 67,
+    DRAGON_HEART = 68,
 }
 
-type InventoryItemData = Omit<InventoryItemDefinition, "sellPrice">;
+const ARMOR_SLOTS = [
+    { name: "Helmet", width: 1, height: 1 },
+    { name: "Chestplate", width: 2, height: 2 },
+    { name: "Leggings", width: 2, height: 2 },
+    { name: "Boots", width: 2, height: 1 },
+] as const;
 
-const HIGH_TIER_ITEMS = new Set<number>([Items.POTION_SPEED_II, Items.MANA_CORE, Items.REDSTONE, Items.GLOWSTONE, Items.POTION_SPEED_III, Items.WYRM_SCALE, Items.TROLL_HEART, Items.PHANTOM_SILK, Items.ARCANE_CRYSTAL, Items.DRAGON_GLASS]);
-const MID_TIER_ITEMS = new Set<number>([Items.OGRE_TOOTH, Items.DIRE_WOLFINE_FUR, Items.HARPY_FEATHER]);
+const ARMOR_SET_DATA = [
+    { baseId: Items.APPRENTICE_HELMET, name: "Apprentice", style: "armor-apprentice", description: "Simple enchanted cloth the guild issues to novice adventurers.", sellPrice: [2, 3] },
+    { baseId: Items.IRONBARK_HELMET, name: "Ironbark", style: "armor-ironbark", description: "Living ironbark plates joined with resilient vines.", sellPrice: [3, 5] },
+    { baseId: Items.WOLFINE_HELMET, name: "Wolfine", style: "armor-wolfine", description: "Warm hide armor reinforced with sharpened bone.", sellPrice: [4, 7] },
+    { baseId: Items.MIREGUARD_HELMET, name: "Mireguard", style: "armor-mireguard", description: "Alchemically treated armor made for poisonous marshes.", sellPrice: [5, 9] },
+    { baseId: Items.RUNESTONE_HELMET, name: "Runestone", style: "armor-runestone", description: "Heavy stone armor held together by glowing runes.", sellPrice: [7, 12] },
+    { baseId: Items.WISPWEAVE_HELMET, name: "Wispweave", style: "armor-wispweave", description: "Weightless fabric woven through strands of wisp essence.", sellPrice: [9, 15] },
+    { baseId: Items.ARCANE_HELMET, name: "Arcane", style: "armor-arcane", description: "Refined armor that hums with concentrated mana.", sellPrice: [12, 19] },
+    { baseId: Items.PHANTOM_HELMET, name: "Phantom", style: "armor-phantom", description: "Ethereal armor that flickers between shadow and substance.", sellPrice: [16, 24] },
+    { baseId: Items.WYRMSCALE_HELMET, name: "Wyrmscale", style: "armor-wyrmscale", description: "Wyrm scales tempered against magical flame...", sellPrice: [21, 30] },
+    { baseId: Items.DRAGON_GLASS_HELMET, name: "Dragon Glass", style: "armor-dragon-glass", description: "Razor glass forged in draconic!! heat.", sellPrice: [27, 38] },
+] as const;
 
-function sellPriceFor(item: number): readonly [number, number] {
-    if (HIGH_TIER_ITEMS.has(item)) return [2, 5];
-    if (MID_TIER_ITEMS.has(item)) return [2, 3];
-    return [1, 2];
-}
+const ARMOR_ITEM_DATA: readonly InventoryItemDefinition[] = ARMOR_SET_DATA.flatMap((set) =>
+    ARMOR_SLOTS.map((slot, index) => ({
+        id: set.baseId + index,
+        name: `${set.name} ${slot.name}`,
+        description: `${set.description} Fits the ${slot.name.toLowerCase()} equipment slot.`,
+        width: slot.width,
+        height: slot.height,
+        style: set.style,
+        sellPrice: set.sellPrice,
+        equipmentSlot: index,
+        armorSet: set.name,
+    }))
+);
 
-const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
+const INVENTORY_ITEM_DATA = ([
 	{
 		id: Items.POTION_SPEED_I,
 		name: "Potion of Speed",
@@ -70,6 +140,7 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		width: 1,
 		height: 1,
 		style: "potion-speed",
+		sellPrice: [1, 2],
 		use: {
 			label: "Drink",
 			action: "drink-speed-potion",
@@ -83,6 +154,7 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		width: 1,
 		height: 1,
 		style: "potion-speed",
+		sellPrice: [2, 5],
 		use: {
 			label: "Drink",
 			action: "drink-speed-potion",
@@ -96,6 +168,7 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
         width: 1,
         height: 1,
         style: "potion-speed",
+        sellPrice: [2, 5],
         use: { label: "Drink", action: "drink-speed-potion", enabled: true },
     },
     {
@@ -105,6 +178,7 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		width: 2,
 		height: 1,
 		style: "wolfine-fur",
+		sellPrice: [1, 2],
     },
 	{
 		id: Items.SLIME_BALL,
@@ -112,7 +186,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A wobbling clump left behind by a slime.",
 		width: 1,
 		height: 1,
-		style: "slime-ball"
+		style: "slime-ball",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.GOBLIN_EAR,
@@ -120,7 +195,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "Proof that a goblin was driven from the road.",
 		width: 1,
 		height: 1,
-		style: "goblin-ear"
+		style: "goblin-ear",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.GIANT_RAT_TAIL,
@@ -128,7 +204,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A surprisingly sturdy giant rat tail.",
 		width: 2,
 		height: 2,
-		style: "rat-tail"
+		style: "rat-tail",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.WISP_ESSENCE,
@@ -136,7 +213,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "Faint mana gathered from a dispersed wisp.",
 		width: 1,
 		height: 2,
-		style: "wisp-essence"
+		style: "wisp-essence",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.OLD_BONE,
@@ -144,7 +222,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A bone recovered from a defeated skeleton.",
 		width: 1,
 		height: 1,
-		style: "old-bone"
+		style: "old-bone",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.CAVE_BAT_WING,
@@ -152,7 +231,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A leathery wing from a cave bat.",
 		width: 1,
 		height: 1,
-		style: "bat-wing"
+		style: "bat-wing",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.SPRIGGAN_TWIG,
@@ -160,7 +240,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A living twig cut from a spriggan.",
 		width: 1,
 		height: 1,
-		style: "spriggan-twig"
+		style: "spriggan-twig",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.ROCKLING_SHARD,
@@ -168,7 +249,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A sharp fragment of animated stone.",
 		width: 1,
 		height: 1,
-		style: "rockling-shard"
+		style: "rockling-shard",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.SHADE_RESIDUE,
@@ -176,7 +258,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "Cold residue left by a banished shade.",
 		width: 1,
 		height: 1,
-		style: "shade-residue"
+		style: "shade-residue",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.MIRE_TOAD_GLAND,
@@ -184,7 +267,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "An alchemical gland from a mire toad.",
 		width: 1,
 		height: 1,
-		style: "toad-gland"
+		style: "toad-gland",
+		sellPrice: [1, 2],
 	},
 	{
 		id: Items.OGRE_TOOTH,
@@ -192,7 +276,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A heavy tooth from a defeated ogre.",
 		width: 2,
 		height: 2,
-		style: "ogre-tooth"
+		style: "ogre-tooth",
+		sellPrice: [2, 3],
 	},
 	{
 		id: Items.DIRE_WOLFINE_FUR,
@@ -200,7 +285,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "Dense fur from a dire Wolfine.",
 		width: 3,
 		height: 2,
-		style: "dire-wolfine-fur"
+		style: "dire-wolfine-fur",
+		sellPrice: [2, 3],
 	},
 	{
 		id: Items.HARPY_FEATHER,
@@ -208,7 +294,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "A long feather carrying a trace of wind mana.",
 		width: 3,
 		height: 1,
-		style: "harpy-feather"
+		style: "harpy-feather",
+		sellPrice: [2, 3],
 	},
 	{
 		id: Items.MANA_CORE,
@@ -216,7 +303,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "The condensed core of a disabled mana golem.",
 		width: 2,
 		height: 2,
-		style: "inventory-mana-core"
+		style: "inventory-mana-core",
+		sellPrice: [2, 5],
 	},
 	{
 		id: Items.REDSTONE,
@@ -224,7 +312,8 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "Crimson magical dust carried by witches.",
 		width: 1,
 		height: 1,
-		style: "redstone"
+		style: "redstone",
+		sellPrice: [2, 5],
 	},
 	{
 		id: Items.GLOWSTONE,
@@ -232,18 +321,86 @@ const INVENTORY_ITEM_DATA: readonly InventoryItemData[] = [
 		description: "Warm luminous dust carried by witches.",
 		width: 1,
 		height: 1,
-		style: "glowstone"
+		style: "glowstone",
+		sellPrice: [2, 5],
 	},
-    { id: Items.WYRM_SCALE, name: "Wyrm Scale", description: "A resilient scale from a young wyrm.", width: 2, height: 2, style: "wyrm-scale" },
-    { id: Items.TROLL_HEART, name: "Troll Heart", description: "A dense heart steeped in regenerative mana.", width: 2, height: 2, style: "troll-heart" },
-    { id: Items.PHANTOM_SILK, name: "Phantom Silk", description: "Nearly weightless silk left by a phantom.", width: 2, height: 1, style: "phantom-silk" },
-    { id: Items.ARCANE_CRYSTAL, name: "Arcane Crystal", description: "A crystal saturated with refined magic.", width: 1, height: 2, style: "arcane-crystal" },
-    { id: Items.DRAGON_GLASS, name: "Dragon Glass", description: "Heat-fused glass from a draconic lair.", width: 1, height: 2, style: "dragon-glass" },
-];
+    {
+		id: Items.WYRM_SCALE,
+		name: "Wyrm Scale",
+		description: "A resilient scale from a young wyrm.",
+		width: 2,
+		height: 2,
+		style: "wyrm-scale",
+		sellPrice: [2, 5],
+	},
+	{
+		id: Items.TROLL_HEART,
+		name: "Troll Heart",
+		description: "A dense heart steeped in regenerative mana.",
+		width: 2,
+		height: 2,
+		style: "troll-heart",
+		sellPrice: [2, 5],
+	},
+	{
+		id: Items.PHANTOM_SILK,
+		name: "Phantom Silk",
+		description: "Nearly weightless silk left by a phantom.",
+		width: 2,
+		height: 1,
+		style: "phantom-silk",
+		sellPrice: [2, 5],
+	},
+	{
+		id: Items.ARCANE_CRYSTAL,
+		name: "Arcane Crystal",
+		description: "A crystal saturated with refined magic.",
+		width: 1,
+		height: 2,
+		style: "arcane-crystal",
+		sellPrice: [2, 5],
+	},
+    {
+		id: Items.DRAGON_GLASS,
+		name: "Dragon Glass",
+		description: "Heat-fused glass from a draconic lair.",
+		width: 1,
+		height: 2,
+		style: "dragon-glass",
+		sellPrice: [2, 5],
+	},
+    {
+        id: Items.ENCHANTED_THREAD,
+        name: "Enchanted Thread",
+        description: "A durable thread spun from concentrated mana.",
+        width: 1,
+        height: 1,
+        style: "enchanted-thread",
+        sellPrice: [8, 14],
+    },
+    {
+        id: Items.SOUL_FRAGMENT,
+        name: "Soul Fragment",
+        description: "A cold fragment left by a powerful incorporeal enemy.",
+        width: 1,
+        height: 1,
+        style: "soul-fragment",
+        sellPrice: [16, 26],
+    },
+    {
+        id: Items.DRAGON_HEART,
+        name: "Dragon Heart",
+        description: "A blazing heart saturated with ancient draconic mana.",
+        width: 2,
+        height: 2,
+        style: "dragon-heart",
+        sellPrice: [35, 55],
+    },
+    ...ARMOR_ITEM_DATA,
+]) as const satisfies readonly InventoryItemDefinition[];
 
-export const INVENTORY_ITEMS: readonly InventoryItemDefinition[] = INVENTORY_ITEM_DATA.map((item) => ({
-    ...item,
-    sellPrice: sellPriceFor(item.id),
-}));
+INVENTORY_ITEM_DATA.length;
+
+export const INVENTORY_ITEMS: readonly InventoryItemDefinition[] = INVENTORY_ITEM_DATA;
 
 export const INVENTORY_ITEMS_BY_ID = new Map(INVENTORY_ITEMS.map((item) => [item.id, item]));

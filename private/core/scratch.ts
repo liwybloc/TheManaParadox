@@ -9,6 +9,7 @@ export interface Scratch {
     productionModifier: i32;
     purificationRelativeIncrease: i32;
     tierOneDisplayMultiplier: i32;
+    tierOneCostAcceleration: i32;
     condenseGain: i32;
     gameSpeed: i32;
     effectiveGameSpeed: i32;
@@ -16,6 +17,7 @@ export interface Scratch {
     oomPerSecond: i32;
     updatesPerSecond: i32;
     enemyMaximumHealth: i32;
+    D10000: i32;
 }
 
 export const SCRATCH_HANDLES: Scratch = {
@@ -27,6 +29,7 @@ export const SCRATCH_HANDLES: Scratch = {
     productionModifier: createZero(),
     purificationRelativeIncrease: createZero(),
     tierOneDisplayMultiplier: createDecimal(1, 0, 1),
+    tierOneCostAcceleration: createZero(),
     condenseGain: createZero(),
     gameSpeed: createDecimal(1, 0, 1),
     effectiveGameSpeed: createDecimal(1, 0, 1),
@@ -34,6 +37,7 @@ export const SCRATCH_HANDLES: Scratch = {
     oomPerSecond: createZero(),
     updatesPerSecond: createZero(),
     enemyMaximumHealth: createZero(),
+    D10000: createDecimal(1, 0, 10000),
 };
 
 /** [WASM] */
@@ -47,6 +51,7 @@ export const scratch: Scratch = {
     productionModifier: 0,
     purificationRelativeIncrease: 0,
     tierOneDisplayMultiplier: 0,
+    tierOneCostAcceleration: 0,
     condenseGain: 0,
     gameSpeed: 0,
     effectiveGameSpeed: 0,
@@ -54,6 +59,7 @@ export const scratch: Scratch = {
     oomPerSecond: 0,
     updatesPerSecond: 0,
     enemyMaximumHealth: 0,
+    D10000: 0,
 };
 
 export function initializeScratch(
@@ -65,6 +71,7 @@ export function initializeScratch(
     productionModifier: i32,
     purificationRelativeIncrease: i32,
     tierOneDisplayMultiplier: i32,
+    tierOneCostAcceleration: i32,
     condenseGain: i32,
     gameSpeed: i32,
     effectiveGameSpeed: i32,
@@ -72,6 +79,7 @@ export function initializeScratch(
     oomPerSecond: i32,
     updateRate: i32,
     enemyMaximumHealth: i32,
+    D10000: i32,
 ): void {
     scratch.currencyGain = currencyGain;
     scratch.tierOneSeconds = tierOneSeconds;
@@ -81,6 +89,7 @@ export function initializeScratch(
     scratch.productionModifier = productionModifier;
     scratch.purificationRelativeIncrease = purificationRelativeIncrease;
     scratch.tierOneDisplayMultiplier = tierOneDisplayMultiplier;
+    scratch.tierOneCostAcceleration = tierOneCostAcceleration;
     scratch.condenseGain = condenseGain;
     scratch.gameSpeed = gameSpeed;
     scratch.effectiveGameSpeed = effectiveGameSpeed;
@@ -88,6 +97,7 @@ export function initializeScratch(
     scratch.oomPerSecond = oomPerSecond;
     scratch.updatesPerSecond = updateRate;
     scratch.enemyMaximumHealth = enemyMaximumHealth;
+    scratch.D10000 = D10000;
 }
 
 /** [/WASM] */
@@ -101,6 +111,7 @@ initializeScratch(
     SCRATCH_HANDLES.productionModifier,
     SCRATCH_HANDLES.purificationRelativeIncrease,
     SCRATCH_HANDLES.tierOneDisplayMultiplier,
+    SCRATCH_HANDLES.tierOneCostAcceleration,
     SCRATCH_HANDLES.condenseGain,
     SCRATCH_HANDLES.gameSpeed,
     SCRATCH_HANDLES.effectiveGameSpeed,
@@ -108,4 +119,5 @@ initializeScratch(
     SCRATCH_HANDLES.oomPerSecond,
     SCRATCH_HANDLES.updatesPerSecond,
     SCRATCH_HANDLES.enemyMaximumHealth,
+    SCRATCH_HANDLES.D10000,
 );

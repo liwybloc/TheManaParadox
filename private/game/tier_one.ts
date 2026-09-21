@@ -1,4 +1,5 @@
 import {
+    addInto,
     addUS,
     copyInto,
     divInto,
@@ -22,7 +23,7 @@ import {
 } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
-import { crystalRewardHandle, hasCompletedCrystal, isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isSpecificCrystalActive } from "./crystals.js";
+import { crystalEffectHandle, crystalRewardHandle, hasCompletedCrystal, isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isSpecificCrystalActive } from "./crystals.js";
 import { applyManaGainModifiers } from "./currencies.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -46,6 +47,13 @@ const PURIFICATION_SOFTCAP_MULTIPLIER: i32 = 350000;
 const PURIFICATION_SOFTCAP_POWER: f64 = 0.5;
 const CONDENSED_PRODUCER_MULTIPLIER: i32 = 2;
 const CONDENSED_STAFF_MULTIPLIER: i32 = 5;
+
+// Past this many purchases, each purchase's cost growth rate itself grows exponentially.
+// A large rate keeps the transition gradual instead of immediately making the cost double-exponential.
+const EXPONENTIAL_COST_START_PURCHASES: i32 = 10000;
+const EXPONENTIAL_COST_RATE: i32 = 1000;
+const LOG10_E: f64 = 0.4342944819032518;
+const LN_10: f64 = 2.302585092994046;
 
 export function refreshTierOneDerivedState(): void {
     for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
@@ -249,27 +257,59 @@ export function buyMaxTierOne(index: i32): bool {
     if (!gte(player.mana, cost)) return false;
     recordProducerBoost(index);
 
-    const scalingExponent = index + 1;
-    powInto(scratch.tierOneSeconds, 10, scalingExponent);
-    subInto(scratch.productionModifier, scratch.tierOneSeconds, 1);
-    multiplyInto(scratch.tierOneProduction, player.mana, scratch.productionModifier);
-    addUS(divUS(scratch.tierOneProduction, cost), 1);
-    log10Into(scratch.tierOneProduction, scratch.tierOneProduction);
-    divUS(scratch.tierOneProduction, scalingExponent);
-    floorInto(scratch.tierOneExponent, scratch.tierOneProduction);
+    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    if (gte(tierOneBoughtHandle(index), scratch.tierOneCostAcceleration)) {
+        buyMaxTierOneAccelerated(index);
+    } else {
+        const scalingExponent = index + 1;
+        powInto(scratch.tierOneSeconds, 10, scalingExponent);
+        subInto(scratch.productionModifier, scratch.tierOneSeconds, 1);
+        multiplyInto(scratch.tierOneProduction, player.mana, scratch.productionModifier);
+        addUS(divUS(scratch.tierOneProduction, cost), 1);
+        log10Into(scratch.tierOneProduction, scratch.tierOneProduction);
+        divUS(scratch.tierOneProduction, scalingExponent);
+        floorInto(scratch.tierOneExponent, scratch.tierOneProduction);
 
-    calculateTierOneBulkCost(cost);
-    while (!lte(scratch.tierOneProduction, player.mana)) {
-        subUS(scratch.tierOneExponent, 1);
         calculateTierOneBulkCost(cost);
+        while (!lte(scratch.tierOneProduction, player.mana)) {
+            subUS(scratch.tierOneExponent, 1);
+            calculateTierOneBulkCost(cost);
+        }
+        subUS(player.mana, scratch.tierOneProduction);
+        addUS(tierOneAmountHandle(index), scratch.tierOneExponent);
+        addUS(tierOneBoughtHandle(index), scratch.tierOneExponent);
     }
-    subUS(player.mana, scratch.tierOneProduction);
-    addUS(tierOneAmountHandle(index), scratch.tierOneExponent);
-    addUS(tierOneBoughtHandle(index), scratch.tierOneExponent);
+
     unlockTierOneAchievement(index);
     refreshTierOneCost(index);
     refreshTierOneMultiplier(index);
     return true;
+}
+
+// Once past EXPONENTIAL_COST_START_PURCHASES, cost growth per unit varies, so an exact bulk-sum isn't tractable; approximate total spend as the cost of the last unit bought (agreed with the user).
+// scratch.tierOneExponent tracks the transition index T: the cost register at bought=T is the price of buying the T->T+1 unit, so once the largest affordable T is found, the final bought count is T+1.
+function buyMaxTierOneAccelerated(index: i32): void {
+    const boughtHandle = tierOneBoughtHandle(index);
+
+    log10Into(scratch.tierOneProduction, player.mana);
+    computeTierOneBoughtCountForExponent(scratch.tierOneExponent, index, scratch.tierOneProduction);
+    floorInto(scratch.tierOneExponent, scratch.tierOneExponent);
+    if (!gte(scratch.tierOneExponent, boughtHandle)) return;
+
+    computeTierOneCostExponent(scratch.productionModifier, index, scratch.tierOneExponent);
+    powInto(scratch.tierOneProduction, 10, scratch.productionModifier);
+    while (gt(scratch.tierOneProduction, player.mana) && gte(scratch.tierOneExponent, boughtHandle)) {
+        subUS(scratch.tierOneExponent, 1);
+        computeTierOneCostExponent(scratch.productionModifier, index, scratch.tierOneExponent);
+        powInto(scratch.tierOneProduction, 10, scratch.productionModifier);
+    }
+    if (!gte(scratch.tierOneExponent, boughtHandle)) return;
+
+    subUS(player.mana, scratch.tierOneProduction);
+    addUS(scratch.tierOneExponent, 1);
+    subUS(scratch.tierOneExponent, boughtHandle);
+    addUS(tierOneAmountHandle(index), scratch.tierOneExponent);
+    addUS(tierOneBoughtHandle(index), scratch.tierOneExponent);
 }
 
 function recordProducerBoost(index: i32): void {
@@ -299,19 +339,14 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
     const infinityBoundary = <i32>toNumber(player.mana_circle_tier);
     if (passesLayerBoundary(cost, infinityBoundary)) return 0;
 
-    const scalingExponent = index + 1;
-    multiplyInto(scratch.tierOneExponent, tierOneBoughtHandle(index), scalingExponent);
-    addUS(scratch.tierOneExponent, 1 << index);
-    if (gt(tierOneBoughtHandle(index), 0)) {
-        subInto(scratch.productionModifier, scratch.tierOneExponent, scalingExponent);
-    } else {
-        writeNumber(scratch.productionModifier, 0);
-    }
+    computeTierOneCostExponent(scratch.tierOneExponent, index, tierOneBoughtHandle(index));
+    addInto(scratch.tierOneProduction, tierOneBoughtHandle(index), 1);
+    computeTierOneCostExponent(scratch.productionModifier, index, scratch.tierOneProduction);
 
     log10Into(scratch.tierOneProduction, player.mana);
-    subUS(scratch.tierOneProduction, scratch.productionModifier);
-    subUS(scratch.tierOneExponent, scratch.productionModifier);
-    divUS(scratch.tierOneProduction, scratch.tierOneExponent);
+    subUS(scratch.tierOneProduction, scratch.tierOneExponent);
+    subUS(scratch.productionModifier, scratch.tierOneExponent);
+    divUS(scratch.tierOneProduction, scratch.productionModifier);
     const progress = toNumber(scratch.tierOneProduction);
     return Math.max(0, Math.min(1, progress));
 }
@@ -376,23 +411,77 @@ function tierOneAmountHandle(index: i32): i32 {
 }
 
 function refreshTierOneCost(index: i32): void {
-    const baseExponent = 1 << index;
-    const scalingExponent = index + 1;
-    multiplyInto(scratch.tierOneExponent, tierOneBoughtHandle(index), scalingExponent);
-    addUS(scratch.tierOneExponent, baseExponent);
+    computeTierOneCostExponent(scratch.tierOneExponent, index, tierOneBoughtHandle(index));
     powInto(tierOneCostHandle(index), 10, scratch.tierOneExponent);
 }
 
-function refreshTierOneMultiplier(index: i32): void {
-    writeNumber(scratch.productionModifier, 0);
-    addUS(scratch.productionModifier, player.multiplier_tierOnePerPurchase);
-    if (index === 0 && hasCondensedEffect(0)) {
-        writeNumber(scratch.tierOneExponent, 0.1);
-        addUS(scratch.productionModifier, scratch.tierOneExponent);
+// Writes log10(cost(boughtHandle)) into result. Through EXPONENTIAL_COST_START_PURCHASES this is the original linear formula; above it, the closed-form solution of the accelerating recurrence.
+function computeTierOneCostExponent(result: i32, index: i32, boughtHandle: i32): void {
+    const baseExponent = 1 << index;
+    const scalingExponent = index + 1;
+    multiplyInto(result, boughtHandle, scalingExponent);
+    addUS(result, baseExponent);
+    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    if (!gt(boughtHandle, scratch.tierOneCostAcceleration)) return;
+
+    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    subInto(result, boughtHandle, scratch.tierOneCostAcceleration);
+    writeNumber(scratch.tierOneCostAcceleration, (<f64>scalingExponent / <f64>EXPONENTIAL_COST_RATE) * LOG10_E);
+    multiplyInto(result, result, scratch.tierOneCostAcceleration);
+    copyInto(scratch.tierOneSeconds, result);
+    pow10Into(result, scratch.tierOneSeconds);
+    subUS(result, 1);
+    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_RATE);
+    multiplyInto(result, result, scratch.tierOneCostAcceleration);
+    writeNumber(
+        scratch.tierOneCostAcceleration,
+        baseExponent + scalingExponent * EXPONENTIAL_COST_START_PURCHASES,
+    );
+    addUS(result, scratch.tierOneCostAcceleration);
+}
+
+// Inverse of computeTierOneCostExponent: writes the bought-count n such that E(n) == targetExponent.
+function computeTierOneBoughtCountForExponent(result: i32, index: i32, targetExponent: i32): void {
+    const baseExponent = 1 << index;
+    const scalingExponent = index + 1;
+    writeNumber(
+        scratch.tierOneCostAcceleration,
+        baseExponent + scalingExponent * EXPONENTIAL_COST_START_PURCHASES,
+    );
+    if (!gt(targetExponent, scratch.tierOneCostAcceleration)) {
+        subInto(result, targetExponent, baseExponent);
+        divUS(result, scalingExponent);
+        return;
     }
-    if (hasAscendedCondensedEffect(0)) {
-        writeNumber(scratch.tierOneExponent, 0.25);
-        addUS(scratch.productionModifier, scratch.tierOneExponent);
+
+    subInto(result, targetExponent, scratch.tierOneCostAcceleration);
+    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_RATE);
+    divInto(result, result, scratch.tierOneCostAcceleration);
+    addUS(result, 1);
+    log10Into(result, result);
+    writeNumber(scratch.tierOneCostAcceleration, LN_10);
+    multiplyInto(result, result, scratch.tierOneCostAcceleration);
+    writeNumber(scratch.tierOneCostAcceleration, <f64>EXPONENTIAL_COST_RATE / <f64>scalingExponent);
+    multiplyInto(result, result, scratch.tierOneCostAcceleration);
+    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    addUS(result, scratch.tierOneCostAcceleration);
+}
+
+function refreshTierOneMultiplier(index: i32): void {
+    if (isSpecificCrystalActive(4)) {
+        copyInto(scratch.productionModifier, crystalEffectHandle(4, 0));
+    } else {
+        writeNumber(scratch.productionModifier, 0);
+        addUS(scratch.productionModifier, player.multiplier_tierOnePerPurchase);
+        if (index === 0 && hasCondensedEffect(0)) {
+            writeNumber(scratch.tierOneExponent, 0.1);
+            addUS(scratch.productionModifier, scratch.tierOneExponent);
+        }
+        if (hasAscendedCondensedEffect(0)) {
+            writeNumber(scratch.tierOneExponent, 0.25);
+            addUS(scratch.productionModifier, scratch.tierOneExponent);
+        }
+        if (hasCompletedCrystal(4)) addUS(scratch.productionModifier, crystalRewardHandle(4, 0));
     }
     powInto(tierOneMultiplierHandle(index), scratch.productionModifier, tierOneBoughtHandle(index));
     if (index < TIER_ONE_COUNT - 1) {

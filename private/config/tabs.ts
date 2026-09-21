@@ -45,7 +45,7 @@ export const TABS = [
         ],
     },
     { id: "quest", label: "Quest", icon: "🐺", requiresQuest: true },
-    { id: "autobuyers", label: "Autobuyers", icon: "⌁", requiresAutobuyers: true },
+    { id: "autocasters", label: "Autocasters", icon: "⌁", requiresAutocasters: true },
     {
         id: "achievements",
         label: "Achievements",

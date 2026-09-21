@@ -19,6 +19,7 @@ defineEmits(["cast", "abandon"]);
         <div class="combat-spells">
             <button
                 v-for="spell in combat.spells"
+                v-show="spell.unlocked !== false"
                 :key="spell.index"
                 type="button"
                 :class="{ affordable: spell.affordable, unaffordable: !spell.affordable }"

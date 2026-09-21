@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref } from "vue";
+import { ARMOR_SET_EFFECTS } from "@game/guild/equipment.js";
 import AscensionHall from "../components/AscensionHall.vue";
 
 const props = defineProps({
@@ -8,9 +9,10 @@ const props = defineProps({
     quests: { type: Array, required: true },
     questResult: { type: Object, required: true },
     manaCircle: { type: Number, required: true },
+    equipmentUnlocked: { type: Boolean, required: true },
 });
 const emit = defineEmits([
-    "apply", "accept", "dismiss-result", "move-item", "use-item", "sell-item",
+    "apply", "accept", "dismiss-result", "move-item", "equip-item", "unequip-item", "use-item", "sell-item",
     "sell-all-materials", "sell-all-items", "drink-all-potions",
     "buy-shop-item", "buy-shop-upgrade", "ascend",
 ]);
@@ -18,6 +20,13 @@ const selectedQuest = ref(null);
 const selectedItem = ref(null);
 const inventoryGrid = ref(null);
 const dragging = ref(null);
+const equipmentSlotNames = ["Helmet", "Chestplate", "Leggings", "Boots"];
+const completeArmorSet = computed(() => {
+    const items = props.guild.equipmentItems;
+    if (items.length !== equipmentSlotNames.length || items.some((item) => !item)) return null;
+    const armorSet = items[0].armorSet;
+    return armorSet && items.every((item) => item.armorSet === armorSet) ? armorSet : null;
+});
 let pendingPress = null;
 const rankProgress = computed(() => {
     const requirement = Number(props.guild.experienceRequirement);
@@ -29,18 +38,27 @@ function coinLabel(value) {
     return Number(value) === 1 ? "coin" : "coins";
 }
 
+function armorEffect(item) {
+    return ARMOR_SET_EFFECTS[item.armorSet]?.pieces[item.equipmentSlot] ?? "Unknown effect";
+}
+
+function armorSetBonus(armorSet) {
+    return ARMOR_SET_EFFECTS[armorSet]?.setBonus ?? "Unknown set bonus";
+}
+
 function acceptQuest() {
     if (selectedQuest.value === null || props.guild.questActive) return;
     emit("accept", selectedQuest.value.index);
     selectedQuest.value = null;
 }
 
-function beginPress(event, item) {
+function beginPress(event, item, equipmentSlot = null) {
     if (event.button !== 0) return;
     event.preventDefault();
     const bounds = event.currentTarget.getBoundingClientRect();
     pendingPress = {
         item,
+        equipmentSlot,
         bounds,
         startX: event.clientX,
         startY: event.clientY,
@@ -53,14 +71,16 @@ function beginPress(event, item) {
 
 function startDrag() {
     if (!pendingPress) return;
-    const { item, bounds, cursorX, cursorY } = pendingPress;
+    const { item, equipmentSlot, bounds, cursorX, cursorY } = pendingPress;
     dragging.value = {
         sourcePosition: item.position,
+        sourceEquipmentSlot: equipmentSlot,
         itemWidth: item.width,
         itemHeight: item.height,
         type: item.type,
         name: item.name,
         style: item.style,
+        equipmentSlot: item.equipmentSlot,
         cursorX,
         cursorY,
         width: bounds.width,
@@ -87,12 +107,22 @@ function finishPress() {
     window.removeEventListener("pointermove", trackPress);
     if (!pendingPress) return;
     if (dragging.value) finishDrag();
-    else selectedItem.value = pendingPress.item;
+    else if (pendingPress.equipmentSlot === null) selectedItem.value = pendingPress.item;
     pendingPress = null;
 }
 
 function finishDrag() {
     const drag = dragging.value;
+    const equipmentTarget = document
+        .elementFromPoint(drag?.cursorX ?? 0, drag?.cursorY ?? 0)
+        ?.closest("[data-equipment-slot]");
+    if (drag && equipmentTarget) {
+        if (drag.sourceEquipmentSlot === null) {
+            emit("equip-item", drag.sourcePosition, Number(equipmentTarget.dataset.equipmentSlot));
+        }
+        dragging.value = null;
+        return;
+    }
     const grid = inventoryGrid.value;
     if (!drag || !grid) {
         dragging.value = null;
@@ -118,7 +148,9 @@ function finishDrag() {
         dragging.value = null;
         return;
     }
-    emit("move-item", drag.sourcePosition, rawRow * 10 + rawColumn);
+    const targetPosition = rawRow * 10 + rawColumn;
+    if (drag.sourceEquipmentSlot === null) emit("move-item", drag.sourcePosition, targetPosition);
+    else emit("unequip-item", drag.sourceEquipmentSlot, targetPosition);
     dragging.value = null;
 }
 
@@ -164,7 +196,12 @@ onBeforeUnmount(() => {
             <button type="button" @click="$emit('apply')">Apply to the Guild</button>
         </div>
         <template v-else-if="activeSubtab === 'guild-main'">
-            <div class="section-title"><h1>Quest Board</h1><p>Guild Rank: <strong>{{ guild.rank }}</strong> · Refresh: {{ guild.refreshTimer }}</p></div>
+            <div class="section-title">
+                <h1>Quest Board</h1>
+                <p>Guild Rank: <strong>{{ guild.rank }}</strong> · Refresh: {{ guild.refreshTimer }}</p>
+                <p>Quests 2 rank below you can only give 25% of the required experience.</p>
+                <p>Quests 1 rank below you can only give 50% of the required experience.</p>
+            </div>
             <div v-if="questResult.visible" class="quest-result" role="status">
                 <div>
                     <strong>You defeated the {{ questResult.monster }}!</strong>
@@ -230,6 +267,7 @@ onBeforeUnmount(() => {
                         <strong>{{ item.name }}</strong>
                     </button>
                 </div>
+                <div class="inventory-side-panel">
                 <aside class="inventory-details">
                     <template v-if="selectedItem">
                         <span :class="['inventory-details-icon', selectedItem.style]"></span>
@@ -254,6 +292,34 @@ onBeforeUnmount(() => {
                         </button>
                     </template>
                 </aside>
+                <aside v-if="equipmentUnlocked" class="inventory-details inventory-equipment">
+                    <h2>Equipment</h2>
+                    <div class="equipment-slots">
+                        <div
+                            v-for="(slotName, slot) in equipmentSlotNames"
+                            :key="slotName"
+                            class="equipment-slot"
+                            :class="[guild.equipmentItems[slot]?.style, {
+                                occupied: guild.equipmentItems[slot],
+                                dragging: dragging?.sourceEquipmentSlot === slot,
+                            }]"
+                            :data-equipment-slot="slot"
+                            @pointerdown="guild.equipmentItems[slot] && beginPress($event, guild.equipmentItems[slot], slot)"
+                        >
+                            <strong>{{ guild.equipmentItems[slot]?.name ?? slotName }}</strong>
+                        </div>
+                    </div>
+                    <div class="equipment-effects">
+                        <strong>Effects</strong>
+                        <span v-for="item in guild.equipmentItems.filter(Boolean)" :key="item.type">
+                            {{ item.name }}: {{ armorEffect(item) }}
+                        </span>
+                        <span v-if="!guild.equipmentItems.some(Boolean)">No armor equipped.</span>
+                        <strong>Set Bonus</strong>
+                        <span>{{ completeArmorSet ? `${completeArmorSet}: ${armorSetBonus(completeArmorSet)}` : "Equip all four pieces from one set." }}</span>
+                    </div>
+                </aside>
+                </div>
             </div>
         </template>
         <template v-else-if="activeSubtab === 'guild-ascension-hall'">
@@ -283,8 +349,8 @@ onBeforeUnmount(() => {
                 </button>
             </div>
             <div class="guild-shop-upgrades">
-                <div v-for="rank in [0, 1, 2]" :key="rank" class="guild-shop-upgrade-row">
-                    <strong class="guild-shop-rank">{{ ["F:", "E:", "D:"][rank] }}</strong>
+                <div v-for="rank in [0, 1, 2, 3]" :key="rank" class="guild-shop-upgrade-row">
+                    <strong class="guild-shop-rank">{{ ["F:", "E:", "D:", "C:"][rank] }}</strong>
                     <button
                         v-for="upgrade in guild.shopUpgrades.filter((upgrade) => upgrade.rank === rank)"
                         :key="upgrade.id"

@@ -1,137 +1,679 @@
 .guild-application {
-    max-width: 620px;
-    margin: 60px auto;
-    padding: 30px;
-    border: 1px solid #7a6542;
-    background: #1d1914;
-    text-align: center;
-    box-shadow: 0 0 18px rgb(210 169 93 / 12%);
-    animation: guild-panel-enter 300ms ease-out both;
+  max-width: 620px;
+  margin: 60px auto;
+  padding: 30px;
+  border: 1px solid #7a6542;
+  background: #1d1914;
+  text-align: center;
+  box-shadow: 0 0 18px rgb(210 169 93 / 12%);
+  animation: guild-panel-enter 300ms ease-out both;
 }
-.guild-application h1 { margin: 0 0 8px; color: #e8cf9d; }
-.guild-application p { white-space: pre-line; color: #bba986; }
+.guild-application h1 {
+  margin: 0 0 8px;
+  color: #e8cf9d;
+}
+.guild-application p {
+  white-space: pre-line;
+  color: #bba986;
+}
 .guild-application button,
-.quest-detail button { border-color: #8c7448; background: #302719; color: #ead5aa; }
-.quest-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; animation: guild-panel-enter 280ms ease-out both; }
+.quest-detail button {
+  border-color: #8c7448;
+  background: #302719;
+  color: #ead5aa;
+}
+.quest-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  animation: guild-panel-enter 280ms ease-out both;
+}
 .quest-board > button {
-    position: relative;
-    min-height: 150px;
-    padding: 24px 14px 14px;
-    border: 1px solid #79633e;
-    background: linear-gradient(145deg, #2a2319, #171510);
-    color: #e7d2aa;
+  position: relative;
+  min-height: 150px;
+  padding: 24px 14px 14px;
+  border: 1px solid #79633e;
+  background: linear-gradient(145deg, #2a2319, #171510);
+  color: #e7d2aa;
 }
-.quest-board > button:hover:not(:disabled) { background: #342b1e; border-color: #b09158; }
-.quest-board > button:disabled { filter: grayscale(0.8); opacity: 0.42; cursor: not-allowed; }
-.quest-board > button.quest-locked { border-color: #4e4940; background: #171613; }
-.guild-rank-progress { position: relative; height: 24px; margin-top: 10px; overflow: visible; border: 1px solid #8b7449; background: #15130f; text-align: center; }
-.guild-rank-progress > span { position: absolute; inset: 0 auto 0 0; background: #8b6b3266; }
-.guild-rank-progress > strong { position: relative; display: block; color: #ead5aa; font-size: 11px; line-height: 22px; text-shadow: 0 1px 2px #000; }
-.guild-rank-progress::after { position: absolute; z-index: 4; right: 50%; bottom: calc(100% + 7px); padding: 5px 8px; border: 1px solid #8b7449; background: #17140f; color: #ead5aa; content: attr(data-tooltip); font-size: 11px; opacity: 0; pointer-events: none; transform: translateX(50%); white-space: nowrap; }
-.guild-rank-progress:hover::after { opacity: 1; }
-.quest-board strong, .quest-board small { display: block; }
-.quest-board small { margin-top: 8px; color: #9e8d70; }
+.quest-board > button:hover:not(:disabled) {
+  background: #342b1e;
+  border-color: #b09158;
+}
+.quest-board > button:disabled {
+  filter: grayscale(0.8);
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+.quest-board > button.quest-locked {
+  border-color: #4e4940;
+  background: #171613;
+}
+.guild-rank-progress {
+  position: relative;
+  height: 24px;
+  margin-top: 10px;
+  overflow: visible;
+  border: 1px solid #8b7449;
+  background: #15130f;
+  text-align: center;
+}
+.guild-rank-progress > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: #8b6b3266;
+}
+.guild-rank-progress > strong {
+  position: relative;
+  display: block;
+  color: #ead5aa;
+  font-size: 11px;
+  line-height: 22px;
+  text-shadow: 0 1px 2px #000;
+}
+.guild-rank-progress::after {
+  position: absolute;
+  z-index: 4;
+  right: 50%;
+  bottom: calc(100% + 7px);
+  padding: 5px 8px;
+  border: 1px solid #8b7449;
+  background: #17140f;
+  color: #ead5aa;
+  content: attr(data-tooltip);
+  font-size: 11px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(50%);
+  white-space: nowrap;
+}
+.guild-rank-progress:hover::after {
+  opacity: 1;
+}
+.quest-board strong,
+.quest-board small {
+  display: block;
+}
+.quest-board small {
+  margin-top: 8px;
+  color: #9e8d70;
+}
 .quest-rank {
-    display: inline-grid;
-    place-items: center;
-    min-width: 28px;
-    min-height: 28px;
-    border: 1px solid #a38650;
-    color: #f1d79f;
-    font-weight: 800;
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  border: 1px solid #a38650;
+  color: #f1d79f;
+  font-weight: 800;
 }
-.quest-board .quest-rank { position: absolute; top: 9px; left: 9px; }
-.quest-active-note { color: #9b8c75; text-align: center; }
+.quest-board .quest-rank {
+  position: absolute;
+  top: 9px;
+  left: 9px;
+}
+.quest-active-note {
+  color: #9b8c75;
+  text-align: center;
+}
 .guild-inventory-grid {
-    display: grid;
-    grid-template-columns: repeat(10, minmax(28px, 48px));
-    grid-template-rows: repeat(10, minmax(28px, 48px));
-    justify-content: center;
-    gap: 3px;
-    padding: 12px;
-    animation: guild-panel-enter 280ms ease-out both;
+  display: grid;
+  grid-template-columns: repeat(10, minmax(28px, 48px));
+  grid-template-rows: repeat(10, minmax(28px, 48px));
+  justify-content: center;
+  gap: 3px;
+  padding: 12px;
+  animation: guild-panel-enter 280ms ease-out both;
 }
-.guild-inventory-layout { display: flex; align-items: flex-start; justify-content: center; gap: 14px; }
-.inventory-bulk-actions { display: flex; justify-content: center; gap: 8px; margin: 8px auto 4px; }
-.inventory-bulk-actions button { padding: 7px 12px; border: 1px solid #746344; background: #292116; color: #dbc79f; }
-.inventory-bulk-actions button:hover { border-color: #aa8d55; background: #382c1c; }
-.inventory-slot { border: 1px solid #4c4538; background: #14130f; aspect-ratio: 1; }
-.inventory-item { z-index: 2; place-self: stretch; min-width: 0; min-height: 0; margin: 0; padding: 4px; box-sizing: border-box; border: 1px solid #9b7a43; background: #302719; color: #efd29a; cursor: grab; overflow: hidden; touch-action: none; user-select: none; }
-.inventory-item:active { cursor: grabbing; }
-.inventory-item.selected { border-color: #f0cb82; box-shadow: inset 0 0 0 1px #f0cb82; }
-.inventory-item strong, .inventory-item span { display: block; font-size: 9px; line-height: 1.15; }
-.inventory-item.wolfine-fur { background: linear-gradient(135deg, #4b4030, #29231b); }
-.inventory-item.potion-speed { border-color: #4f88ad; background: #17354a; color: #bce8ff; }
-.inventory-details { width: 180px; min-height: 150px; margin-top: 12px; padding: 12px; border: 1px solid #574c39; background: #17140f; color: #cfc1a7; }
-.inventory-details h2 { margin: 8px 0 2px; color: #ead5aa; font-size: 15px; }
-.inventory-details small { color: #8f836d; }
-.inventory-details p { margin: 12px 0 0; font-size: 12px; line-height: 1.4; }
-.inventory-details-icon { display: block; width: 100%; height: 34px; border: 1px solid #9b7a43; }
-.inventory-details-icon.wolfine-fur { background: linear-gradient(135deg, #4b4030, #29231b); }
-.inventory-details-icon.potion-speed { border-color: #4f88ad; background: #17354a; }
-.inventory-details-empty { color: #837966; text-align: center; }
-.inventory-use-button { width: 100%; margin-top: 12px; padding: 6px; border: 1px solid #746344; background: #292116; color: #dbc79f; }
-.inventory-use-button:disabled { opacity: 0.45; cursor: not-allowed; }
-.inventory-sell-button { border-color: #8c7434; background: #332912; color: #f0d681; }
-.inventory-sell-button:hover { background: #453719; }
-.guild-shop-items, .guild-shop-upgrades { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; max-width: 820px; margin: 0 auto; }
-.guild-shop-items { grid-template-columns: repeat(3, 132px); justify-content: center; gap: 42px; padding-bottom: 22px; }
-.guild-shop-upgrades { display: grid; grid-template-columns: 1fr; margin-top: 38px; }
-.guild-shop-upgrade-row { display: grid; grid-template-columns: 42px repeat(3, 1fr); gap: 10px; }
-.guild-shop-rank { display: grid; place-items: center; color: #d5b778; font-size: 17px; }
-.guild-shop-items button, .guild-shop-upgrades button { min-height: 100px; padding: 12px; border: 1px solid #79633e; background: #241e16; color: #e7d2aa; }
-.guild-shop-items button { position: relative; z-index: 1; width: 132px; height: 132px; min-height: 132px; box-shadow: inset 0 0 18px rgb(185 144 74 / 8%); }
-.guild-shop-items button::after { position: absolute; z-index: -1; top: calc(100% + 5px); left: 50%; width: 82px; height: 9px; border: 1px solid #655333; border-top-color: #9a7b47; background: linear-gradient(#46371f, #211a11); content: ""; transform: translateX(-50%); box-shadow: 0 5px 8px #0008; }
-.guild-shop-items button:hover:not(:disabled) { border-color: #b79557; background: #302719; }
-.guild-shop-upgrades button.affordable:hover { border-color: #63926c; background: #203124; }
-.guild-shop-upgrades button:not(.affordable):not(.purchased):not(.locked):hover { border-color: #965d5d; background: #342020; }
-.guild-shop-items button.refreshing { filter: grayscale(1); opacity: 0.48; }
-.guild-shop-items strong, .guild-shop-items small, .guild-shop-upgrades strong, .guild-shop-upgrades small { display: block; }
-.guild-shop-items small, .guild-shop-upgrades small { margin-top: 12px; color: #a99470; }
-.guild-shop-upgrades button.purchased { border-color: #4f8259; background: #17251a; }
-.guild-shop-upgrades button.locked { border-color: #494641; background: #171613; color: #77716a; }
-.quest-detail-overlay { position: fixed; inset: 0; z-index: 110; display: grid; place-items: center; background: rgb(5 4 3 / 76%); }
-.quest-detail { width: min(460px, calc(100% - 30px)); padding: 22px; border: 1px solid #8b7449; background: #1c1812; box-shadow: 0 0 24px #000; animation: quest-detail-enter 180ms ease-out both; }
-.quest-detail h2 { margin: 10px 0 4px; color: #ead2a3; }
-.quest-detail p { color: #a99b80; }
-.quest-detail > div:last-child { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
-.quest-reward { display: grid; gap: 4px; padding: 10px; border-left: 2px solid #8b7449; background: #272016; }
-.combat-panel { max-width: 820px; margin: 0 auto; animation: guild-panel-enter 300ms ease-out both; }
-.combatant { width: min(520px, 78%); padding: 12px; border: 1px solid #59535c; background: #17151a; }
-.combatant > div:first-child { display: flex; justify-content: space-between; gap: 10px; }
-.combatant small { display: block; margin-top: 4px; text-align: right; color: #aaa3ad; }
-.wolfines { margin-left: auto; }
-.player-shield { margin-right: auto; }
-.combat-health { height: 13px; margin-top: 8px; overflow: hidden; border: 1px solid #543638; background: #28191b; }
-.combat-health span { display: block; height: 100%; background: #bd454f; transition: width 260ms ease-out; }
-.combat-health.shield { border-color: #315b7d; background: #132534; }
-.combat-health.shield span { background: #3d9bd1; }
-.combat-field { display: flex; justify-content: flex-end; gap: 18px; min-height: 120px; padding: 28px 70px; font-size: 46px; }
-.combat-spells { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 22px; }
-.combat-spells button { min-height: 82px; border-color: #694a70; background: #271c2b; color: #ead9ee; }
-.combat-spells strong, .combat-spells span, .combat-spells small { display: block; }
-.combat-spells span { margin: 5px 0; color: #baa7bf; font-size: 11px; }
-.combat-spells button.affordable:hover { border-color: #6e9c78; background: #24372a; }
-.combat-spells button.unaffordable:hover { border-color: #945c66; background: #382126; }
-.abandon-quest { display: block; margin: 14px auto 0; border-color: #704044; background: #2b191b; color: #d8a3a8; }
-.quest-result { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 0 auto 14px; padding: 12px 14px; border: 1px solid #6e9c67; background: #172218; color: #cbe6c7; animation: quest-result-enter 320ms ease-out both; }
-.quest-result div, .quest-result div span { display: block; }
-.quest-result div span { margin-top: 3px; font-size: 12px; }
-.quest-result .dropped-item { color: #d7ae8c; }
-.quest-result button { min-width: 28px; padding: 1px 7px; border-color: #52744d; background: #1e3020; color: #d5edd2; }
-@keyframes guild-panel-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes quest-detail-enter { from { opacity: 0; transform: scale(0.97) translateY(5px); } to { opacity: 1; transform: scale(1) translateY(0); } }
-@keyframes quest-result-enter { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: translateX(0); } }
+.guild-inventory-layout {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 14px;
+}
+.inventory-side-panel {
+  display: flex;
+  width: 280px;
+  flex-direction: column;
+}
+.inventory-side-panel > .inventory-details {
+  width: auto;
+}
+.inventory-bulk-actions {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 8px auto 4px;
+}
+.inventory-bulk-actions button {
+  padding: 7px 12px;
+  border: 1px solid #746344;
+  background: #292116;
+  color: #dbc79f;
+}
+.inventory-bulk-actions button:hover {
+  border-color: #aa8d55;
+  background: #382c1c;
+}
+.inventory-slot {
+  border: 1px solid #4c4538;
+  background: #14130f;
+  aspect-ratio: 1;
+}
+.inventory-item {
+  z-index: 2;
+  place-self: stretch;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 4px;
+  box-sizing: border-box;
+  border: 1px solid #9b7a43;
+  background: #302719;
+  color: #efd29a;
+  cursor: grab;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+}
+.inventory-item:active {
+  cursor: grabbing;
+}
+.inventory-item.selected {
+  border-color: #f0cb82;
+  box-shadow: inset 0 0 0 1px #f0cb82;
+}
+.inventory-item strong,
+.inventory-item span {
+  display: block;
+  font-size: 9px;
+  line-height: 1.15;
+}
+.inventory-item.wolfine-fur {
+  background: linear-gradient(135deg, #4b4030, #29231b);
+}
+.inventory-item.potion-speed {
+  border-color: #4f88ad;
+  background: #17354a;
+  color: #bce8ff;
+}
+.inventory-item.armor-apprentice,
+.inventory-details-icon.armor-apprentice { border-color: #8190b0; color: #dce5ff; background: linear-gradient(135deg, #4b5368, #282d3a); }
+.inventory-item.armor-ironbark,
+.inventory-details-icon.armor-ironbark { border-color: #7e6842; color: #ead3a3; background: linear-gradient(135deg, #514329, #282317); }
+.inventory-item.armor-wolfine,
+.inventory-details-icon.armor-wolfine { border-color: #98856c; color: #eee0cb; background: linear-gradient(135deg, #625544, #312a22); }
+.inventory-item.armor-mireguard,
+.inventory-details-icon.armor-mireguard { border-color: #64864f; color: #d5f2bc; background: linear-gradient(135deg, #3d592f, #202d19); }
+.inventory-item.armor-runestone,
+.inventory-details-icon.armor-runestone { border-color: #738899; color: #d4edff; background: linear-gradient(135deg, #45545f, #222a30); }
+.inventory-item.armor-wispweave,
+.inventory-details-icon.armor-wispweave { border-color: #60b5c8; color: #d2f8ff; background: linear-gradient(135deg, #347685, #183943); }
+.inventory-item.armor-arcane,
+.inventory-details-icon.armor-arcane { border-color: #9d69c3; color: #f0d5ff; background: linear-gradient(135deg, #653f83, #30203e); }
+.inventory-item.armor-phantom,
+.inventory-details-icon.armor-phantom { border-color: #7b73a8; color: #e1dcff; background: linear-gradient(135deg, #484363, #22202f); }
+.inventory-item.armor-wyrmscale,
+.inventory-details-icon.armor-wyrmscale { border-color: #a34f45; color: #ffd4c9; background: linear-gradient(135deg, #6d302b, #351a18); }
+.inventory-item.armor-dragon-glass,
+.inventory-details-icon.armor-dragon-glass { border-color: #dc713e; color: #ffe1bf; background: linear-gradient(135deg, #8b3f27, #401d14); }
+.inventory-item[class*="armor-"] {
+  border-color: #579966;
+  color: #d9ffe0;
+  background: linear-gradient(135deg, #285735, #163420);
+  box-shadow: inset 0 0 12px rgba(95, 207, 116, 0.16);
+}
+.inventory-item.selected[class*="armor-"] {
+  border-color: #8bea9d;
+  box-shadow: inset 0 0 0 1px #8bea9d, inset 0 0 14px rgba(95, 207, 116, 0.24);
+}
+.inventory-details {
+  width: 180px;
+  min-height: 150px;
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid #574c39;
+  background: #17140f;
+  color: #cfc1a7;
+}
+.inventory-details h2 {
+  margin: 8px 0 2px;
+  color: #ead5aa;
+  font-size: 15px;
+}
+.inventory-details small {
+  color: #8f836d;
+}
+.inventory-details p {
+  margin: 12px 0 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.inventory-details-icon {
+  display: block;
+  width: 100%;
+  height: 34px;
+  border: 1px solid #9b7a43;
+}
+.inventory-details-icon.wolfine-fur {
+  background: linear-gradient(135deg, #4b4030, #29231b);
+}
+.inventory-details-icon.potion-speed {
+  border-color: #4f88ad;
+  background: #17354a;
+}
+.inventory-details-empty {
+  color: #837966;
+  text-align: center;
+}
+.inventory-equipment h2 {
+  margin-top: 0;
+  text-align: center;
+}
+.equipment-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+.equipment-slot {
+  display: flex;
+  min-width: 0;
+  aspect-ratio: 1;
+  min-height: 118px;
+  padding: 10px 8px;
+  box-sizing: border-box;
+  align-items: center;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #477a52;
+  color: #84ad8c;
+  background: #111b13;
+  box-shadow: inset 0 0 14px rgba(48, 113, 62, 0.12);
+}
+.equipment-slot.occupied {
+  border-color: #71c783;
+  color: #d9ffe0;
+  background: linear-gradient(135deg, #285735, #163420);
+  box-shadow: inset 0 0 18px rgba(95, 207, 116, 0.22), 0 0 8px rgba(73, 180, 94, 0.18);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+.equipment-slot.occupied:active {
+  cursor: grabbing;
+}
+.equipment-slot.dragging {
+  opacity: 0.3;
+}
+.equipment-slot strong {
+  max-width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.equipment-effects {
+  display: flex;
+  margin-top: 14px;
+  padding-top: 12px;
+  flex-direction: column;
+  gap: 5px;
+  border-top: 1px solid #574c39;
+  color: #a99d88;
+  font-size: 11px;
+  line-height: 1.35;
+}
+.equipment-effects strong {
+  margin-top: 5px;
+  color: #ead5aa;
+}
+.inventory-use-button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 6px;
+  border: 1px solid #746344;
+  background: #292116;
+  color: #dbc79f;
+}
+.inventory-use-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.inventory-sell-button {
+  border-color: #8c7434;
+  background: #332912;
+  color: #f0d681;
+}
+.inventory-sell-button:hover {
+  background: #453719;
+}
+.guild-shop-items,
+.guild-shop-upgrades {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-width: 820px;
+  margin: 0 auto;
+}
+.guild-shop-items {
+  grid-template-columns: repeat(3, 132px);
+  justify-content: center;
+  gap: 42px;
+  padding-bottom: 22px;
+}
+.guild-shop-upgrades {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin-top: 38px;
+}
+.guild-shop-upgrade-row {
+  display: grid;
+  grid-template-columns: 42px repeat(3, 1fr);
+  gap: 10px;
+}
+.guild-shop-rank {
+  display: grid;
+  place-items: center;
+  color: #d5b778;
+  font-size: 17px;
+}
+.guild-shop-items button,
+.guild-shop-upgrades button {
+  min-height: 100px;
+  padding: 12px;
+  border: 1px solid #79633e;
+  background: #241e16;
+  color: #e7d2aa;
+}
+.guild-shop-items button {
+  position: relative;
+  z-index: 1;
+  width: 132px;
+  height: 132px;
+  min-height: 132px;
+  box-shadow: inset 0 0 18px rgb(185 144 74 / 8%);
+}
+.guild-shop-items button::after {
+  position: absolute;
+  z-index: -1;
+  top: calc(100% + 5px);
+  left: 50%;
+  width: 82px;
+  height: 9px;
+  border: 1px solid #655333;
+  border-top-color: #9a7b47;
+  background: linear-gradient(#46371f, #211a11);
+  content: "";
+  transform: translateX(-50%);
+  box-shadow: 0 5px 8px #0008;
+}
+.guild-shop-items button:hover:not(:disabled) {
+  border-color: #b79557;
+  background: #302719;
+}
+.guild-shop-upgrades button.affordable:hover {
+  border-color: #63926c;
+  background: #203124;
+}
+.guild-shop-upgrades
+  button:not(.affordable):not(.purchased):not(.locked):hover {
+  border-color: #965d5d;
+  background: #342020;
+}
+.guild-shop-items button.refreshing {
+  filter: grayscale(1);
+  opacity: 0.48;
+}
+.guild-shop-items strong,
+.guild-shop-items small,
+.guild-shop-upgrades strong,
+.guild-shop-upgrades small {
+  display: block;
+}
+.guild-shop-items small,
+.guild-shop-upgrades small {
+  margin-top: 12px;
+  color: #a99470;
+}
+.guild-shop-upgrades button.purchased {
+  border-color: #4f8259;
+  background: #17251a;
+}
+.guild-shop-upgrades button.locked {
+  border-color: #494641;
+  background: #171613;
+  color: #77716a;
+}
+.quest-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: grid;
+  place-items: center;
+  background: rgb(5 4 3 / 76%);
+}
+.quest-detail {
+  width: min(460px, calc(100% - 30px));
+  padding: 22px;
+  border: 1px solid #8b7449;
+  background: #1c1812;
+  box-shadow: 0 0 24px #000;
+  animation: quest-detail-enter 180ms ease-out both;
+}
+.quest-detail h2 {
+  margin: 10px 0 4px;
+  color: #ead2a3;
+}
+.quest-detail p {
+  color: #a99b80;
+}
+.quest-detail > div:last-child {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+.quest-reward {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border-left: 2px solid #8b7449;
+  background: #272016;
+}
+.combat-panel {
+  max-width: 820px;
+  margin: 0 auto;
+  animation: guild-panel-enter 300ms ease-out both;
+}
+.combatant {
+  width: min(520px, 78%);
+  padding: 12px;
+  border: 1px solid #59535c;
+  background: #17151a;
+}
+.combatant > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+.combatant small {
+  display: block;
+  margin-top: 4px;
+  text-align: right;
+  color: #aaa3ad;
+}
+.wolfines {
+  margin-left: auto;
+}
+.player-shield {
+  margin-right: auto;
+}
+.combat-health {
+  height: 13px;
+  margin-top: 8px;
+  overflow: hidden;
+  border: 1px solid #543638;
+  background: #28191b;
+}
+.combat-health span {
+  display: block;
+  height: 100%;
+  background: #bd454f;
+  transition: width 260ms ease-out;
+}
+.combat-health.shield {
+  border-color: #315b7d;
+  background: #132534;
+}
+.combat-health.shield span {
+  background: #3d9bd1;
+}
+.combat-field {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  min-height: 120px;
+  padding: 28px 70px;
+  font-size: 46px;
+}
+.combat-spells {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 22px;
+}
+.combat-spells button {
+  min-height: 82px;
+  border-color: #694a70;
+  background: #271c2b;
+  color: #ead9ee;
+}
+.combat-spells strong,
+.combat-spells span,
+.combat-spells small {
+  display: block;
+}
+.combat-spells span {
+  margin: 5px 0;
+  color: #baa7bf;
+  font-size: 11px;
+}
+.combat-spells button.affordable:hover {
+  border-color: #6e9c78;
+  background: #24372a;
+}
+.combat-spells button.unaffordable:hover {
+  border-color: #945c66;
+  background: #382126;
+}
+.abandon-quest {
+  display: block;
+  margin: 14px auto 0;
+  border-color: #704044;
+  background: #2b191b;
+  color: #d8a3a8;
+}
+.quest-result {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 auto 14px;
+  padding: 12px 14px;
+  border: 1px solid #6e9c67;
+  background: #172218;
+  color: #cbe6c7;
+  animation: quest-result-enter 320ms ease-out both;
+}
+.quest-result div,
+.quest-result div span {
+  display: block;
+}
+.quest-result div span {
+  margin-top: 3px;
+  font-size: 12px;
+}
+.quest-result .dropped-item {
+  color: #d7ae8c;
+}
+.quest-result button {
+  min-width: 28px;
+  padding: 1px 7px;
+  border-color: #52744d;
+  background: #1e3020;
+  color: #d5edd2;
+}
+@keyframes guild-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes quest-detail-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.97) translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+@keyframes quest-result-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
 @media (max-width: 650px) {
-    .quest-board, .combat-spells { grid-template-columns: 1fr; }
-    .combatant { width: 100%; }
-    .combat-field { padding-right: 20px; }
-    .guild-inventory-layout { flex-direction: column; align-items: center; }
-    .inventory-details { width: min(100%, 300px); margin-top: 0; }
-    .guild-shop-items { grid-template-columns: repeat(3, 96px); gap: 14px; }
-    .guild-shop-items button { width: 96px; height: 96px; min-height: 96px; padding: 7px; }
-    .guild-shop-upgrade-row { grid-template-columns: 34px 1fr; }
-    .guild-shop-rank { grid-row: 1 / 4; }
+  .quest-board,
+  .combat-spells {
+    grid-template-columns: 1fr;
+  }
+  .combatant {
+    width: 100%;
+  }
+  .combat-field {
+    padding-right: 20px;
+  }
+  .guild-inventory-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+  .inventory-details {
+    width: min(100%, 300px);
+    margin-top: 0;
+  }
+  .inventory-side-panel {
+    width: min(100%, 326px);
+  }
+  .guild-shop-items {
+    grid-template-columns: repeat(3, 96px);
+    gap: 14px;
+  }
+  .guild-shop-items button {
+    width: 96px;
+    height: 96px;
+    min-height: 96px;
+    padding: 7px;
+  }
+  .guild-shop-upgrade-row {
+    grid-template-columns: 34px 1fr;
+  }
+  .guild-shop-rank {
+    grid-row: 1 / 4;
+  }
 }
 .ascension-hall-scene {
   position: relative;
@@ -153,7 +695,12 @@
   place-items: center;
   border: 1px solid #51405e;
   color: #aa91b9;
-  background: radial-gradient(circle at center, #261a2d 0, #100c14 42%, #08070b 100%);
+  background: radial-gradient(
+    circle at center,
+    #261a2d 0,
+    #100c14 42%,
+    #08070b 100%
+  );
   box-shadow: inset 0 0 80px #000b;
   font-size: clamp(15px, 2vw, 22px);
   letter-spacing: 0.06em;
@@ -250,7 +797,18 @@
 }
 
 @keyframes mana-circle-expansion-title {
-  0%, 18% { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
-  42%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.25); }
+  0%,
+  18% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.7);
+  }
+  42%,
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.25);
+  }
 }

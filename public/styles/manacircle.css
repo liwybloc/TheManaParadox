@@ -10,7 +10,6 @@
   overflow: visible;
 }
 
-
 /* =========================================================
    BASE MANA CIRCLE
    ========================================================= */
@@ -35,20 +34,14 @@
 
   color: var(--mana-bright);
 
-  box-shadow:
-    0 0 10px var(--mana-color),
-    0 0 25px var(--mana-color),
+  box-shadow: 0 0 10px var(--mana-color), 0 0 25px var(--mana-color),
     inset 0 0 20px var(--mana-dark);
 
-  transition:
-    width 0.5s ease,
-    height 0.5s ease,
-    border-color 0.5s ease,
+  transition: width 0.5s ease, height 0.5s ease, border-color 0.5s ease,
     box-shadow 0.5s ease;
 
   animation: circlePulse 2.2s ease-in-out infinite;
 }
-
 
 /* =========================================================
    CIRCLE 1
@@ -63,7 +56,6 @@
   --mana-dark: #240046;
 }
 
-
 /* =========================================================
    CIRCLE 2
    PURPLE-BLUE
@@ -77,7 +69,6 @@
   --mana-dark: #312e81;
 }
 
-
 /* =========================================================
    CIRCLE 3
    BRIGHT BLUE
@@ -90,13 +81,9 @@
   --mana-bright: #90e0ef;
   --mana-dark: #023e8a;
 
-  box-shadow:
-    0 0 12px var(--mana-color),
-    0 0 32px rgba(0, 180, 216, 0.7),
-    0 0 60px rgba(0, 180, 216, 0.35),
-    inset 0 0 25px var(--mana-dark);
+  box-shadow: 0 0 12px var(--mana-color), 0 0 32px rgba(0, 180, 216, 0.7),
+    0 0 60px rgba(0, 180, 216, 0.35), inset 0 0 25px var(--mana-dark);
 }
-
 
 /* =========================================================
    CIRCLE 4
@@ -112,13 +99,9 @@
 
   border-width: 2px;
 
-  box-shadow:
-    0 0 16px var(--mana-color),
-    0 0 42px rgba(0, 119, 255, 0.8),
-    0 0 80px rgba(0, 119, 255, 0.4),
-    inset 0 0 30px var(--mana-dark);
+  box-shadow: 0 0 16px var(--mana-color), 0 0 42px rgba(0, 119, 255, 0.8),
+    0 0 80px rgba(0, 119, 255, 0.4), inset 0 0 30px var(--mana-dark);
 }
-
 
 /* =========================================================
    CIRCLE 5
@@ -134,13 +117,9 @@
 
   border-width: 3px;
 
-  box-shadow:
-    0 0 18px var(--mana-color),
-    0 0 48px rgba(217, 4, 41, 0.85),
-    0 0 95px rgba(217, 4, 41, 0.4),
-    inset 0 0 35px var(--mana-dark);
+  box-shadow: 0 0 18px var(--mana-color), 0 0 48px rgba(217, 4, 41, 0.85),
+    0 0 95px rgba(217, 4, 41, 0.4), inset 0 0 35px var(--mana-dark);
 }
-
 
 /* =========================================================
    CIRCLE 6
@@ -156,17 +135,12 @@
 
   border-width: 3px;
 
-  box-shadow:
-    0 0 20px #ff001f,
-    0 0 60px rgba(255, 0, 31, 0.9),
-    0 0 115px rgba(180, 0, 25, 0.5),
-    inset 0 0 42px #60000d;
+  box-shadow: 0 0 20px #ff001f, 0 0 60px rgba(255, 0, 31, 0.9),
+    0 0 115px rgba(180, 0, 25, 0.5), inset 0 0 42px #60000d;
 
-  animation:
-    circlePulse 1.2s ease-in-out infinite,
+  animation: circlePulse 1.2s ease-in-out infinite,
     unstable 0.14s linear infinite;
 }
-
 
 /* =========================================================
    CIRCLE 7
@@ -182,16 +156,12 @@
 
   border-width: 4px;
 
-  box-shadow:
-    0 0 14px rgba(255, 255, 255, 0.95),
-    0 0 40px rgba(255, 255, 255, 0.9),
-    0 0 85px rgba(186, 230, 253, 0.75),
-    0 0 145px rgba(255, 255, 255, 0.4),
-    inset 0 0 55px rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.95),
+    0 0 40px rgba(255, 255, 255, 0.9), 0 0 85px rgba(186, 230, 253, 0.75),
+    0 0 145px rgba(255, 255, 255, 0.4), inset 0 0 55px rgba(255, 255, 255, 0.9);
 
   animation: divinePulse 0.9s ease-in-out infinite;
 }
-
 
 /* =========================================================
    OUTER GLOW
@@ -208,13 +178,10 @@
 
   opacity: 0.25;
 
-  box-shadow:
-    0 0 20px var(--mana-color),
-    inset 0 0 20px var(--mana-color);
+  box-shadow: 0 0 20px var(--mana-color), inset 0 0 20px var(--mana-color);
 
   animation: outerGlowPulse 2.4s ease-in-out infinite;
 }
-
 
 /* =========================================================
    RINGS
@@ -230,7 +197,6 @@
   pointer-events: none;
 }
 
-
 .ring-1 {
   width: 82%;
   height: 82%;
@@ -241,7 +207,6 @@
 
   animation: rotate 9s linear infinite;
 }
-
 
 .ring-2 {
   width: 62%;
@@ -254,7 +219,6 @@
   animation: rotateReverse 5s linear infinite;
 }
 
-
 .ring-3 {
   width: 42%;
   height: 42%;
@@ -265,7 +229,6 @@
 
   animation: rotate 2.8s linear infinite;
 }
-
 
 /* Lower circles start simpler */
 
@@ -281,18 +244,14 @@
   opacity: 0.25;
 }
 
-
 /* Higher circles have glowing rings */
 
 .mana-3 .ring,
 .mana-4 .ring,
 .mana-5 .ring,
 .mana-6 .ring {
-  box-shadow:
-    0 0 8px var(--mana-color),
-    inset 0 0 8px var(--mana-color);
+  box-shadow: 0 0 8px var(--mana-color), inset 0 0 8px var(--mana-color);
 }
-
 
 /* =========================================================
    RUNES
@@ -310,7 +269,6 @@
   pointer-events: none;
 }
 
-
 .runes span {
   position: absolute;
 
@@ -319,20 +277,15 @@
 
   font-size: clamp(8px, calc(var(--size) * 0.045), 16px);
 
-  transform:
-    rotate(calc(var(--i) * 30deg))
-    translateY(calc(var(--size) * -0.42))
-    rotate(calc(var(--i) * -30deg));
+  transform: rotate(calc(var(--i) * 30deg))
+    translateY(calc(var(--size) * -0.42)) rotate(calc(var(--i) * -30deg));
 
   transform-origin: 0 0;
 
   color: var(--mana-bright);
 
-  text-shadow:
-    0 0 5px var(--mana-bright),
-    0 0 12px var(--mana-color);
+  text-shadow: 0 0 5px var(--mana-bright), 0 0 12px var(--mana-color);
 }
-
 
 /* Progressive rune visibility */
 
@@ -358,7 +311,6 @@
   opacity: 1;
 }
 
-
 /* =========================================================
    ENERGY ORBITS
    ========================================================= */
@@ -372,11 +324,9 @@
 
   pointer-events: none;
 
-  filter:
-    drop-shadow(0 0 4px var(--mana-color))
+  filter: drop-shadow(0 0 4px var(--mana-color))
     drop-shadow(0 0 9px var(--mana-color));
 }
-
 
 .orbit-1 {
   width: 108%;
@@ -388,7 +338,6 @@
   animation: orbitOne 3s linear infinite;
 }
 
-
 .orbit-2 {
   width: 70%;
   height: 108%;
@@ -398,7 +347,6 @@
 
   animation: orbitTwo 4.5s linear infinite;
 }
-
 
 /* Simplify lower circles */
 
@@ -413,7 +361,6 @@
 .mana-1 .orbit-1 {
   opacity: 0.35;
 }
-
 
 /* =========================================================
    CORE
@@ -431,23 +378,19 @@
   align-items: center;
   justify-content: center;
 
-  background:
-    radial-gradient(
-      circle,
-      rgba(255, 255, 255, 1) 0%,
-      var(--mana-bright) 20%,
-      var(--mana-color) 48%,
-      transparent 72%
-    );
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 1) 0%,
+    var(--mana-bright) 20%,
+    var(--mana-color) 48%,
+    transparent 72%
+  );
 
-  box-shadow:
-    0 0 8px white,
-    0 0 18px var(--mana-color),
+  box-shadow: 0 0 8px white, 0 0 18px var(--mana-color),
     0 0 35px var(--mana-color);
 
   animation: corePulse 1.3s ease-in-out infinite;
 }
-
 
 .core-inner {
   width: 34%;
@@ -457,11 +400,8 @@
 
   background: #ffffff;
 
-  box-shadow:
-    0 0 8px #ffffff,
-    0 0 18px #ffffff;
+  box-shadow: 0 0 8px #ffffff, 0 0 18px #ffffff;
 }
-
 
 /* =========================================================
    NUMBER
@@ -482,12 +422,9 @@
 
   pointer-events: none;
 
-  text-shadow:
-    0 0 8px #000000,
-    0 0 10px var(--mana-color),
+  text-shadow: 0 0 8px #000000, 0 0 10px var(--mana-color),
     0 0 18px var(--mana-color);
 }
-
 
 /* =========================================================
    CIRCLE 5+ ENERGY FIELD
@@ -504,19 +441,18 @@
 
   border-radius: 50%;
 
-  background:
-    conic-gradient(
-      from 0deg,
-      transparent 0deg,
-      var(--mana-color) 35deg,
-      transparent 70deg,
-      var(--mana-bright) 120deg,
-      transparent 160deg,
-      var(--mana-color) 220deg,
-      transparent 270deg,
-      var(--mana-bright) 315deg,
-      transparent 360deg
-    );
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    var(--mana-color) 35deg,
+    transparent 70deg,
+    var(--mana-bright) 120deg,
+    transparent 160deg,
+    var(--mana-color) 220deg,
+    transparent 270deg,
+    var(--mana-bright) 315deg,
+    transparent 360deg
+  );
 
   opacity: 0.18;
 
@@ -526,7 +462,6 @@
 
   pointer-events: none;
 }
-
 
 /* =========================================================
    CIRCLE 6 CHAOS FIELD
@@ -541,12 +476,11 @@
 
   border-radius: 50%;
 
-  background:
-    repeating-conic-gradient(
-      transparent 0deg 11deg,
-      rgba(255, 20, 45, 0.28) 12deg 13deg,
-      transparent 14deg 24deg
-    );
+  background: repeating-conic-gradient(
+    transparent 0deg 11deg,
+    rgba(255, 20, 45, 0.28) 12deg 13deg,
+    transparent 14deg 24deg
+  );
 
   opacity: 0.7;
 
@@ -554,7 +488,6 @@
 
   pointer-events: none;
 }
-
 
 /* =========================================================
    CIRCLE 7 DIVINE SHOCKWAVE
@@ -571,15 +504,13 @@
 
   border: 2px solid rgba(255, 255, 255, 0.7);
 
-  box-shadow:
-    0 0 20px rgba(255, 255, 255, 0.8),
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.8),
     inset 0 0 20px rgba(255, 255, 255, 0.5);
 
   animation: divineShockwave 1.8s ease-out infinite;
 
   pointer-events: none;
 }
-
 
 /* =========================================================
    ANIMATIONS
@@ -595,7 +526,6 @@
   }
 }
 
-
 @keyframes rotateReverse {
   from {
     transform: rotate(360deg);
@@ -605,7 +535,6 @@
     transform: rotate(0deg);
   }
 }
-
 
 @keyframes orbitOne {
   from {
@@ -617,7 +546,6 @@
   }
 }
 
-
 @keyframes orbitTwo {
   from {
     transform: rotateY(66deg) rotateZ(0deg);
@@ -627,7 +555,6 @@
     transform: rotateY(66deg) rotateZ(-360deg);
   }
 }
-
 
 @keyframes circlePulse {
   0%,
@@ -639,7 +566,6 @@
     filter: brightness(1.25);
   }
 }
-
 
 @keyframes outerGlowPulse {
   0%,
@@ -654,7 +580,6 @@
   }
 }
 
-
 @keyframes corePulse {
   0%,
   100% {
@@ -667,7 +592,6 @@
     opacity: 1;
   }
 }
-
 
 @keyframes unstable {
   0% {
@@ -691,7 +615,6 @@
   }
 }
 
-
 @keyframes divinePulse {
   0%,
   100% {
@@ -702,7 +625,6 @@
     filter: brightness(1.55);
   }
 }
-
 
 @keyframes divineShockwave {
   0% {

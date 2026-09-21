@@ -55,6 +55,10 @@ const BASE_MESSAGE_TICKERS = [
     "wordle in 7",
     "applied apiculture coming soon to a AE2 modpack near you",
     "update is soon™",
+    "naneinf? wait till you meat Infinitye2147483647",
+    "isn't this just the spiral abyss?",
+    "turi ip ip ip",
+    "when is the guild tag coming out",
 ] as const;
 
 export const MESSAGE_TICKERS: readonly string[] = ([

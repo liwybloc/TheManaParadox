@@ -751,14 +751,15 @@ export function readString(handle: i32): string {
 
     const prefix = sign < 0 ? "-" : "";
 
-    const exponent = <i32>Math.floor(magnitude);
-    const mantissa = Math.pow(10, magnitude - <f64>exponent);
+    const exponent: f64 = Math.floor(magnitude);
+    const mantissa = Math.pow(10, magnitude - exponent);
+    const exponentString = (<i64>exponent).toString();
 
     if (layer === 1) {
         return prefix
             + mantissa.toString()
             + "e"
-            + exponent.toString();
+            + exponentString;
     }
 
     let ePrefix = "";
@@ -771,7 +772,7 @@ export function readString(handle: i32): string {
         + ePrefix
         + mantissa.toString()
         + "e"
-        + exponent.toString();
+        + exponentString;
 }
 
 export function powInto(result: i32, base: i32, exponent: i32): void {

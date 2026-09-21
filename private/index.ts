@@ -9,6 +9,7 @@ import "./game/currencies.js";
 import "./game/courage.js";
 import "./game/condensed.js";
 import "./guild/guild.js";
+import "./guild/equipment.js";
 import "./game/tier_one.js";
 import "./game/progression.js";
 import "./systems/debug.js";

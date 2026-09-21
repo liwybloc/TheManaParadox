@@ -8,7 +8,7 @@ import { getTotalMessageTickersSeen, getUniqueMessageTickersSeen } from "@game/g
 import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/game/condensed.js";
 import { TABS } from "@game/config/tabs.js";
 import { PROGRESSION_GOALS } from "@game/config/goals.js";
-import { GUILD_RANKS, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES } from "@game/guild/guild.js";
+import { ADVANCED_COMBAT_SPELL_COST_HANDLES, GUILD_RANKS, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES } from "@game/guild/guild.js";
 import { GUILD_QUESTS_BY_ID } from "@game/guild/quests.js";
 import { INVENTORY_ITEMS_BY_ID, Items, resolveItemDescription } from "@game/guild/items.js";
 import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
@@ -28,7 +28,7 @@ import ManaCircleTab from "./tabs/ManaCircleTab.vue";
 import CrystalsTab from "./tabs/CrystalsTab.vue";
 import GuildTab from "./tabs/GuildTab.vue";
 import QuestTab from "./tabs/QuestTab.vue";
-import AutobuyersTab from "./tabs/AutobuyersTab.vue";
+import AutocastersTab from "./tabs/AutocastersTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
 import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
@@ -66,7 +66,7 @@ const condensedMana = ref("0");
 const condensedUnlocked = ref(false);
 const guildUnlocked = ref(false);
 const ascensionHallUnlocked = ref(false);
-const autobuyersUnlocked = ref(false);
+const autocastersUnlocked = ref(false);
 const questActive = ref(false);
 const manaCircle = ref(0);
 const manaCircleExpansionVisible = ref(false);
@@ -76,6 +76,7 @@ const libraryUnlocked = ref(false);
 const activeCrystal = ref(-1);
 const crystalGoalReached = ref(false);
 const crystalCanShatter = ref(false);
+const equipmentUnlocked = ref(false);
 const pingedTabs = ref([]);
 const pingedSubtabs = ref([]);
 const manaPerSecond = ref("0.00");
@@ -109,6 +110,8 @@ const tierOneUpgrades = ref(tierOneDefinitions.map((upgrade, index) => ({
     id: `tier-one-${index}`,
     index,
     amount: "0",
+    bought: "0",
+    boughtGT10000: false,
     cost: "0 mana",
     multiplier: "×1",
     visible: index === 0,
@@ -169,7 +172,7 @@ const meridianPurification = ref({
     multiplier: "×1.00",
     requirement: "1.00e45",
 });
-const guild = ref({ member: false, rank: "F", rankIndex: 0, nextRank: "E", questActive: false, refreshTimer: "10:00", experience: 0, experienceRequirement: 25, coins: "0", wolfFur: "0", potions: "0", inventoryItems: [], shopItems: [], shopUpgrades: [] });
+const guild = ref({ member: false, rank: "F", rankIndex: 0, nextRank: "E", questActive: false, refreshTimer: "10:00", experience: 0, experienceRequirement: 25, coins: "0", wolfFur: "0", potions: "0", inventoryItems: [], equipmentItems: [], shopItems: [], shopUpgrades: [] });
 const autocasters = ref({ casters: [], tasks: [], hireOptions: [] });
 const questResult = ref({ visible: false, monster: "Wolfines", items: [] });
 const guildQuests = ref(Array.from({ length: 6 }, (_, index) => ({ ...GUILD_QUESTS_BY_ID.get(index), index, rank: "F", locked: false, visible: index < 3 })));
@@ -186,6 +189,9 @@ const combat = ref({
         { index: 0, name: "Fireball", effect: "35 damage", costHandle: HANDLES.fireballCost, cost: "1e40", affordable: false },
         { index: 1, name: "Whirlwind", effect: "60 damage", costHandle: HANDLES.whirlwindCost, cost: "1e80", affordable: false },
         { index: 2, name: "Freeze", effect: "10 damage · freezes for 2 turns", costHandle: HANDLES.freezeCost, cost: "1e120", affordable: false },
+        { index: 3, name: "Lightning", effect: "120 damage", costHandle: ADVANCED_COMBAT_SPELL_COST_HANDLES[0], cost: "1e160", affordable: false, unlocked: false, upgrade: 9 },
+        { index: 4, name: "Meteor", effect: "250 damage", costHandle: ADVANCED_COMBAT_SPELL_COST_HANDLES[1], cost: "1e220", affordable: false, unlocked: false, upgrade: 10 },
+        { index: 5, name: "Arcane Nova", effect: "500 damage", costHandle: ADVANCED_COMBAT_SPELL_COST_HANDLES[2], cost: "1e300", affordable: false, unlocked: false, upgrade: 11 },
     ],
 });
 const resetConfirmationVisible = ref(false);
@@ -239,7 +245,7 @@ const visibleTabs = computed(() => TABS.filter((tab) => {
     if (tab.requiresCondensed && !condensedUnlocked.value) return false;
     if (tab.requiresGuild && !guildUnlocked.value) return false;
     if (tab.requiresQuest && !questActive.value) return false;
-    if (tab.requiresAutobuyers && !autobuyersUnlocked.value) return false;
+    if (tab.requiresAutocasters && !autocastersUnlocked.value) return false;
     if (tab.requiresCrystals && !crystalsUnlocked.value) return false;
     return true;
 }).map((tab) => ({
@@ -292,7 +298,7 @@ function updateDisplay() {
             case "manacircle": manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier); break;
             case "guild": updateGuildDisplay(activeSubtab.value); break;
             case "quest": updateQuestDisplay(); break;
-            case "autobuyers": updateAutocastersDisplay(); break;
+            case "autocasters": updateAutocastersDisplay(); break;
             case "achievements": updateAchievementsDisplay(); break;
             case "statistics": updateStatisticsDisplay(); break;
         }
@@ -326,7 +332,7 @@ function updateGlobalDisplay() {
             memories.value.nextChance = (namedWasm.memoryChance(SCRATCH_HANDLES.condenseGain) * 100).toFixed(2);
         }
     }
-    autobuyersUnlocked.value = namedWasm.hasGuildShopUpgrade(7);
+    autocastersUnlocked.value = namedWasm.hasGuildShopUpgrade(7);
     if (!ascensionHallUnlocked.value && activeSubtabs.value.guild === "guild-ascension-hall") {
         activeSubtabs.value.guild = "guild-main";
     }
@@ -468,7 +474,10 @@ function updateManaDisplay() {
         text: `Potion of Speed III: +${namedWasm.potionEffect(Items.POTION_SPEED_III).toFixed(2)}× Game Speed (${formatShortTimer(seconds)})`,
     })));
     for (const upgrade of tierOneUpgrades.value) {
+        const bought = namedWasm.tierOneBoughtHandle(upgrade.index);
         upgrade.amount = formatDecimal(upgrade.handle, 0);
+        upgrade.bought = formatDecimal(bought, 0);
+        upgrade.boughtGT10000 = namedWasm.gt(bought, SCRATCH_HANDLES.D10000);
         upgrade.cost = `${formatDecimal(upgrade.costHandle)} mana`;
         upgrade.multiplier = `×${formatDecimal(namedWasm.tierOneDisplayMultiplierHandle(upgrade.index))}`;
         upgrade.visible = namedWasm.isTierOneVisible(upgrade.index);
@@ -547,6 +556,7 @@ function updateGuildShopDisplay() {
 
 function updateGuildInventoryDisplay() {
     guild.value.coins = formatDecimal(HANDLES.coins, 0);
+    equipmentUnlocked.value = namedWasm.isEquipmentUnlocked();
     const inventoryRevision = namedWasm.getInventoryRevision();
     if (inventoryRevision !== displayedInventoryRevision) {
         const inventoryItems = [];
@@ -564,6 +574,18 @@ function updateGuildInventoryDisplay() {
         guild.value.inventoryItems = inventoryItems;
         displayedInventoryRevision = inventoryRevision;
     }
+    guild.value.equipmentItems = Array.from({ length: 4 }, (_, slot) => {
+        const type = namedWasm.equippedItem(slot);
+        return type === 0 ? null : { type, ...displayedItemDefinition(type) };
+    });
+}
+
+function equipInventoryItem(position, slot) {
+    namedWasm.equipInventoryItem(position, slot);
+}
+
+function unequipInventoryItem(slot, position) {
+    namedWasm.unequipInventoryItem(slot, position);
 }
 
 function updateGuildBoardDisplay() {
@@ -614,6 +636,7 @@ function updateQuestDisplay() {
     combat.value.shieldPercent = namedWasm.combatShieldPercent();
     combat.value.freezeTurns = formatDecimal(HANDLES.combatFreezeTurns, 0);
     for (const spell of combat.value.spells) {
+        spell.unlocked = spell.upgrade === undefined || namedWasm.hasGuildShopUpgrade(spell.upgrade);
         spell.cost = formatDecimal(spell.costHandle);
         spell.affordable = namedWasm.canCastCombatSpell(spell.index);
     }
@@ -1101,10 +1124,13 @@ onBeforeUnmount(() => {
                 :quests="guildQuests"
                 :quest-result="questResult"
                 :mana-circle="manaCircle"
+                :equipment-unlocked="equipmentUnlocked"
                 @apply="applyToGuild"
                 @accept="acceptGuildQuest"
                 @dismiss-result="dismissQuestResult"
                 @move-item="moveInventoryItem"
+                @equip-item="equipInventoryItem"
+                @unequip-item="unequipInventoryItem"
                 @use-item="useInventoryItem"
                 @sell-item="sellInventoryItem"
                 @sell-all-materials="sellAllMaterials"
@@ -1120,8 +1146,8 @@ onBeforeUnmount(() => {
                 @cast="castCombatSpell"
                 @abandon="abandonGuildQuest"
             />
-            <AutobuyersTab
-                v-else-if="activeTab === 'autobuyers'"
+            <AutocastersTab
+                v-else-if="activeTab === 'autocasters'"
                 :autocasters="autocasters"
                 :coins="guild.coins"
                 @hire="hireAutocaster"
@@ -1166,7 +1192,7 @@ onBeforeUnmount(() => {
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
         <MessageTicker @message-displayed="updateMessageTickerStatistics" />
-        <footer>The Mana Paradox v0.0.11</footer>
+        <footer>The Mana Paradox v0.0.12</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

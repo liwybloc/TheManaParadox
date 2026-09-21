@@ -5,6 +5,7 @@ import { HANDLES } from "../core/player.js";
 import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { setTotalMemories } from "../game/memories.js";
+import { setQuestRefreshRemaining } from "../guild/guild.js";
 
 (globalThis as any).readValue = (value: keyof typeof HANDLES) => {
     return readString(HANDLES[value] ?? HANDLES.mana);
@@ -32,4 +33,8 @@ import { setTotalMemories } from "../game/memories.js";
 
 (globalThis as any).assignMemories = (number: number) => {
     return setTotalMemories(number);
+}
+
+(globalThis as any).refreshQuests = () => {
+    setQuestRefreshRemaining(0);
 }

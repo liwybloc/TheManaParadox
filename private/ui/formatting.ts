@@ -37,12 +37,21 @@ function formatScientificDecimal(value: string): string {
     const [, sign, layerPrefix] = match;
     let mantissa = Number(match[3]);
     let exponent = Number(match[4]);
+    let prefix = layerPrefix;
     const decimals = 2;
     const roundingScale = 10 ** decimals;
+
+    while (Math.abs(exponent) >= 1e9) {
+        prefix += "e";
+        mantissa = Math.abs(exponent);
+        exponent = Math.floor(Math.log10(mantissa));
+        mantissa /= 10 ** exponent;
+    }
+
     mantissa = Math.round(mantissa * roundingScale) / roundingScale;
     if (mantissa >= 10) {
         mantissa /= 10;
         exponent++;
     }
-    return `${sign}${layerPrefix}${mantissa.toFixed(decimals)}e${exponent}`;
+    return `${sign}${prefix}${mantissa.toFixed(decimals)}e${exponent}`;
 }

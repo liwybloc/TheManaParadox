@@ -5,6 +5,7 @@ import { isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isSpecifi
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 import { refreshTierOneDerivedState, resetMeridianPurification, resetTierOneAmounts } from "./tier_one.js";
+import { equipmentCrystalMatrixMultiplier } from "../guild/equipment.js";
 
 declare const player: Player;
 declare const scratch: Scratch;
@@ -143,6 +144,8 @@ export function matrixMagnitudeHandle(): i32 {
         writeNumber(scratch.tierOneSeconds, 0.1);
         addUS(scratch.productionModifier, scratch.tierOneSeconds);
     }
+    writeNumber(scratch.tierOneSeconds, equipmentCrystalMatrixMultiplier());
+    mulUS(scratch.productionModifier, scratch.tierOneSeconds);
     return scratch.productionModifier;
 }
 

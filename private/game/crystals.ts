@@ -13,8 +13,8 @@ export interface CrystalDefinition {
 }
 
 const CRYSTAL_GOAL_EXPONENTS = [
-    1600, 4500, 450, 40, 10000,
-    16000, 25000, 40000, 65000, 100000,
+    1600, 4500, 450, 40, 200,
+    2500, 25000, 40000, 65000, 100000,
     160000, 250000, 400000, 650000, 1000000,
 ] as const;
 
@@ -27,8 +27,8 @@ export const CRYSTALS: readonly CrystalDefinition[] = [
     { id: 2,  color: "#77ddff", variant: 2, effects: ["Empowerments are disabled", "Crystal Matrices are disabled"], rewards: ["Empowerments are buffed based on Crystal Matrices (×{empowermentCMBuff})"] },
     { id: 3,  color: "#49b7f2", variant: 3, effects: ["Only producers are enabled"], rewards: ["Unlock Memories"] },
     { id: 4,  color: "#2877d2", variant: 4, effects: ["Only Mana Absorbers are available", "Sealed Meridians and Crystal Matrix costs are modified", "Start with 10 mana"], rewards: ["Mana Absorbers are buffed based on Sealed Meridians (×{manaAbsorberSMBuff})"] },
-    { id: 5,  color: "#173b91", variant: 5, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false, locked: true },
-    { id: 6,  color: "#422d83", variant: 1, effects: ["Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
+    { id: 5,  color: "#173b91", variant: 5, effects: ["Per-boost multiplier is fixed to ×1.1"], rewards: ["Per-boost multiplier is increased by +0.05×"] },
+    { id: 6,  color: "#422d83", variant: 1, effects: ["All multipliers are raised ^0.1"], rewards: ["×10 All Production"], possible: false, locked: true },
     { id: 7,  color: "#78265f", variant: 2, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder."], possible: false },
     { id: 8,  color: "#ae2d48", variant: 3, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
     { id: 9,  color: "#dc3d32", variant: 4, effects: ["Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
@@ -47,14 +47,17 @@ const crystalFourManaAbsorberBuff = createZero();
 const crystalEffectHandles = [
     createDecimal(1, 0, 0.9), unusedEffectHandle, unusedEffectHandle,
     createDecimal(1, 0, 1), createDecimal(1, 0, 1), createDecimal(1, 0, 0.1),
-    ...Array(CRYSTALS.length * 3 - 6).fill(unusedEffectHandle),
+    ...Array(6).fill(unusedEffectHandle),
+    createDecimal(1, 0, 1.1), unusedEffectHandle, unusedEffectHandle,
+    ...Array(CRYSTALS.length * 3 - 15).fill(unusedEffectHandle),
 ];
 const crystalRewardHandles = [
     createDecimal(1, 0, 10), unusedRewardHandle, unusedRewardHandle,
     crystalTwoEmpowermentBuff, unusedRewardHandle, unusedRewardHandle,
     unusedRewardHandle, unusedRewardHandle, unusedRewardHandle,
     crystalFourManaAbsorberBuff, unusedRewardHandle, unusedRewardHandle,
-    ...Array(CRYSTALS.length * 3 - 12).fill(unusedRewardHandle),
+    createDecimal(1, 0, 0.05), unusedRewardHandle, unusedRewardHandle,
+    ...Array(CRYSTALS.length * 3 - 15).fill(unusedRewardHandle),
 ];
 
 declare const player: Player;

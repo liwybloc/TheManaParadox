@@ -118,8 +118,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-    <section class="autobuyers-tab">
-        <div class="section-title"><h1>Guild Auto-Casters</h1><p>You have {{ coins }} {{ coinLabel(coins) }}.</p></div>
+    <section class="autocasters-tab">
+        <div class="section-title"><h1>Guild Autocasters</h1><p>You have {{ coins }} {{ coinLabel(coins) }}.</p></div>
         <div class="autocaster-hiring">
             <button v-for="option in autocasters.hireOptions" :key="option.tier" type="button" :disabled="!option.affordable" @click="$emit('hire', option.tier)">
                 Hire Tier {{ option.tier }}<small>{{ option.hireCost }} {{ coinLabel(option.hireCost) }} · {{ option.wage }} {{ coinLabel(option.wage) }} / 10 min</small>

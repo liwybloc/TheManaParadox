@@ -67,7 +67,7 @@ export interface PlayerHandles {
     coins: i32;
     guildRank: i32;
     activeQuest: i32;
-    wolfineHealth: i32;
+    enemyHealth: i32;
     combatShield: i32;
     combatShieldMaximum: i32;
     combatFreezeTurns: i32;
@@ -160,7 +160,7 @@ export const HANDLES: PlayerHandles = {
     coins: createZero(),
     guildRank: createZero(),
     activeQuest: createDecimal(-1, 0, 1),
-    wolfineHealth: createZero(),
+    enemyHealth: createZero(),
     combatShield: createZero(),
     combatShieldMaximum: createZero(),
     combatFreezeTurns: createZero(),
@@ -243,7 +243,7 @@ export const player: Player = {
     coins: 0,
     guildRank: 0,
     activeQuest: 0,
-    wolfineHealth: 0,
+    enemyHealth: 0,
     combatShield: 0,
     combatShieldMaximum: 0,
     combatFreezeTurns: 0,
@@ -390,7 +390,7 @@ export function initializeGuildHandles(
     player.coins = coins;
     player.guildRank = rank;
     player.activeQuest = activeQuest;
-    player.wolfineHealth = wolfineHealth;
+    player.enemyHealth = wolfineHealth;
     player.combatShield = shield;
     player.combatShieldMaximum = shieldMaximum;
     player.combatFreezeTurns = freezeTurns;
@@ -452,7 +452,7 @@ initializeEmpowermentHandles(
 initializeCourageHandles(HANDLES.courageTimer, HANDLES.courageCooldown, HANDLES.courageMultiplier);
 initializeCondensedManaHandle(HANDLES.condensedMana);
 initializeGuildHandles(
-    HANDLES.coins, HANDLES.guildRank, HANDLES.activeQuest, HANDLES.wolfineHealth, HANDLES.combatShield, HANDLES.combatShieldMaximum, HANDLES.combatFreezeTurns,
+    HANDLES.coins, HANDLES.guildRank, HANDLES.activeQuest, HANDLES.enemyHealth, HANDLES.combatShield, HANDLES.combatShieldMaximum, HANDLES.combatFreezeTurns,
     HANDLES.fireballCost, HANDLES.whirlwindCost, HANDLES.freezeCost,
     HANDLES.inventoryWolfFur, HANDLES.inventoryPotionOfSpeed,
     HANDLES.inventoryWolfFurPosition, HANDLES.inventoryPotionPosition, HANDLES.potionSpeedTimer,
