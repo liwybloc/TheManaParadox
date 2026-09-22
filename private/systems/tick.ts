@@ -321,7 +321,7 @@ registerProductionEntity(
 const UPDATE_RATE_STORAGE_KEY = "updateRate";
 const MIN_UPDATE_RATE = 10;
 const MAX_UPDATE_RATE = 200;
-const DEFAULT_UPDATE_RATE = 33;
+const DEFAULT_UPDATE_RATE = 100;
 let updateRate = loadUpdateRate();
 setUpdateRate(updateRate);
 
@@ -451,7 +451,7 @@ function runTick(): void {
     const elapsedMilliseconds = Math.max(0, start - lastTickTimestamp);
     lastTickTimestamp = start;
     if (!simulationActive) {
-        if (elapsedMilliseconds > 500) {
+        if (elapsedMilliseconds > 10_000) {
             void simulateTime(elapsedMilliseconds / 1000, true);
         } else {
             tick(elapsedMilliseconds, true);
