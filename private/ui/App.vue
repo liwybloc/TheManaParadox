@@ -290,20 +290,61 @@ function selectSubtab(id) {
     localStorage.setItem("selectedSubTab", id);
 }
 
-function updateDisplay() {
+const FAST_UI_INTERVAL = 50;
+const SLOW_UI_INTERVAL = 250;
+let lastFastUiUpdate = 0;
+let lastSlowUiUpdate = 0;
+
+function updateFastDisplay() {
+    updateGlobalDisplay();
+
+    switch (activeTab.value) {
+        case "mana":
+            updateManaDisplay();
+            break;
+        case "quest":
+            updateQuestDisplay();
+            break;
+    }
+}
+
+function updateSlowDisplay() {
+    updateAchievementNotifications();
+
+    switch (activeTab.value) {
+        case "condensed":
+            updateCondensedDisplay();
+            break;
+        case "manacircle":
+            manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier);
+            break;
+        case "guild":
+            updateGuildDisplay(activeSubtab.value);
+            break;
+        case "autocasters":
+            updateAutocastersDisplay();
+            break;
+        case "achievements":
+            updateAchievementsDisplay();
+            break;
+        case "statistics":
+            updateStatisticsDisplay();
+            break;
+    }
+}
+
+function updateDisplay(timestamp) {
     try {
-        updateGlobalDisplay();
-        updateAchievementNotifications();
-        switch (activeTab.value) {
-            case "mana": updateManaDisplay(); break;
-            case "condensed": updateCondensedDisplay(); break;
-            case "manacircle": manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier); break;
-            case "guild": updateGuildDisplay(activeSubtab.value); break;
-            case "quest": updateQuestDisplay(); break;
-            case "autocasters": updateAutocastersDisplay(); break;
-            case "achievements": updateAchievementsDisplay(); break;
-            case "statistics": updateStatisticsDisplay(); break;
+        if (timestamp - lastFastUiUpdate >= FAST_UI_INTERVAL) {
+            lastFastUiUpdate = timestamp;
+            updateFastDisplay();
         }
+
+        if (timestamp - lastSlowUiUpdate >= SLOW_UI_INTERVAL) {
+            lastSlowUiUpdate = timestamp;
+            updateSlowDisplay();
+        }
+
         displayErrorReported = false;
     } catch (error) {
         if (!displayErrorReported) console.error("Failed to update the active game display", error);
