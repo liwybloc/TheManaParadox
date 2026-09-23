@@ -139,6 +139,8 @@ const gameSpeed = ref("1.00");
 const gameSpeedIncreased = ref(false);
 const starsVisible = ref(loadStarsVisible());
 const starsAnimated = ref(loadStarsAnimated());
+const newsTickerEnabled = ref(localStorage.getItem("newsTickerEnabled") !== "false");
+const messageTickerParticles = ref(localStorage.getItem("messageTickerParticles") === "true");
 const sealedMeridians = ref({
     level: "1",
     effect: "1",
@@ -755,6 +757,16 @@ function setStarsAnimated(animated) {
     applyStarsAnimated(animated);
 }
 
+function setNewsTickerEnabled(enabled) {
+    newsTickerEnabled.value = enabled;
+    localStorage.setItem("newsTickerEnabled", String(enabled));
+}
+
+function setMessageTickerParticles(enabled) {
+    messageTickerParticles.value = enabled;
+    localStorage.setItem("messageTickerParticles", String(enabled));
+}
+
 function updateTickRate(value) {
     updateRate.value = setUpdateRate(value);
 }
@@ -1169,9 +1181,13 @@ onBeforeUnmount(() => {
                 :update-rate="updateRate"
                 :stars-visible="starsVisible"
                 :stars-animated="starsAnimated"
+                :news-ticker-enabled="newsTickerEnabled"
+                :message-ticker-particles="messageTickerParticles"
                 @edit-keybinds="editKeybinds"
                 @stars-visible="setStarsVisible"
                 @stars-animated="setStarsAnimated"
+                @news-ticker-enabled="setNewsTickerEnabled"
+                @message-ticker-particles="setMessageTickerParticles"
                 @export-save="exportGameSave"
                 @import-save="importGameSave"
                 @reset-game="resetGame"
@@ -1191,7 +1207,12 @@ onBeforeUnmount(() => {
             </section>
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
-        <MessageTicker @message-displayed="updateMessageTickerStatistics" />
+        <MessageTicker
+            v-if="newsTickerEnabled"
+            :key="messageTickerParticles ? 'particles' : 'text'"
+            :particles="messageTickerParticles"
+            @message-displayed="updateMessageTickerStatistics"
+        />
         <footer>The Mana Paradox v0.0.12</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>

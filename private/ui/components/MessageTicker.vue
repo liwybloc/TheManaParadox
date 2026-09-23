@@ -8,6 +8,9 @@ import {
 } from 'vue';
 import { MESSAGE_TICKERS, recordMessageTicker } from '@game/game/message_tickers.js';
 
+const props = defineProps({
+    particles: { type: Boolean, required: true }
+});
 const emit = defineEmits(['message-displayed']);
 
 const config = {
@@ -77,6 +80,7 @@ let ctx;
 let particles = [];
 let animationFrame;
 let startTime = 0;
+let canvasInitialized = false;
 
 function resizeCanvas() {
     const el = canvas.value;
@@ -205,25 +209,45 @@ function animate(time) {
     ctx.shadowBlur = 0;
     animationFrame = requestAnimationFrame(animate);
 }
-onMounted(() => {
+function initializeCanvas() {
+    if (canvasInitialized || !canvas.value) return;
     ctx = canvas.value.getContext('2d');
+    canvasInitialized = true;
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
     animationFrame = requestAnimationFrame(animate);
-});
-onBeforeUnmount(() => {
+}
+
+function destroyCanvas() {
+    if (!canvasInitialized) return;
     cancelAnimationFrame(animationFrame);
     window.removeEventListener('resize', resizeCanvas);
+    canvasInitialized = false;
+    ctx = undefined;
+    particles = [];
+}
+
+onMounted(() => {
+    if (props.particles) initializeCanvas();
+});
+onBeforeUnmount(() => {
+    destroyCanvas();
 });
 watch(
     () => message.value,
     () => {
-        buildParticles();
+        if (props.particles && canvasInitialized) buildParticles();
     });
 </script>
 
 <template>
     <div class="message-ticker-head">
-        <canvas ref="canvas" class="mana-message-canvas" />
+        <canvas v-if="props.particles" ref="canvas" class="mana-message-canvas" />
+        <div
+            v-else
+            :key="message"
+            class="mana-message-text"
+            :style="{ '--message-duration': `${getMessageDuration()}ms` }"
+        >{{ message }}</div>
     </div>
 </template>

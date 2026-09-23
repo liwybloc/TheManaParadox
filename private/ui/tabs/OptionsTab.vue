@@ -4,8 +4,10 @@ defineProps({
     updateRate: { type: Number, required: true },
     starsVisible: { type: Boolean, required: true },
     starsAnimated: { type: Boolean, required: true },
+    newsTickerEnabled: { type: Boolean, required: true },
+    messageTickerParticles: { type: Boolean, required: true },
 });
-const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "export-save", "import-save", "reset-game", "update-rate"]);
+const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "news-ticker-enabled", "message-ticker-particles", "export-save", "import-save", "reset-game", "update-rate"]);
 </script>
 
 <template>
@@ -36,6 +38,8 @@ const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "e
             <div class="option-list">
                 <label><span><strong>Show star background</strong><small>Display background stars.</small></span><input type="checkbox" :checked="starsVisible" @change="emit('stars-visible', $event.currentTarget.checked)" /></label>
                 <label><span><strong>Animate stars</strong><small>Allow stars to twinkle and move with mana.</small></span><input type="checkbox" :checked="starsAnimated" @change="emit('stars-animated', $event.currentTarget.checked)" /></label>
+                <label><span><strong>News Ticker Enabled</strong><small>Display news ticker messages.</small></span><input type="checkbox" :checked="newsTickerEnabled" @change="emit('news-ticker-enabled', $event.currentTarget.checked)" /></label>
+                <label><span><strong>Message Ticker Particles</strong><small>Render ticker messages with mana particles.</small></span><input type="checkbox" :checked="messageTickerParticles" @change="emit('message-ticker-particles', $event.currentTarget.checked)" /></label>
             </div>
         </div>
     </section>
