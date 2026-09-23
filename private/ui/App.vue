@@ -672,7 +672,7 @@ function updateQuestDisplay() {
     const activeQuest = GUILD_QUESTS_BY_ID.get(activeQuestId);
     combat.value.monster = activeQuest?.monster ?? "Monsters";
     combat.value.rank = GUILD_RANKS[activeQuest?.rank ?? 0] ?? "F";
-    combat.value.enemyHealth = formatDecimal(HANDLES.wolfineHealth, 0);
+    combat.value.enemyHealth = formatDecimal(HANDLES.enemyHealth, 0);
     combat.value.enemyMaximumHealth = formatDecimal(namedWasm.enemyMaximumHealth(namedWasm.activeQuestIndex()), 0);
     combat.value.enemyPercent = namedWasm.wolfineHealthPercent();
     combat.value.shield = formatDecimal(namedWasm.combatShieldHandle(), 0);
