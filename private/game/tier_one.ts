@@ -339,9 +339,14 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
     const infinityBoundary = <i32>toNumber(player.mana_circle_tier);
     if (passesLayerBoundary(cost, infinityBoundary)) return 0;
 
-    computeTierOneCostExponent(scratch.tierOneExponent, index, tierOneBoughtHandle(index));
-    addInto(scratch.tierOneProduction, tierOneBoughtHandle(index), 1);
-    computeTierOneCostExponent(scratch.productionModifier, index, scratch.tierOneProduction);
+    const bought = tierOneBoughtHandle(index);
+    computeTierOneCostExponent(scratch.productionModifier, index, bought);
+    if (gt(bought, 0)) {
+        subInto(scratch.tierOneProduction, bought, 1);
+        computeTierOneCostExponent(scratch.tierOneExponent, index, scratch.tierOneProduction);
+    } else {
+        writeNumber(scratch.tierOneExponent, 0);
+    }
 
     log10Into(scratch.tierOneProduction, player.mana);
     subUS(scratch.tierOneProduction, scratch.tierOneExponent);

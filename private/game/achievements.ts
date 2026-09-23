@@ -10,7 +10,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_unnecessary", number: 22, title: "Unnecessary", description: "Condense without meditating.", reward: "Start each Condense with 1 Crystal Matrix", category: "challenge" },
 
     { id: "achievement_hatethetaste", number: 31, title: "I hate the taste!", description: "Condense without any potion effects.", reward: "Potions are ×1.25 stronger", category: "challenge"},
-    { id: "achievement_lovethetaste", number: 32, title: "Actually, I love the taste!", description: "Drink 20 potions at once.", reward: "Increase potion durations by 30 seconds", category: "challenge" },
+    { id: "achievement_lovethetaste", number: 32, title: "Actually, I love the taste!", description: "Drink 20 potions at once. (Note: you can only drink 10 of the same potion level at once)", reward: "Increase potion durations by 30 seconds", category: "challenge" },
     { id: "achievement_freezeonly", number: 33, title: "Where's my supa suit!", description: "Defeat a D-rank or stronger enemy using only Freeze.", reward: "Freeze scales by 1e20 less per cast", category: "challenge" },
     { id: "achievement_noboosting", number: 34, title: "Booster? I hardly know 'er!", description: "Condense without boosting any producer.", reward: "Increase per-boost multiplier by +0.01×", category: "challenge" },
     { id: "achievement_sellfullinventory", number: 35, title: "Will this be enough?", description: "Sell an entire inventory of items.", reward: "+50% Sell price", category: "challenge" },

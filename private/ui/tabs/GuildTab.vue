@@ -10,6 +10,7 @@ const props = defineProps({
     questResult: { type: Object, required: true },
     manaCircle: { type: Number, required: true },
     equipmentUnlocked: { type: Boolean, required: true },
+    cantRankUp: { type: Boolean, required: true },
 });
 const emit = defineEmits([
     "apply", "accept", "dismiss-result", "move-item", "equip-item", "unequip-item", "use-item", "sell-item",
@@ -31,7 +32,8 @@ let pendingPress = null;
 const rankProgress = computed(() => {
     const requirement = Number(props.guild.experienceRequirement);
     if (!Number.isFinite(requirement) || requirement <= 0) return 0;
-    return Math.max(0, Math.min(1, props.guild.experience / requirement));
+    const maximum = props.cantRankUp ? 0.99 : 1;
+    return Math.max(0, Math.min(maximum, props.guild.experience / requirement));
 });
 
 function coinLabel(value) {
@@ -201,6 +203,7 @@ onBeforeUnmount(() => {
                 <p>Guild Rank: <strong>{{ guild.rank }}</strong> · Refresh: {{ guild.refreshTimer }}</p>
                 <p>Quests 2 rank below you can only give 25% of the required experience.</p>
                 <p>Quests 1 rank below you can only give 50% of the required experience.</p>
+                <p v-if="cantRankUp">The Guild won't let you rank up until you grow stronger..</p>
             </div>
             <div v-if="questResult.visible" class="quest-result" role="status">
                 <div>

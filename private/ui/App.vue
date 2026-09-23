@@ -77,6 +77,7 @@ const activeCrystal = ref(-1);
 const crystalGoalReached = ref(false);
 const crystalCanShatter = ref(false);
 const equipmentUnlocked = ref(false);
+const cantRankUp = ref(false);
 const pingedTabs = ref([]);
 const pingedSubtabs = ref([]);
 const manaPerSecond = ref("0.00");
@@ -639,6 +640,7 @@ function updateGuildBoardDisplay() {
     guild.value.experience = namedWasm.getGuildExperience();
     const experienceRequirement = namedWasm.guildExperienceRequirement();
     guild.value.experienceRequirement = Number.isFinite(experienceRequirement) ? experienceRequirement : "∞";
+    cantRankUp.value = namedWasm.cantRankUp();
     questResult.value.visible = namedWasm.hasQuestResult();
     if (questResult.value.visible) {
         questResult.value.monster = GUILD_QUESTS_BY_ID.get(namedWasm.lastCompletedQuestDefinitionId())?.monster ?? "monsters";
@@ -1178,6 +1180,7 @@ onBeforeUnmount(() => {
                 :quest-result="questResult"
                 :mana-circle="manaCircle"
                 :equipment-unlocked="equipmentUnlocked"
+                :cant-rank-up="cantRankUp"
                 @apply="applyToGuild"
                 @accept="acceptGuildQuest"
                 @dismiss-result="dismissQuestResult"
@@ -1254,7 +1257,7 @@ onBeforeUnmount(() => {
             :particles="messageTickerParticles"
             @message-displayed="updateMessageTickerStatistics"
         />
-        <footer>The Mana Paradox v0.0.12</footer>
+        <footer>The Mana Paradox v0.0.13</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

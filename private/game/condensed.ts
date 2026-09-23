@@ -30,11 +30,11 @@ const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
     { slot: 8,  title: "Circuits produce ×2 more", cost: [1, 0, 2], circleTwo: { title: "Circuits produce ^1.1 more", cost: [1, 0, 200] } },
     { slot: 9,  title: "Conduits produce ×2 more", cost: [1, 0, 1], circleTwo: { title: "Conduits produce ^1.1 more", cost: [1, 0, 100] } },
 
-    { slot: 10, title: "Start each reset with 1e50 mana", cost: [1, 0, 20], circleTwo: { title: "Start each reset with 1e100 mana", cost: [1, 0, 50] } },
-    { slot: 11, title: "Decrease Meditation cost growth to ^1.9", cost: [1, 0, 75], circleTwo: { title: "Decrease Meditation cost growth to ^1.8", cost: [1, 0, 125] } },
+    { slot: 10, title: "Start each reset with 1e50 mana", cost: [1, 0, 15], circleTwo: { title: "Start each reset with 1e100 mana", cost: [1, 0, 50] } },
+    { slot: 11, title: "Decrease Meditation cost growth to ^1.9", cost: [1, 0, 40], circleTwo: { title: "Decrease Meditation cost growth to ^1.8", cost: [1, 0, 125] } },
 
-    { slot: 13, title: "Decrease Empowerment cost growth to ^1.9", cost: [1, 0, 75], circleTwo: { title: "Decrease Empowerment cost growth to ^1.8", cost: [1, 0, 125] } },
-    { slot: 14, title: "Start each reset with 2 Sealed Meridians", cost: [1, 0, 20], circleTwo: { title: "Start each reset with 3 Sealed Meridians and 1 Crystal Matrix", cost: [1, 0, 50] } },
+    { slot: 13, title: "Decrease Empowerment cost growth to ^1.9", cost: [1, 0, 40], circleTwo: { title: "Decrease Empowerment cost growth to ^1.8", cost: [1, 0, 125] } },
+    { slot: 14, title: "Start each reset with 2 Sealed Meridians", cost: [1, 0, 15], circleTwo: { title: "Start each reset with 3 Sealed Meridians and 1 Crystal Matrix", cost: [1, 0, 50] } },
 
     { slot: 15, title: "First Meditation is free", cost: [1, 0, 10], circleTwo: { title: "First and second Meditations are free", cost: [1, 0, 20] } },
     { slot: 16, title: "Courage duration is increased by 25%", cost: [1, 0, 10], circleTwo: { title: "Courage duration is increased by 50%", cost: [1, 0, 20] } },
@@ -42,9 +42,9 @@ const CONDENSED_UPGRADE_DEFINITIONS: CondensedUpgradeDefinition[] = [
     { slot: 18, title: "Courage is unlocked 1e20 earlier", cost: [1, 0, 10], circleTwo: { title: "Courage is always unlocked", cost: [1, 0, 20] } },
     { slot: 19, title: "Sealed Meridian magnitude is increased based on Crystal Matrix effect", cost: [1, 0, 10], circleTwo: { title: "Sealed Meridian magnitude is increased by twice the Crystal Matrix effect", cost: [1, 0, 20] } },
 
-    { slot: 21, title: "Empowerments are ×5 stronger", cost: [1, 0, 250], circleTwo: { title: "Empowerments are ×25 stronger", cost: [1, 0, 2500] } },
-    { slot: 22, title: "Meditation power is slightly increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff})", cost: [1, 0, 400], circleTwo: { title: "Meditation power is increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff2})", cost: [1, 0, 4000] } },
-    { slot: 23, title: "Condensed Mana boosts Courage power\n(Currently: {condensedCourageBuff})", cost: [1, 0, 250], circleTwo: { title: "Condensed Mana boosts courage power greatly\n(Currently: {condensedCourageBuff2})", cost: [1, 0, 2500] } },
+    { slot: 21, title: "Empowerments are ×5 stronger", cost: [1, 0, 200], circleTwo: { title: "Empowerments are ×25 stronger", cost: [1, 0, 2500] } },
+    { slot: 22, title: "Meditation power is slightly increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff})", cost: [1, 0, 300], circleTwo: { title: "Meditation power is increased based on Sealed Meridians\n(Currently: {sealedMeridiansCastPowerBuff2})", cost: [1, 0, 4000] } },
+    { slot: 23, title: "Condensed Mana boosts Courage power\n(Currently: {condensedCourageBuff})", cost: [1, 0, 200], circleTwo: { title: "Condensed Mana boosts courage power greatly\n(Currently: {condensedCourageBuff2})", cost: [1, 0, 2500] } },
     
     {
         slot: 12,

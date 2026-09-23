@@ -59,6 +59,11 @@ const BASE_MESSAGE_TICKERS = [
     "isn't this just the spiral abyss?",
     "turi ip ip ip",
     "when is the guild tag coming out",
+    "cosidering yrou'e a wizerd i thot yu wood b beter at speling",
+    "please be patient, all bugs will be fixed in the next update",
+    "have you tried turning the mana off and on again?",
+    "ok the spell might not be mana efficient but is it at least card efficient?",
+    "would you do it all again? sure, why not! -lily",
 ] as const;
 
 export const MESSAGE_TICKERS: readonly string[] = ([

@@ -131,7 +131,8 @@ export function setQuestDefinitionId(slot: i32, id: i32): void {
 }
 
 export function getGuildExperience(): f64 {
-    return guildExperience;
+    if (!cantRankUp()) return guildExperience;
+    return Math.min(guildExperience, guildExperienceRequirement() * 0.99);
 }
 
 export function setGuildExperience(experience: f64): void {
@@ -158,6 +159,11 @@ export function guildExperienceRequirement(): f64 {
     return rank >= 0 && rank < guildRankExperienceRequirementCount
         ? guildRankExperienceRequirements[rank]
         : Infinity;
+}
+
+export function cantRankUp(): bool {
+    const rank = <i32>toNumber(player.guildRank);
+    return rank === 4 || (rank === 0 && toNumber(player.mana_circle_tier) <= 0);
 }
 
 export function isQuestActive(): bool {
@@ -855,7 +861,9 @@ function finishQuest(victory: bool): void {
         const currentRank = <i32>toNumber(player.guildRank);
         addGuildExperience(questRank(completedSlot), currentRank);
         const requirement = guildExperienceRequirement();
-        if (guildExperience >= requirement) {
+        if (cantRankUp()) {
+            guildExperience = Math.min(guildExperience, requirement * 0.99);
+        } else if (guildExperience >= requirement) {
             writeNumber(player.guildRank, currentRank + 1);
             resetGuildExperienceByQuestRank();
             unlockTierOneAchievement(29);

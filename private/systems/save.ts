@@ -17,7 +17,7 @@ import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, au
 const STORAGE_KEY = "saveData";
 const RECOVERY_STORAGE_KEY = "saveDataRecovery";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "017";
+const CURRENT_SAVE_VERSION = "018";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -76,13 +76,37 @@ const achievementFields011 = achievementSaveFields(5, 35);
 const ascensionAchievementFields011 = achievementSaveFields(2, 40);
 const achievementFields012 = achievementSaveFields(3, 42);
 const achievementFields015 = achievementSaveFields(5, 45);
-const messageTickerFields: readonly SaveField[] = [
+const MESSAGE_TICKER_COUNT_013 = 56;
+const MESSAGE_TICKER_SAVE_CAPACITY = 256;
+if (MESSAGE_TICKER_COUNT > MESSAGE_TICKER_SAVE_CAPACITY) throw new Error("Message ticker save capacity exceeded");
+const messageTickerFields013: readonly SaveField[] = [
     callbackNumberSaveField(getTotalMessageTickersSeen, setTotalMessageTickersSeen),
-    ...Array.from({ length: MESSAGE_TICKER_COUNT }, (_, index) => booleanSaveField(
+    ...Array.from({ length: MESSAGE_TICKER_COUNT_013 }, (_, index) => booleanSaveField(
         () => hasSeenMessageTicker(index),
         (seen) => setSeenMessageTicker(index, seen),
     )),
 ];
+const messageTickerSeenField018: SaveField = {
+    byteLength: MESSAGE_TICKER_SAVE_CAPACITY / 8,
+    write: (view, offset) => {
+        for (let byte = 0; byte < MESSAGE_TICKER_SAVE_CAPACITY / 8; byte++) {
+            let value = 0;
+            for (let bit = 0; bit < 8; bit++) {
+                if (hasSeenMessageTicker(byte * 8 + bit)) value |= 1 << bit;
+            }
+            view.setUint8(offset + byte, value);
+        }
+    },
+    read: (view, offset) => {
+        for (let index = 0; index < MESSAGE_TICKER_COUNT; index++) {
+            const value = view.getUint8(offset + Math.floor(index / 8));
+            setSeenMessageTicker(index, (value & (1 << index % 8)) !== 0);
+        }
+    },
+    reset: () => {
+        for (let index = 0; index < MESSAGE_TICKER_COUNT; index++) setSeenMessageTicker(index, false);
+    },
+};
 const crystalFields: readonly SaveField[] = [
     callbackInt32SaveField(getActiveCrystal, setActiveCrystal, -1),
     ...CRYSTALS.map((_, index) => booleanSaveField(
@@ -325,7 +349,7 @@ const savedFields012: readonly SaveField[] = [
 
 const savedFields013: readonly SaveField[] = [
     ...savedFields012,
-    ...messageTickerFields,
+    ...messageTickerFields013,
 ];
 
 const savedFields014: readonly SaveField[] = [
@@ -361,6 +385,31 @@ const savedFields017: readonly SaveField[] = [
     )),
 ];
 
+const savedFields018: readonly SaveField[] = [
+    ...savedFields017,
+    messageTickerSeenField018,
+];
+const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
+    savedFields001,
+    savedFields002,
+    savedFields003,
+    savedFields004,
+    savedFields005,
+    savedFields006,
+    savedFields007,
+    savedFields008,
+    savedFields009,
+    savedFields010,
+    savedFields011,
+    savedFields012,
+    savedFields013,
+    savedFields014,
+    savedFields015,
+    savedFields016,
+    savedFields017,
+    savedFields018,
+];
+
 const condenseResetFields: readonly SaveField[] = [
     ...savedFields001,
     castSpeedTimerField,
@@ -384,10 +433,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields017));
+    const bytes = new Uint8Array(totalByteLength(savedFields018));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields017) {
+    for (const field of savedFields018) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -401,61 +450,12 @@ export async function importSave(saveData: string): Promise<void> {
     }
     const version = saveData.slice(SAVE_PREFIX.length, SAVE_PREFIX.length + 3);
     const encoded = saveData.slice(SAVE_PREFIX.length + 3, -SAVE_SUFFIX.length);
-    switch (version) {
-        case "001":
-            await importFields(encoded, savedFields001);
-            break;
-        case "002":
-            await importFields(encoded, savedFields002);
-            break;
-        case "003":
-            await importFields(encoded, savedFields003);
-            break;
-        case "004":
-            await importFields(encoded, savedFields004);
-            break;
-        case "005":
-            await importFields(encoded, savedFields005);
-            break;
-        case "006":
-            await importFields(encoded, savedFields006);
-            break;
-        case "007":
-            await importFields(encoded, savedFields007);
-            break;
-        case "008":
-            await importFields(encoded, savedFields008);
-            break;
-        case "009":
-            await importFields(encoded, savedFields009, true);
-            break;
-        case "010":
-            await importFields(encoded, savedFields010, true);
-            break;
-        case "011":
-            await importFields(encoded, savedFields011, true);
-            break;
-        case "012":
-            await importFields(encoded, savedFields012, true);
-            break;
-        case "013":
-            await importFields(encoded, savedFields013, true);
-            break;
-        case "014":
-            await importFields(encoded, savedFields014, true);
-            break;
-        case "015":
-            await importFields(encoded, savedFields015, true);
-            break;
-        case "016":
-            await importFields(encoded, savedFields016, true);
-            break;
-        case "017":
-            await importFields(encoded, savedFields017, true);
-            break;
-        default:
-            throw new Error(`Unsupported Mana Paradox save version ${version}`);
+    const versionIndex = Number(version) - 1;
+    const fields = savedFieldsByVersion[versionIndex];
+    if (!fields || String(versionIndex + 1).padStart(3, "0") !== version) {
+        throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
+    await importFields(encoded, fields, versionIndex >= 8);
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
@@ -482,11 +482,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields017;
+    const currentVersionFields = fields === savedFields018;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields017) field.reset();
+    for (const field of savedFields018) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -583,7 +583,7 @@ export async function saveGame(): Promise<void> {
 
 export function resetGame(): void {
     savingEnabled = true;
-    for (const field of savedFields017) field.reset();
+    for (const field of savedFields018) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();

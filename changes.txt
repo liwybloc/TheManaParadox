@@ -1,7 +1,9 @@
-v0.0.12
-- implemented equipment
-- added Crystal 5
-- added additional Guild content
-- implemented Autocaster improvements
-- more message tickers
-- optimizations, balancing, and bug fixes
+v0.0.13
+- added options to disable the news ticker and message ticker particles
+- improved UI and game performance
+- added more message tickers
+- adjusted progression goals, condensed upgrade costs, and quest rewards
+- added Guild rank progression gates
+- fixed producer affordability progress bars
+- fixed enemy health after the performance refactor
+- fixed save compatibility when adding message tickers

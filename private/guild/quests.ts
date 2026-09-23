@@ -19,7 +19,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "1-2"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -33,7 +33,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "1-2"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -47,7 +47,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "1-2"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -61,7 +61,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -75,7 +75,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -89,7 +89,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -103,7 +103,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -117,7 +117,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -131,7 +131,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -145,7 +145,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -159,7 +159,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -173,7 +173,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-3"
 		}, {
 			item: Items.POTION_SPEED_I,
-			amount: "0-1"
+			amount: "2-3"
 		}]
 	},
 	{
@@ -187,7 +187,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
 			amount: "1-2"
 		}, {
 			item: Items.POTION_SPEED_II,
-			amount: "0-2"
+			amount: "1-3"
 		}]
 	},
 	{
@@ -249,11 +249,11 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
             amount: "1-3",
         }]
 	},
-    { id: 17, rank: 2, title: "Hunt Wyrms", monster: "Wyrms", description: "Hunt the young wyrms circling the mountain pass.", rewards: [{ item: Items.MANA_CORE, amount: "1-2" }, { item: Items.WYRM_SCALE, amount: "1-3" }, { item: Items.POTION_SPEED_III, amount: "0-2" }] },
-    { id: 18, rank: 2, title: "Defeat Trolls", monster: "Trolls", description: "Defeat the trolls occupying a Guild bridge.", rewards: [{ item: Items.DIRE_WOLFINE_FUR, amount: "1-2" }, { item: Items.TROLL_HEART, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "0-2" }] },
-    { id: 19, rank: 2, title: "Dispel Phantoms", monster: "Phantoms", description: "Dispel the phantoms haunting an old watchtower.", rewards: [{ item: Items.GLOWSTONE, amount: "1-3" }, { item: Items.PHANTOM_SILK, amount: "1-3" }, { item: Items.POTION_SPEED_III, amount: "0-2" }] },
-    { id: 20, rank: 2, title: "Shatter Arcane Constructs", monster: "Arcane Constructs", description: "Shatter unstable constructs beneath the Guild.", rewards: [{ item: Items.REDSTONE, amount: "1-3" }, { item: Items.ARCANE_CRYSTAL, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "0-2" }] },
-    { id: 21, rank: 2, title: "Raid a Draconic Lair", monster: "Drakes", description: "Drive the drakes from a newly discovered lair.", rewards: [{ item: Items.MANA_CORE, amount: "1-2" }, { item: Items.DRAGON_GLASS, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "1-2" }] },
+    { id: 17, rank: 2, title: "Hunt Wyrms", monster: "Wyrms", description: "Hunt the young wyrms circling the mountain pass.", rewards: [{ item: Items.MANA_CORE, amount: "1-2" }, { item: Items.WYRM_SCALE, amount: "1-3" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
+    { id: 18, rank: 2, title: "Defeat Trolls", monster: "Trolls", description: "Defeat the trolls occupying a Guild bridge.", rewards: [{ item: Items.DIRE_WOLFINE_FUR, amount: "1-2" }, { item: Items.TROLL_HEART, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
+    { id: 19, rank: 2, title: "Dispel Phantoms", monster: "Phantoms", description: "Dispel the phantoms haunting an old watchtower.", rewards: [{ item: Items.GLOWSTONE, amount: "1-3" }, { item: Items.PHANTOM_SILK, amount: "1-3" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
+    { id: 20, rank: 2, title: "Shatter Arcane Constructs", monster: "Arcane Constructs", description: "Shatter unstable constructs beneath the Guild.", rewards: [{ item: Items.REDSTONE, amount: "1-3" }, { item: Items.ARCANE_CRYSTAL, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
+    { id: 21, rank: 2, title: "Raid a Draconic Lair", monster: "Drakes", description: "Drive the drakes from a newly discovered lair.", rewards: [{ item: Items.MANA_CORE, amount: "1-2" }, { item: Items.DRAGON_GLASS, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
     { id: 22, rank: 3, title: "Break a Wolfine Horde", monster: "Horde of Wolfines", description: "Break a vast Wolfine horde before it reaches the Guild.", rewards: [{ item: Items.WOLFINE_FUR, amount: "10-20" }, { item: Items.DIRE_WOLFINE_FUR, amount: "3-6" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
     { id: 23, rank: 3, title: "Drive Back Elder Trolls", monster: "Elder Trolls", description: "Drive a band of elder trolls from the mountain road.", rewards: [{ item: Items.TROLL_HEART, amount: "3-6" }, { item: Items.OLD_BONE, amount: "8-14" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
     { id: 24, rank: 3, title: "Disperse a Wisp Tempest", monster: "Wisp Tempest", description: "Disperse a storm of wisps tearing through the mana wells.", rewards: [{ item: Items.WISP_ESSENCE, amount: "8-15" }, { item: Items.ENCHANTED_THREAD, amount: "1-2" }, { item: Items.POTION_SPEED_III, amount: "1-3" }] },
@@ -267,7 +267,7 @@ export const GUILD_QUESTS: readonly GuildQuestDefinition[] = [
     { id: 32, rank: 5, title: "Survive the Endless Pack", monster: "Endless Wolfine Pack", description: "Survive a seemingly endless tide of empowered Wolfines.", rewards: [{ item: Items.WOLFINE_FUR, amount: "60-100" }, { item: Items.DIRE_WOLFINE_FUR, amount: "20-35" }, { item: Items.POTION_SPEED_III, amount: "8-12" }] },
     { id: 33, rank: 5, title: "Slay an Ancient Dragon", monster: "Ancient Dragon", description: "Slay an ancient dragon awakened beneath the mountains.", rewards: [{ item: Items.DRAGON_HEART, amount: "1" }, { item: Items.DRAGON_GLASS, amount: "15-25" }, { item: Items.WYRM_SCALE, amount: "20-30" }] },
     { id: 34, rank: 5, title: "Defeat the Phantom Court", monster: "Phantom Court", description: "Defeat the spectral court ruling a city of the dead.", rewards: [{ item: Items.SOUL_FRAGMENT, amount: "4-8" }, { item: Items.PHANTOM_SILK, amount: "20-35" }, { item: Items.ARCANE_CRYSTAL, amount: "10-18" }] },
-    { id: 35, rank: 5, title: "Shatter the Living Mountain", monster: "Living Mountain", description: "Shatter a mountain animated by ancient runes.", rewards: [{ item: Items.ROCKLING_SHARD, amount: "50-80" }, { item: Items.ARCANE_CRYSTAL, amount: "15-25" }, { item: Items.ENCHANTED_THREAD, amount: "6-10" }] },
+    { id: 35, rank: 5, title: "Shatter the Living Mountain", monster: "Living Mountain", description: "Shatter a mountain animated by ancient runes.", rewards: [{ item: Items.ROCKLING_SHARD, amount: "30-50" }, { item: Items.ARCANE_CRYSTAL, amount: "15-25" }, { item: Items.ENCHANTED_THREAD, amount: "6-10" }] },
     { id: 36, rank: 5, title: "Disable the Mana Titan", monster: "Mana Titan", description: "Disable a city-sized mana construct before it overloads.", rewards: [{ item: Items.MANA_CORE, amount: "20-35" }, { item: Items.REDSTONE, amount: "30-50" }, { item: Items.GLOWSTONE, amount: "30-50" }] },
 ];
 
