@@ -400,11 +400,7 @@ function updateGlobalDisplay() {
         const goal = PROGRESSION_GOALS.find((candidate) => !isProgressionGoalComplete(candidate))
             ?? PROGRESSION_GOALS[PROGRESSION_GOALS.length - 1];
         nextGoal.value = goal.label;
-        nextGoalProgress.value = namedWasm.manaGoalProgress(
-            goal.startExponent,
-            goal.endExponent,
-            goal.maximumBeforeCompletion,
-        );
+        nextGoalProgress.value = progressionGoalProgress(goal);
     }
     setStarManaProgress(namedWasm.manaCondenseProgress());
     if (!questActive.value && activeTab.value === "quest") selectTab("guild");
@@ -485,11 +481,45 @@ function isProgressionGoalComplete(goal) {
             return namedWasm.isGuildMember();
         case "courage":
             return namedWasm.isCourageUnlocked() || namedWasm.hasCondensed();
-        case "first-circle-expanded":
-            return manaCircle.value > 0;
+        case "condensed":
+            return namedWasm.hasCondensed();
+        case "ascension-hall":
+            return namedWasm.isAscensionHallUnlocked();
+        case "crystals":
+            return namedWasm.hasAscendedCondensedEffect(CONDENSED_UPGRADES.length - 1);
+        case "abyss":
+            return CRYSTALS.every((_, index) => namedWasm.hasCompletedCrystal(index));
         default:
             return false;
     }
+}
+
+function progressionGoalProgress(goal) {
+    const progress = goal.progress;
+    switch (progress.type) {
+        case "mana":
+            return namedWasm.manaGoalProgress(
+                progress.startExponent,
+                progress.endExponent,
+                progress.maximumBeforeCompletion,
+            );
+        case "condensed-upgrades":
+            return countCompleted(CONDENSED_UPGRADES, (_, index) => namedWasm.hasCondensedUpgrade(index)) / progress.target;
+        case "ascended-condensed-upgrades":
+            return countCompleted(CONDENSED_UPGRADES, (_, index) => namedWasm.hasCircleTwoCondensedUpgrade(index)) / progress.target;
+        case "shattered-crystals":
+            return countCompleted(CRYSTALS, (_, index) => namedWasm.hasCompletedCrystal(index)) / progress.target;
+        default:
+            return 0;
+    }
+}
+
+function countCompleted(definitions, predicate) {
+    let total = 0;
+    definitions.forEach((definition, index) => {
+        if (predicate(definition, index)) total++;
+    });
+    return total;
 }
 
 function updateManaDisplay() {

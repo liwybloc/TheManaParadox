@@ -11,7 +11,7 @@ export const MEMORY_MILESTONE_REWARDS: Readonly<Record<number, string>> = {
     1: "Gain ×2 more condensed mana",
     3: "Courage is ×2 stronger",
     5: "Mana is multiplied based on current mana (Currently: ×{amount})",
-    10: "The game speed decrease is slightly weaker",
+    10: "The game speed decrease in focus is slightly weaker",
     25: "Unlock the Guild's Library",
 };
 
