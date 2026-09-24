@@ -376,7 +376,7 @@ function updateGlobalDisplay() {
             memories.value.nextChance = (namedWasm.memoryChance(SCRATCH_HANDLES.condenseGain) * 100).toFixed(2);
         }
     }
-    autocastersUnlocked.value = namedWasm.hasGuildShopUpgrade(7);
+    autocastersUnlocked.value = namedWasm.hasGuildShopUpgrade(1);
     if (!ascensionHallUnlocked.value && activeSubtabs.value.guild === "guild-ascension-hall") {
         activeSubtabs.value.guild = "guild-main";
     }

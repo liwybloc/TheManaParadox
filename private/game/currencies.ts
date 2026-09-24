@@ -74,7 +74,7 @@ export function applyManaGainModifiers(amount: i32): void {
     writeNumber(scratch.productionModifier, equipmentManaProductionMultiplier());
     mulUS(amount, scratch.productionModifier);
     if (hasMemoryMilestone(5)) mulUS(amount, memoryManaMultiplierHandle());
-    if (hasGuildShopUpgrade(1)) mulUS(amount, 2);
+    if (hasGuildShopUpgrade(7)) mulUS(amount, 2);
     if (hasCondensedEffect(13)) {
         writeNumber(scratch.productionModifier, 0);
         addUS(addUS(scratch.productionModifier, player.condensedMana), 1);
