@@ -63,10 +63,15 @@ function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: b
         }
         clampManaToInfinityBoundary();
         clampManaToActiveCrystalGoal();
+        updateHighestManaReached();
         checkManaAchievements();
         return;
     }
     addUS(currency, amount);
+}
+
+export function updateHighestManaReached(): void {
+    if (gt(player.mana, player.highestManaReached)) copyInto(player.highestManaReached, player.mana);
 }
 
 export function applyManaGainModifiers(amount: i32): void {

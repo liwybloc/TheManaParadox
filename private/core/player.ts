@@ -2,6 +2,7 @@ import { createDecimal, createZero } from "./break_eternity.js";
 
 export interface PlayerHandles {
     mana: i32;
+    highestManaReached: i32;
     statistics_totalManaProduced: i32;
     statistics_totalTimePlayed: i32;
     statistics_gameTimePlayed: i32;
@@ -67,6 +68,7 @@ export interface PlayerHandles {
     coins: i32;
     guildRank: i32;
     activeQuest: i32;
+    quests_currentAvailableMana: i32;
     enemyHealth: i32;
     combatShield: i32;
     combatShieldMaximum: i32;
@@ -95,6 +97,7 @@ export interface Player extends PlayerHandles {
 
 export const HANDLES: PlayerHandles = {
     mana: createDecimal(1, 0, 10),
+    highestManaReached: createDecimal(1, 0, 10),
     statistics_totalManaProduced: createZero(),
     statistics_totalTimePlayed: createZero(),
     statistics_gameTimePlayed: createZero(),
@@ -160,6 +163,7 @@ export const HANDLES: PlayerHandles = {
     coins: createZero(),
     guildRank: createZero(),
     activeQuest: createDecimal(-1, 0, 1),
+    quests_currentAvailableMana: createZero(),
     enemyHealth: createZero(),
     combatShield: createZero(),
     combatShieldMaximum: createZero(),
@@ -178,6 +182,7 @@ export const HANDLES: PlayerHandles = {
 
 export const player: Player = {
     mana: 0,
+    highestManaReached: 0,
     statistics_totalManaProduced: 0,
     statistics_totalTimePlayed: 0,
     statistics_gameTimePlayed: 0,
@@ -243,6 +248,7 @@ export const player: Player = {
     coins: 0,
     guildRank: 0,
     activeQuest: 0,
+    quests_currentAvailableMana: 0,
     enemyHealth: 0,
     combatShield: 0,
     combatShieldMaximum: 0,
@@ -268,6 +274,7 @@ export const player: Player = {
 
 export function initializeCoreHandles(
     mana: i32,
+    highestManaReached: i32,
     totalManaProduced: i32,
     totalTimePlayed: i32,
     gameTimePlayed: i32,
@@ -279,6 +286,7 @@ export function initializeCoreHandles(
     timeDivisor: i32,
 ): void {
     player.mana = mana;
+    player.highestManaReached = highestManaReached;
     player.statistics_totalManaProduced = totalManaProduced;
     player.statistics_totalTimePlayed = totalTimePlayed;
     player.statistics_gameTimePlayed = gameTimePlayed;
@@ -383,13 +391,14 @@ export function initializeCondensedManaHandle(condensedMana: i32): void {
 }
 
 export function initializeGuildHandles(
-    coins: i32, rank: i32, activeQuest: i32, wolfineHealth: i32, shield: i32, shieldMaximum: i32, freezeTurns: i32,
+    coins: i32, rank: i32, activeQuest: i32, currentAvailableMana: i32, wolfineHealth: i32, shield: i32, shieldMaximum: i32, freezeTurns: i32,
     fireballCost: i32, whirlwindCost: i32, freezeCost: i32,
     wolfFur: i32, potionOfSpeed: i32, wolfFurPosition: i32, potionPosition: i32, potionSpeedTimer: i32,
 ): void {
     player.coins = coins;
     player.guildRank = rank;
     player.activeQuest = activeQuest;
+    player.quests_currentAvailableMana = currentAvailableMana;
     player.enemyHealth = wolfineHealth;
     player.combatShield = shield;
     player.combatShieldMaximum = shieldMaximum;
@@ -408,6 +417,7 @@ export function initializeGuildHandles(
 
 initializeCoreHandles(
     HANDLES.mana,
+    HANDLES.highestManaReached,
     HANDLES.statistics_totalManaProduced,
     HANDLES.statistics_totalTimePlayed,
     HANDLES.statistics_gameTimePlayed,
@@ -452,7 +462,8 @@ initializeEmpowermentHandles(
 initializeCourageHandles(HANDLES.courageTimer, HANDLES.courageCooldown, HANDLES.courageMultiplier);
 initializeCondensedManaHandle(HANDLES.condensedMana);
 initializeGuildHandles(
-    HANDLES.coins, HANDLES.guildRank, HANDLES.activeQuest, HANDLES.enemyHealth, HANDLES.combatShield, HANDLES.combatShieldMaximum, HANDLES.combatFreezeTurns,
+    HANDLES.coins, HANDLES.guildRank, HANDLES.activeQuest, HANDLES.quests_currentAvailableMana,
+    HANDLES.enemyHealth, HANDLES.combatShield, HANDLES.combatShieldMaximum, HANDLES.combatFreezeTurns,
     HANDLES.fireballCost, HANDLES.whirlwindCost, HANDLES.freezeCost,
     HANDLES.inventoryWolfFur, HANDLES.inventoryPotionOfSpeed,
     HANDLES.inventoryWolfFurPosition, HANDLES.inventoryPotionPosition, HANDLES.potionSpeedTimer,

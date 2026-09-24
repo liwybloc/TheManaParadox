@@ -334,6 +334,7 @@ onBeforeUnmount(() => {
         <template v-else-if="activeSubtab === 'guild-library'">
             <div class="section-title">
                 <h1>Guild's Library</h1>
+                <p>Coming soon to a Mana Paradox near you:tm:</p>
             </div>
         </template>
         <template v-else-if="activeSubtab === 'guild-shop'">

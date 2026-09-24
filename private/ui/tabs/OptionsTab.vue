@@ -2,12 +2,13 @@
 defineProps({
     activeSubtab: { type: String, required: true },
     updateRate: { type: Number, required: true },
+    offlineProgress: { type: Boolean, required: true },
     starsVisible: { type: Boolean, required: true },
     starsAnimated: { type: Boolean, required: true },
     newsTickerEnabled: { type: Boolean, required: true },
     messageTickerParticles: { type: Boolean, required: true },
 });
-const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "news-ticker-enabled", "message-ticker-particles", "export-save", "import-save", "reset-game", "update-rate"]);
+const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "news-ticker-enabled", "message-ticker-particles", "export-save", "import-save", "reset-game", "update-rate", "offline-progress"]);
 </script>
 
 <template>
@@ -26,7 +27,7 @@ const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "n
                         @input="emit('update-rate', Number($event.currentTarget.value))"
                     />
                 </label>
-
+                <label><span><strong>Offline Progress</strong><small>Allow progress while offline.</small></span><input type="checkbox" :checked="offlineProgress" @change="emit('offline-progress', $event.currentTarget.checked)" /></label>
                 <button type="button" @click="emit('edit-keybinds')">Edit Keybinds</button>
                 <button type="button" @click="emit('export-save')"  >Export Save  </button>
                 <button type="button" @click="emit('import-save')"  >Import Save  </button>

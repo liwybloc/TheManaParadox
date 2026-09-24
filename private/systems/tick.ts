@@ -1,7 +1,7 @@
 import { gt, lte, mulUS, multiplyInto, subUS, writeNumber } from "../core/break_eternity.js";
 import { consumeTierOneRewardsChanged } from "../game/achievements.js";
 import { updateCourage } from "../game/courage.js";
-import { addCondenseTime, addGameTime, addPlayerTime, gainProductionCurrency } from "../game/currencies.js";
+import { addCondenseTime, addGameTime, addPlayerTime, gainProductionCurrency, updateHighestManaReached } from "../game/currencies.js";
 import { getGameSpeed, isQuestActive, updatePotionEffects, updateQuestBoard } from "../guild/guild.js";
 import { HANDLES } from "../core/player.js";
 import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, resetCastSpeed } from "../game/progression.js";
@@ -251,6 +251,7 @@ export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
     updateQuestBoard(deltaMilliseconds / 1000);
     updateAutocasters(deltaMilliseconds / 1000);
     tickProduction(deltaMilliseconds, countTimePlayed);
+    updateHighestManaReached();
     if (consumeTierOneRewardsChanged()) {
         refreshSealedMeridiansDerivedState();
         refreshMatrixDerivedState();
@@ -319,11 +320,13 @@ registerProductionEntity(
 );
 
 const UPDATE_RATE_STORAGE_KEY = "updateRate";
+const OFFLINE_PROGRESS_STORAGE_KEY = "offlineProgress";
 const MIN_UPDATE_RATE = 10;
 const MAX_UPDATE_RATE = 200;
 const DEFAULT_UPDATE_RATE = 100;
 let updateRate = loadUpdateRate();
 setUpdateRate(updateRate);
+let offlineProgress = loadOfflineProgress();
 
 const BASE_SIMULATION_BATCH_SIZE = 5000;
 const simulationListeners = new Set<(state: TimeSimulationState) => void>();
@@ -355,6 +358,19 @@ export function setUpdateRate(value: number): number {
     return updateRate;
 }
 
+export function isOfflineProgressEnabled(): boolean {
+    return offlineProgress;
+}
+
+export function setOfflineProgressEnabled(enabled: boolean): void {
+    offlineProgress = enabled;
+    try {
+        localStorage.setItem(OFFLINE_PROGRESS_STORAGE_KEY, String(enabled));
+    } catch (error) {
+        console.error("Failed to save offline progress setting", error);
+    }
+}
+
 export function subscribeToTimeSimulation(listener: (state: TimeSimulationState) => void): () => void {
     simulationListeners.add(listener);
     listener(currentSimulationState());
@@ -362,7 +378,7 @@ export function subscribeToTimeSimulation(listener: (state: TimeSimulationState)
 }
 
 export async function simulateTime(seconds: number, countTimePlayed = true): Promise<void> {
-    if (simulationActive) return;
+    if (!offlineProgress || simulationActive) return;
     const finiteSeconds = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
     if (finiteSeconds === 0) return;
 
@@ -443,6 +459,15 @@ function loadUpdateRate(): number {
     return DEFAULT_UPDATE_RATE;
 }
 
+function loadOfflineProgress(): boolean {
+    try {
+        return localStorage.getItem(OFFLINE_PROGRESS_STORAGE_KEY) !== "false";
+    } catch (error) {
+        console.error("Failed to load offline progress setting", error);
+        return true;
+    }
+}
+
 let lastTickTimestamp = performance.now();
 
 function runTick(): void {
@@ -452,7 +477,7 @@ function runTick(): void {
     lastTickTimestamp = start;
     if (!simulationActive) {
         if (elapsedMilliseconds > 10_000) {
-            void simulateTime(elapsedMilliseconds / 1000, true);
+            if (offlineProgress) void simulateTime(elapsedMilliseconds / 1000, true);
         } else {
             tick(elapsedMilliseconds, true);
         }

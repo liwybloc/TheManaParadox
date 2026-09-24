@@ -433,3 +433,22 @@
     opacity: 0;
   }
 }
+
+.info-button {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: none;
+  box-shadow: none;
+  text-shadow: none;
+  cursor: pointer;
+}
+
+.info-button:hover {
+  color: #c49cff;
+}
+
+.info-button:focus-visible {
+  outline: 2px solid #c49cff;
+  outline-offset: 2px;
+}

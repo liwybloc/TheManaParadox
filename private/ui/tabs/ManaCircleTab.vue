@@ -31,7 +31,7 @@ const manaMax = computed(() => {
       v-if="activeSubtab === 'current-mana-circle'"
       class="section-title"
     >
-      <h1>Current Mana Circle</h1>
+      <h1>Current Mana Circle <button class="info-button">ⓘ</button></h1>
       <p>Mana Maximum: {{ manaMax }}</p>
 
       <div class="mana-stage">

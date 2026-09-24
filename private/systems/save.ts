@@ -3,21 +3,21 @@ import { checkOfflineAchievement, hasBoostedProducerThisCondense, hasCombatUsedN
 import { getTotalMessageTickersSeen, hasSeenMessageTicker, MESSAGE_TICKER_COUNT, setSeenMessageTicker, setTotalMessageTickersSeen } from "../game/message_tickers.js";
 import { getTotalMemories, isFocusing, setFocusing, setTotalMemories } from "../game/memories.js";
 import { CRYSTALS, getActiveCrystal, getFastestCrystalShatter, hasCompletedCrystal, setActiveCrystal, setCompletedCrystal, setFastestCrystalShatter } from "../game/crystals.js";
-import { clampManaToInfinityBoundary } from "../game/currencies.js";
+import { clampManaToInfinityBoundary, updateHighestManaReached } from "../game/currencies.js";
 import { isCourageUnlocked, setCourageUnlocked } from "../game/courage.js";
 import { CONDENSED_HANDLES, CONDENSED_UPGRADE_COUNT, hasCircleTwoCondensedUpgrade, hasCondensed, hasCondensedUpgrade, refreshCondensedUpgradeState, setCircleTwoCondensedUpgrade, setCondensedUpgrade, setHasCondensed } from "../game/condensed.js";
 import { HANDLES } from "../core/player.js";
 import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSealedMeridianThisReset, refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, setCastSpeedUsedThisCondense, setSealedMeridianThisReset } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
-import { simulateTime } from "./tick.js";
-import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getGuildExperienceForQuestRank, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, repairGuildCurrency, resetCombatSpellCosts, setGuildExperience, setGuildExperienceForQuestRank, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
+import { isOfflineProgressEnabled, simulateTime } from "./tick.js";
+import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getGuildExperienceForQuestRank, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, initializeLegacyQuestAvailableMana, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, repairGuildCurrency, resetCombatSpellCosts, setGuildExperience, setGuildExperienceForQuestRank, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
 import { equippedItem, setEquippedItem } from "../guild/equipment.js";
 import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterPurifyMinimumRelativeMultiplier, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, producerAutocasterCastsMax, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterPurifyMinimumRelativeMultiplier, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod, setProducerAutocasterCastsMax } from "../guild/autocasters.js";
 
 const STORAGE_KEY = "saveData";
 const RECOVERY_STORAGE_KEY = "saveDataRecovery";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "018";
+const CURRENT_SAVE_VERSION = "020";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -389,6 +389,14 @@ const savedFields018: readonly SaveField[] = [
     ...savedFields017,
     messageTickerSeenField018,
 ];
+const savedFields019: readonly SaveField[] = [
+    ...savedFields018,
+    decimalSaveField(HANDLES.highestManaReached, [1, 0, 10]),
+];
+const savedFields020: readonly SaveField[] = [
+    ...savedFields019,
+    decimalSaveField(HANDLES.quests_currentAvailableMana, [0, 0, 0]),
+];
 const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
     savedFields001,
     savedFields002,
@@ -408,6 +416,8 @@ const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
     savedFields016,
     savedFields017,
     savedFields018,
+    savedFields019,
+    savedFields020,
 ];
 
 const condenseResetFields: readonly SaveField[] = [
@@ -433,10 +443,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields018));
+    const bytes = new Uint8Array(totalByteLength(savedFields020));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields018) {
+    for (const field of savedFields020) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -467,10 +477,13 @@ export async function importSave(saveData: string): Promise<void> {
     repairGuildCurrency();
     refreshPotionEffectState();
     clampManaToInfinityBoundary();
+    updateHighestManaReached();
+    if (versionIndex < 19) initializeLegacyQuestAvailableMana();
     simulateOfflineTime();
 }
 
 function simulateOfflineTime(): void {
+    if (!isOfflineProgressEnabled()) return;
     const now = Date.now();
     if (lastSaveTimestamp.value <= 0 || lastSaveTimestamp.value >= now) return;
     const offlineSeconds = (now - lastSaveTimestamp.value) / 1000;
@@ -482,11 +495,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields018;
+    const currentVersionFields = fields === savedFields020;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields018) field.reset();
+    for (const field of savedFields020) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -583,7 +596,7 @@ export async function saveGame(): Promise<void> {
 
 export function resetGame(): void {
     savingEnabled = true;
-    for (const field of savedFields018) field.reset();
+    for (const field of savedFields020) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();

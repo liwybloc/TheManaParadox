@@ -1,6 +1,7 @@
 import { addUS, gte, subUS } from "../core/break_eternity.js";
 import { canCondense } from "../game/condensed.js";
-import { increaseMatrix, sealMeridians } from "../game/progression.js";
+import { activateCourage } from "../game/courage.js";
+import { castSpeed, increaseMatrix, sealMeridians } from "../game/progression.js";
 import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplier, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
 import type { Player } from "../core/player.js";
 import { checkCoinAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
@@ -10,7 +11,7 @@ declare const player: Player;
 /** [WASM] */
 
 const MAX_AUTOCASTERS: i32 = 9;
-const AUTOCASTER_TASK_COUNT: i32 = 9;
+const AUTOCASTER_TASK_COUNT: i32 = 11;
 const WAGE_PERIOD_SECONDS: f64 = 600;
 const UNASSIGNED: i32 = -1;
 
@@ -220,6 +221,8 @@ function updateAction(caster: i32, deltaSeconds: f64): void {
                 break;
             case 7: acted = sealMeridians(); break;
             case 8: acted = increaseMatrix(); break;
+            case 9: acted = activateCourage(); break;
+            case 10: acted = castSpeed(); break;
         }
     }
     if (!acted) return;
@@ -259,12 +262,21 @@ function firstAvailableRosterPosition(): i32 {
     return UNASSIGNED;
 }
 
-function minimumTierForTask(task: i32): i32 { return task === 5 || task === 6 ? 2 : 1; }
+function minimumTierForTask(task: i32): i32 { return task === 5 || task === 6 || task === 9 || task === 10 ? 2 : 1; }
 
 function baseCooldownForTask(task: i32): f64 {
     if (task < 5) return 1;
-    if (task === 5) return 30;
-    if (task === 6) return 10;
+    switch (task) {
+        case 5:
+            return 30;
+        case 6:
+            return 10;
+        case 9:
+            return 5;
+        case 10:
+            return 1;
+        default: ;
+    }
     return 5;
 }
 

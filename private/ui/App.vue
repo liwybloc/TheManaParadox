@@ -15,7 +15,7 @@ import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
 import { AUTOCASTER_NAMES, AUTOCASTER_TASKS, AUTOCASTER_TIERS, MAX_AUTOCASTERS } from "@game/config/autocasters.js";
 import { castAll, condense, enterCrystal as enterCrystalAction, escapeCrystal as escapeCrystalAction, focus as focusAction, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, shatterCrystal as shatterCrystalAction, subscribeToCondense, subscribeToMemoryGain } from "@game/systems/actions.js";
 import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
-import { getUpdateRate, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
+import { getUpdateRate, isOfflineProgressEnabled, setOfflineProgressEnabled, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
 import { setStarManaProgress, setStarsAnimated as applyStarsAnimated, setStarsVisible as applyStarsVisible, starsAnimated as loadStarsAnimated, starsVisible as loadStarsVisible } from "@game/systems/background.js";
 import { formatCompletionTime, formatCrystalGoal, formatDecimal, formatDecimalCompact } from "@game/ui/formatting.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
@@ -32,6 +32,7 @@ import AutocastersTab from "./tabs/AutocastersTab.vue";
 import OptionsTab from "./tabs/OptionsTab.vue";
 import StatisticsTab from "./tabs/StatisticsTab.vue";
 import AchievementsTab from "./tabs/AchievementsTab.vue";
+import InfoTab from "./tabs/InfoTab.vue";
 import NotificationStack from "./components/NotificationStack.vue";
 import TimeSimulation from "./components/TimeSimulation.vue";
 import KeybindMenu from "./components/KeybindMenu.vue";
@@ -199,7 +200,9 @@ const combat = ref({
 });
 const resetConfirmationVisible = ref(false);
 const changeKeybindsVisible = ref(false);
+const infoTabVisible = ref(false);
 const updateRate = ref(getUpdateRate());
+const offlineProgress = ref(isOfflineProgressEnabled());
 const timeSimulation = ref({ active: false, totalSeconds: 0, simulatedSeconds: 0, progress: 0, speed: 1 });
 let unsubscribeFromTimeSimulation;
 let unsubscribeFromCondense;
@@ -356,7 +359,7 @@ function updateDisplay(timestamp) {
 }
 
 function updateGlobalDisplay() {
-    mana.value = formatDecimal(HANDLES.mana, 2, "Maximum");
+    mana.value = formatDecimal(namedWasm.isQuestActive() ? HANDLES.quests_currentAvailableMana : HANDLES.mana, 2, "Maximum");
     canCondense.value = namedWasm.canCondense();
     condensedUnlocked.value = namedWasm.hasCondensed();
     if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
@@ -844,6 +847,11 @@ function updateTickRate(value) {
     updateRate.value = setUpdateRate(value);
 }
 
+function setOfflineProgress(enabled) {
+    offlineProgress.value = enabled;
+    setOfflineProgressEnabled(enabled);
+}
+
 async function exportGameSave() {
     const saveData = await exportSave();
     try {
@@ -1105,6 +1113,13 @@ onBeforeUnmount(() => {
             aria-label="Join The Mana Paradox Discord"
             title="Join The Mana Paradox Discord"
         ><img :src="'./img/discord.png'" alt=""></a>
+        <button
+            class="info-launcher"
+            type="button"
+            aria-label="Open how to play"
+            title="How to Play"
+            @click="infoTabVisible = true"
+        >?</button>
         <NotificationStack />
         <ManaCircleExpansion
             v-if="manaCircleExpansionVisible"
@@ -1253,6 +1268,7 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'options'"
                 :active-subtab="activeSubtab"
                 :update-rate="updateRate"
+                :offline-progress="offlineProgress"
                 :stars-visible="starsVisible"
                 :stars-animated="starsAnimated"
                 :news-ticker-enabled="newsTickerEnabled"
@@ -1266,6 +1282,7 @@ onBeforeUnmount(() => {
                 @import-save="importGameSave"
                 @reset-game="resetGame"
                 @update-rate="updateTickRate"
+                @offline-progress="setOfflineProgress"
             />
 
 
@@ -1281,6 +1298,7 @@ onBeforeUnmount(() => {
             </section>
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
+        <InfoTab v-if="infoTabVisible" @close="infoTabVisible = false" />
         <MessageTicker
             v-if="newsTickerEnabled"
             :key="messageTickerParticles ? 'particles' : 'text'"
@@ -1291,3 +1309,33 @@ onBeforeUnmount(() => {
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>
+
+<style>
+.info-launcher {
+    position: fixed;
+    z-index: 40;
+    top: 50%;
+    left: 0;
+    display: grid;
+    width: 24px;
+    height: 72px;
+    padding: 0;
+    place-items: center;
+    border: 1px solid #4d4d5d;
+    border-left: 0;
+    border-radius: 0 5px 5px 0;
+    color: #d8c6ee;
+    background: #15151dee;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 700;
+    transform: translateY(-50%);
+}
+
+.info-launcher:hover,
+.info-launcher:focus-visible {
+    border-color: #9a72cf;
+    color: #fff;
+    background: #292035;
+}
+</style>

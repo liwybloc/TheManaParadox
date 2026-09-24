@@ -353,7 +353,7 @@ export function combatShieldPercent(): f64 {
 export function canCastCombatSpell(index: i32): bool {
     if (!isQuestActive() || index < 0 || index >= COMBAT_SPELL_COUNT) return false;
     if (index >= 3 && !hasGuildShopUpgrade(index + 6)) return false;
-    return gte(player.mana, combatSpellCost(index));
+    return gte(player.quests_currentAvailableMana, combatSpellCost(index));
 }
 
 export function initializeAdvancedCombatSpellCosts(lightning: i32, meteor: i32, arcaneNova: i32): void {
@@ -773,13 +773,13 @@ export function acceptGuildQuest(index: i32): bool {
     if (!player.guildMember || isQuestActive() || index < 0 || index >= visibleQuestSlotCount() || isQuestSlotLocked(index)) return false;
     questResultPending = false;
     writeNumber(player.activeQuest, index);
+    copyInto(player.quests_currentAvailableMana, player.highestManaReached);
     copyInto(player.enemyHealth, enemyMaximumHealth(index));
     writeNumber(player.combatFreezeTurns, 0);
     player.combatUsedNonFreeze = false;
-    log10Into(player.combatShieldMaximum, player.mana);
+    log10Into(player.combatShieldMaximum, player.quests_currentAvailableMana);
     writeNumber(scratch.productionModifier, equipmentMaximumShieldMultiplier());
     mulUS(player.combatShieldMaximum, scratch.productionModifier);
-    log10Into(player.combatShield, player.mana);
     copyInto(player.combatShield, player.combatShieldMaximum);
     resetCombatSpellCosts();
     return true;
@@ -788,7 +788,7 @@ export function acceptGuildQuest(index: i32): bool {
 export function castCombatSpell(index: i32): bool {
     if (!canCastCombatSpell(index)) return false;
     const cost = combatSpellCost(index);
-    divUS(player.mana, cost);
+    divUS(player.quests_currentAvailableMana, cost);
     if (index !== 2) player.combatUsedNonFreeze = true;
     writeNumber(scratch.productionModifier, 1.1);
     powUS(cost, scratch.productionModifier);
@@ -873,6 +873,7 @@ function finishQuest(victory: bool): void {
         if (gte(player.statistics_questsCompleted, 10)) unlockTierOneAchievement(28);
     }
     writeNumber(player.activeQuest, NO_ACTIVE_QUEST);
+    writeNumber(player.quests_currentAvailableMana, 0);
     writeNumber(player.enemyHealth, 0);
     if (victory && hasMireguardSetBonus()) {
         copyInto(player.combatShield, player.combatShieldMaximum);
@@ -884,6 +885,10 @@ function finishQuest(victory: bool): void {
     writeNumber(player.combatFreezeTurns, 0);
     player.combatUsedNonFreeze = false;
     resetCombatSpellCosts();
+}
+
+export function initializeLegacyQuestAvailableMana(): void {
+    if (isQuestActive()) copyInto(player.quests_currentAvailableMana, player.highestManaReached);
 }
 
 function addGuildExperience(completedQuestRank: i32, currentRank: i32): void {

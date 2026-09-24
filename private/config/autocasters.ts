@@ -33,6 +33,8 @@ export const AUTOCASTER_TASKS = [
     { id: 6, action: "Purify Meridians", minimumTier: 2, cooldown: 3, effects: [null, "Purifies Meridians", "Purifies Meridians; ×2 cooldown speed"] },
     { id: 7, action: "Seal Meridians", minimumTier: 1, cooldown: 3, effects: ["Seals Meridians", "Seals Meridians", "Seals Meridians; ×2 cooldown speed"] },
     { id: 8, action: "Conjure Crystal Matrix", minimumTier: 1, cooldown: 3, effects: ["Conjures a Matrix", "Conjures a Matrix", "Conjures a Matrix; ×2 cooldown speed"] },
+    { id: 9, action: "Activate Courage", minimumTier: 2, cooldown: 5, effects: [null, "Activates Courage", "Activates Courage; ×2 cooldown speed"] },
+    { id: 10, action: "Meditate", minimumTier: 2, cooldown: 1, effects: [null, "Meditates", "Meditates; ×2 cooldown speed"] },
 ] as const;
 
 export const MAX_AUTOCASTERS = 9;
