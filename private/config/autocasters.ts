@@ -37,4 +37,4 @@ export const AUTOCASTER_TASKS = [
     { id: 10, action: "Meditate", minimumTier: 2, cooldown: 1, effects: [null, "Meditates", "Meditates; ×2 cooldown speed"] },
 ] as const;
 
-export const MAX_AUTOCASTERS = 9;
+export const MAX_AUTOCASTERS = 64;

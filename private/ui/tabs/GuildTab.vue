@@ -57,6 +57,16 @@ function acceptQuest() {
 function beginPress(event, item, equipmentSlot = null) {
     if (event.button !== 0) return;
     event.preventDefault();
+    if (equipmentSlot === null && event.ctrlKey) {
+        emit("sell-item", item.position, item.type);
+        if (selectedItem.value?.position === item.position) selectedItem.value = null;
+        return;
+    }
+    if (equipmentSlot === null && event.shiftKey) {
+        if (item.use?.enabled) emit("use-item", item.use.action, item.position, item.type);
+        else if (item.equipmentSlot !== undefined) emit("equip-item", item.position, item.equipmentSlot);
+        return;
+    }
     const bounds = event.currentTarget.getBoundingClientRect();
     pendingPress = {
         item,
@@ -245,7 +255,11 @@ onBeforeUnmount(() => {
             <p v-if="guild.questActive" class="quest-active-note">Finish your active quest before accepting another.</p>
         </template>
         <template v-else-if="activeSubtab === 'guild-inventory'">
-            <div class="section-title"><h1>Guild Inventory</h1><p>You have {{ guild.coins }} {{ coinLabel(guild.coins) }}.</p></div>
+            <div class="section-title">
+                <h1>Guild Inventory</h1>
+                <p>You have {{ guild.coins }} {{ coinLabel(guild.coins) }}.</p>
+                <p>Shift+click to use or equip an item. Ctrl+click to sell it.</p>
+            </div>
             <div class="inventory-bulk-actions">
                 <button type="button" @click="$emit('sell-all-materials')">Sell All Materials</button>
                 <button type="button" @click="$emit('sell-all-items')">Sell All Items</button>
@@ -276,7 +290,7 @@ onBeforeUnmount(() => {
                         <span :class="['inventory-details-icon', selectedItem.style]"></span>
                         <h2>{{ selectedItem.name }}</h2>
                         <small>{{ selectedItem.width }}×{{ selectedItem.height }} item</small>
-                        <p>{{ selectedItem.description }}</p>
+                        <p class="inventory-item-description">{{ selectedItem.description }}</p>
                         <button
                             v-if="selectedItem.use"
                             class="inventory-use-button"

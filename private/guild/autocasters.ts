@@ -1,16 +1,26 @@
-import { addUS, gte, subUS } from "../core/break_eternity.js";
-import { canCondense } from "../game/condensed.js";
+import { addUS, createDecimal, gte, lt, subUS, toNumber, writeNumber } from "../core/break_eternity.js";
+import { canCondense, refreshCondenseGain } from "../game/condensed.js";
 import { activateCourage } from "../game/courage.js";
 import { castSpeed, increaseMatrix, sealMeridians } from "../game/progression.js";
-import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplier, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
+import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplierHandle, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
 import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 import { checkCoinAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
 
 declare const player: Player;
+declare const scratch: Scratch;
+
+export const AUTOCASTER_HANDLES = {
+    purifyMinimum: createDecimal(1, 0, 1.01),
+    condenseGain: createDecimal(1, 0, 1),
+    sealedMeridiansMaximum: createDecimal(1, 0, Infinity),
+    crystalMatricesMaximum: createDecimal(1, 0, Infinity),
+};
 
 /** [WASM] */
 
-const MAX_AUTOCASTERS: i32 = 9;
+const MAX_AUTOCASTERS: i32 = 64;
+const ROSTER_CAPACITY: i32 = 9;
 const AUTOCASTER_TASK_COUNT: i32 = 11;
 const WAGE_PERIOD_SECONDS: f64 = 600;
 const UNASSIGNED: i32 = -1;
@@ -24,7 +34,22 @@ const wageTimers = new StaticArray<f64>(MAX_AUTOCASTERS);
 const workedThisPeriod = new StaticArray<u8>(MAX_AUTOCASTERS);
 let autoCondenseRequested: bool = false;
 const producerCastOne = new StaticArray<u8>(5);
-let purifyMinimumRelativeMultiplier: f64 = 1.01;
+let purifyMinimumHandle: i32 = 0;
+let autoCondenseGainHandle: i32 = 0;
+let sealedMeridiansMaximumHandle: i32 = 0;
+let crystalMatricesMaximumHandle: i32 = 0;
+
+export function initializeAutocasterSettingHandles(
+    purifyMinimum: i32,
+    condenseGain: i32,
+    sealedMeridiansMaximum: i32,
+    crystalMatricesMaximum: i32,
+): void {
+    purifyMinimumHandle = purifyMinimum;
+    autoCondenseGainHandle = condenseGain;
+    sealedMeridiansMaximumHandle = sealedMeridiansMaximum;
+    crystalMatricesMaximumHandle = crystalMatricesMaximum;
+}
 
 export function isAutocasterHired(index: i32): bool {
     return isValidCaster(index) && tiers[index] !== 0;
@@ -67,11 +92,26 @@ export function setProducerAutocasterCastsMax(index: i32, value: bool): void {
 }
 
 export function autocasterPurifyMinimumRelativeMultiplier(): f64 {
-    return purifyMinimumRelativeMultiplier;
+    return toNumber(purifyMinimumHandle);
 }
 
 export function setAutocasterPurifyMinimumRelativeMultiplier(value: f64): void {
-    purifyMinimumRelativeMultiplier = Math.max(1.01, Math.min(100, value));
+    writeNumber(purifyMinimumHandle, Math.max(1.01, value));
+}
+
+export function autocasterCondenseGain(): f64 {
+    return toNumber(autoCondenseGainHandle);
+}
+
+export function setAutocasterCondenseGain(value: f64): void {
+    writeNumber(autoCondenseGainHandle, Math.max(1, value));
+}
+
+function canAutoCondense(): bool {
+    if (!canCondense()) return false;
+    if (toNumber(player.mana_circle_tier) <= 0) return true;
+    refreshCondenseGain();
+    return gte(scratch.condenseGain, autoCondenseGainHandle);
 }
 
 export function autocasterHireCost(tier: i32): i32 {
@@ -93,14 +133,17 @@ export function autocasterWageForTier(tier: i32): i32 {
 }
 
 export function canHireAutocaster(tier: i32): bool {
-    return tier >= 1 && tier <= 3 && firstAvailableCaster() >= 0 && gte(player.coins, autocasterHireCost(tier));
+    return tier >= 1 && tier <= 3
+        && firstAvailableCaster() >= 0
+        && firstAvailableRosterPosition() >= 0
+        && gte(player.coins, autocasterHireCost(tier));
 }
 
 export function hireAutocaster(tier: i32, nameIndex: i32): i32 {
     if (!canHireAutocaster(tier) || nameIndex < 0) return UNASSIGNED;
     const index = firstAvailableCaster();
     const position = firstAvailableRosterPosition();
-    if (index < 0) return UNASSIGNED;
+    if (index < 0 || position < 0) return UNASSIGNED;
     subUS(player.coins, autocasterHireCost(tier));
     tiers[index] = tier;
     nameIndices[index] = nameIndex;
@@ -124,7 +167,7 @@ export function assignAutocaster(caster: i32, task: i32): bool {
         actionCooldowns[caster] = 0;
         return true;
     }
-    if (!isValidTask(task) || tiers[caster] < minimumTierForTask(task) || casterAssignedToTask(task) >= 0) return false;
+    if (!isValidTask(task) || tiers[caster] < minimumTierForTask(task)) return false;
     assignments[caster] = task;
     rosterPositions[caster] = UNASSIGNED;
     actionCooldowns[caster] = 0;
@@ -132,7 +175,7 @@ export function assignAutocaster(caster: i32, task: i32): bool {
 }
 
 export function moveAutocaster(caster: i32, position: i32): bool {
-    if (!isAutocasterHired(caster) || assignments[caster] !== UNASSIGNED || position < 0 || position >= MAX_AUTOCASTERS) return false;
+    if (!isAutocasterHired(caster) || assignments[caster] !== UNASSIGNED || position < 0 || position >= ROSTER_CAPACITY) return false;
     const occupant = casterAtRosterPosition(position);
     if (occupant >= 0 && occupant !== caster) return false;
     rosterPositions[caster] = position;
@@ -200,10 +243,10 @@ function updateWage(caster: i32, deltaSeconds: f64): void {
 }
 
 function updateAction(caster: i32, deltaSeconds: f64): void {
-    const speedMultiplier: f64 = hasTierOneAchievement(37) ? 2 : 1;
-    actionCooldowns[caster] = Math.max(0, actionCooldowns[caster] - deltaSeconds * speedMultiplier);
-    if (actionCooldowns[caster] > 0) return;
     const task = assignments[caster];
+    if (casterAssignedToTask(task) !== caster) return;
+    actionCooldowns[caster] = Math.max(0, actionCooldowns[caster] - deltaSeconds);
+    if (actionCooldowns[caster] > 0) return;
     let acted = false;
     if (task < 5) {
         if (tiers[caster] >= 2 && empowerTierOne(task)) acted = true;
@@ -211,24 +254,55 @@ function updateAction(caster: i32, deltaSeconds: f64): void {
     } else {
         switch (task) {
             case 5:
-                if (!autoCondenseRequested && canCondense()) {
+                if (!autoCondenseRequested && canAutoCondense()) {
                     autoCondenseRequested = true;
                     acted = true;
                 }
                 break;
             case 6:
-                if (canPurifyMeridiansAtRelativeMultiplier(purifyMinimumRelativeMultiplier)) acted = purifyMeridians();
+                if (canPurifyMeridiansAtRelativeMultiplierHandle(purifyMinimumHandle)) acted = purifyMeridians();
                 break;
-            case 7: acted = sealMeridians(); break;
-            case 8: acted = increaseMatrix(); break;
+            case 7:
+                if (lt(player.sealedMeridiansOwned, sealedMeridiansMaximumHandle)) acted = sealMeridians();
+                break;
+            case 8:
+                if (lt(player.matrixOwned, crystalMatricesMaximumHandle)) acted = increaseMatrix();
+                break;
             case 9: acted = activateCourage(); break;
             case 10: acted = castSpeed(); break;
         }
     }
     if (!acted) return;
-    actionCooldowns[caster] = baseCooldownForTask(task) / (tiers[caster] >= 3 ? 2 : 1);
-    workedThisPeriod[caster] = 1;
-    if (wageTimers[caster] <= 0) wageTimers[caster] = WAGE_PERIOD_SECONDS;
+    const tierSpeed: f64 = hasTierThreeCasterAssigned(task) ? 2 : 1;
+    const achievementSpeed: f64 = hasTierOneAchievement(37) ? 2 : 1;
+    actionCooldowns[caster] = baseCooldownForTask(task)
+        / tierSpeed
+        / achievementSpeed
+        / assignedCasterCount(task);
+    recordTaskWork(task);
+}
+
+function assignedCasterCount(task: i32): i32 {
+    let count: i32 = 0;
+    for (let caster: i32 = 0; caster < MAX_AUTOCASTERS; caster++) {
+        if (isAutocasterHired(caster) && assignments[caster] === task) count++;
+    }
+    return count > 0 ? count : 1;
+}
+
+function hasTierThreeCasterAssigned(task: i32): bool {
+    for (let caster: i32 = 0; caster < MAX_AUTOCASTERS; caster++) {
+        if (isAutocasterHired(caster) && assignments[caster] === task && tiers[caster] >= 3) return true;
+    }
+    return false;
+}
+
+function recordTaskWork(task: i32): void {
+    for (let caster: i32 = 0; caster < MAX_AUTOCASTERS; caster++) {
+        if (!isAutocasterHired(caster) || assignments[caster] !== task) continue;
+        workedThisPeriod[caster] = 1;
+        if (wageTimers[caster] <= 0) wageTimers[caster] = WAGE_PERIOD_SECONDS;
+    }
 }
 
 function dismissAutocaster(caster: i32): void {
@@ -258,7 +332,7 @@ function casterAtRosterPosition(position: i32): i32 {
 }
 
 function firstAvailableRosterPosition(): i32 {
-    for (let position: i32 = 0; position < MAX_AUTOCASTERS; position++) if (casterAtRosterPosition(position) < 0) return position;
+    for (let position: i32 = 0; position < ROSTER_CAPACITY; position++) if (casterAtRosterPosition(position) < 0) return position;
     return UNASSIGNED;
 }
 
@@ -267,20 +341,25 @@ function minimumTierForTask(task: i32): i32 { return task === 5 || task === 6 ||
 function baseCooldownForTask(task: i32): f64 {
     if (task < 5) return 1;
     switch (task) {
-        case 5:
-            return 30;
-        case 6:
-            return 10;
-        case 9:
-            return 5;
-        case 10:
-            return 1;
+        case 5: return 30;
+        case 6: return 3;
+        case 7: return 3;
+        case 8: return 3;
+        case 9: return 5;
+        case 10: return 1;
         default: ;
     }
-    return 5;
+    return 1;
 }
 
 function isValidCaster(index: i32): bool { return index >= 0 && index < MAX_AUTOCASTERS; }
 function isValidTask(index: i32): bool { return index >= 0 && index < AUTOCASTER_TASK_COUNT; }
 
 /** [/WASM] */
+
+initializeAutocasterSettingHandles(
+    AUTOCASTER_HANDLES.purifyMinimum,
+    AUTOCASTER_HANDLES.condenseGain,
+    AUTOCASTER_HANDLES.sealedMeridiansMaximum,
+    AUTOCASTER_HANDLES.crystalMatricesMaximum,
+);

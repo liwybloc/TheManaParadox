@@ -146,6 +146,10 @@ export function canPurifyMeridiansAtRelativeMultiplier(minimum: f64): bool {
     return gte(scratch.purificationRelativeIncrease, scratch.tierOneSeconds);
 }
 
+export function canPurifyMeridiansAtRelativeMultiplierHandle(minimum: i32): bool {
+    return canPurifyMeridians() && gte(scratch.purificationRelativeIncrease, minimum);
+}
+
 export function purifyMeridians(): bool {
     if (!canPurifyMeridians()) return false;
     copyInto(player.purifiedMeridiansMultiplier, player.meridianPurificationEffect);

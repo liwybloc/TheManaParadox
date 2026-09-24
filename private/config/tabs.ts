@@ -49,7 +49,7 @@ export const TABS = [
     {
         id: "achievements",
         label: "Achievements",
-        icon: "★",
+        icon: "★︎",
         subtabs: [
             { id: "basic-achievements", label: "Progression" },
             { id: "challenge-achievements", label: "Challenges" },
@@ -59,7 +59,7 @@ export const TABS = [
     {
         id: "options",
         label: "Options",
-        icon: "⚙",
+        icon: "⚙︎",
         subtabs: [
             { id: "general", label: "General" },
             { id: "visuals", label: "Visuals" },

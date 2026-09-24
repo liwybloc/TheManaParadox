@@ -18,8 +18,8 @@ defineEmits(["cast", "empower"]);
 <template>
     <article class="upgrade-row" :class="{ locked }" :style="{ '--affordability-progress': affordabilityProgress }">
         <div v-if="empowered === '0'"><h2>{{ name }}</h2></div>
-        <div v-else-if="empowered === '1'"><h2>{{ name }} ⭐</h2></div>
-        <div v-else><h2>{{ name }} ⭐{{ empowered }}</h2></div>
+        <div v-else-if="empowered === '1'"><h2>{{ name }} ⭐︎</h2></div>
+        <div v-else><h2>{{ name }} ⭐︎{{ empowered }}</h2></div>
         <div class="upgrade-effect"><span>{{ amount }} owned</span><strong>{{ multiplier }}</strong></div>
         <div class="upgrade-actions">
             <button v-show="empowerVisible" class="empower-button" type="button" @click="$emit('empower')"><span>Empower</span><strong>{{ empowerCost }} owned</strong></button>

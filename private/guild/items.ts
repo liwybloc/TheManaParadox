@@ -96,6 +96,8 @@ export enum Items {
     ENCHANTED_THREAD = 66,
     SOUL_FRAGMENT = 67,
     DRAGON_HEART = 68,
+
+	PACKAGE = 254,
 }
 
 const ARMOR_SLOTS = [
@@ -395,6 +397,15 @@ const INVENTORY_ITEM_DATA = ([
         height: 2,
         style: "dragon-heart",
         sellPrice: [35, 55],
+    },
+    {
+        id: Items.PACKAGE,
+        name: "Package",
+        description: "Contains 10 of one potion or material.",
+        width: 1,
+        height: 1,
+        style: "inventory-package",
+        sellPrice: [0, 0],
     },
     ...ARMOR_ITEM_DATA,
 ]) as const satisfies readonly InventoryItemDefinition[];

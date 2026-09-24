@@ -39,7 +39,9 @@ const INVENTORY_ARMOR_START: i32 = 26;
 const INVENTORY_ARMOR_ITEM_COUNT: i32 = 40;
 const INVENTORY_ARMOR_ITEMS_PER_SET: i32 = 4;
 const EQUIPMENT_SLOT_COUNT: i32 = 4;
+const INVENTORY_PACKAGE: u8 = 254;
 const INVENTORY_CONTINUATION: u8 = 255;
+const PACKAGE_SIZE: i32 = 10;
 const MAX_QUEST_REWARDS: i32 = 4;
 const QUEST_DEFINITION_COUNT: i32 = 37;
 const QUEST_SLOT_COUNT: i32 = 6;
@@ -48,6 +50,7 @@ const SHOP_ITEM_COUNT: i32 = 3;
 const SHOP_UPGRADE_COUNT: i32 = 12;
 const COMBAT_SPELL_COUNT: i32 = 6;
 const inventorySlots = new StaticArray<u8>(INVENTORY_SIZE);
+const inventoryMetadata = new StaticArray<u8>(INVENTORY_SIZE);
 const inventoryItemWidths = new StaticArray<u8>(256);
 const inventoryItemHeights = new StaticArray<u8>(256);
 const inventoryItemSellMinimums = new StaticArray<u8>(256);
@@ -254,7 +257,10 @@ export function repairGuildCurrency(): void {
 export function canBuyShopItem(slot: i32): bool {
     if (slot < 0 || slot >= SHOP_ITEM_COUNT || shopItemIds[slot] <= 0 || shopItemRefreshTimers[slot] > 0) return false;
     writeNumber(scratch.productionModifier, shopItemCosts[slot]);
-    return gte(player.coins, scratch.productionModifier) && findInventorySpace(<u8>shopItemIds[slot]) >= 0;
+    const item = <u8>shopItemIds[slot];
+    const hasSpace = (canPackageItem(item) && looseInventoryItemCount(item) >= PACKAGE_SIZE - 1)
+        || findInventorySpace(item) >= 0;
+    return gte(player.coins, scratch.productionModifier) && hasSpace;
 }
 
 export function buyShopItem(slot: i32): bool {
@@ -401,13 +407,27 @@ export function inventoryItemAt(position: i32): i32 {
     return item === INVENTORY_CONTINUATION ? 0 : item;
 }
 
+export function inventoryItemMetadata(position: i32): i32 {
+    return position >= 0 && position < INVENTORY_SIZE ? inventoryMetadata[position] : 0;
+}
+
 export function rawInventorySlot(position: i32): i32 {
     return position >= 0 && position < INVENTORY_SIZE ? inventorySlots[position] : 0;
+}
+
+export function rawInventoryMetadata(position: i32): i32 {
+    return position >= 0 && position < INVENTORY_SIZE ? inventoryMetadata[position] : 0;
 }
 
 export function setRawInventorySlot(position: i32, item: i32): void {
     if (position < 0 || position >= INVENTORY_SIZE || item < 0 || item > 255) return;
     inventorySlots[position] = <u8>item;
+    inventoryRevision++;
+}
+
+export function setRawInventoryMetadata(position: i32, metadata: i32): void {
+    if (position < 0 || position >= INVENTORY_SIZE || metadata < 0 || metadata > 255) return;
+    inventoryMetadata[position] = <u8>metadata;
     inventoryRevision++;
 }
 
@@ -483,8 +503,9 @@ export function moveInventoryItem(source: i32, position: i32): bool {
     if (source < 0 || source >= INVENTORY_SIZE) return false;
     const item = inventorySlots[source];
     if (!isInventoryItem(item) || !inventoryPositionFits(item, position, source)) return false;
+    const metadata = inventoryMetadata[source];
     clearInventoryItem(source, item);
-    placeInventoryItem(position, item);
+    placeInventoryItem(position, item, metadata);
     inventoryRevision++;
     return true;
 }
@@ -495,9 +516,12 @@ export function drinkSpeedPotion(position: i32): bool {
 
 export function drinkPotion(position: i32, itemId: i32): bool {
     if (isProducerOnlyCrystalActive() || position < 0 || position >= INVENTORY_SIZE || inventorySlots[position] !== itemId) return false;
-    if (!applyPotionEffect(itemId)) return false;
+    const containedItem = itemId === INVENTORY_PACKAGE ? <i32>inventoryMetadata[position] : itemId;
+    const amount: i32 = itemId === INVENTORY_PACKAGE ? PACKAGE_SIZE : 1;
+    if (!isPotion(containedItem) || availablePotionEffectSlots(containedItem) < amount) return false;
+    for (let index: i32 = 0; index < amount; index++) applyPotionEffect(containedItem);
     clearInventoryItem(position, <u8>itemId);
-    if (itemId === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, 1);
+    if (containedItem === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, amount);
     inventoryRevision++;
     player.potionUsedThisCondense = true;
     unlockTierOneAchievement(27);
@@ -506,13 +530,16 @@ export function drinkPotion(position: i32, itemId: i32): bool {
 
 export function sellInventoryItem(position: i32, itemId: i32): i32 {
     if (position < 0 || position >= INVENTORY_SIZE || inventorySlots[position] !== itemId) return 0;
-    const minimum = inventoryItemSellMinimum(itemId);
-    const maximum = inventoryItemSellMaximum(itemId);
+    const containedItem = itemId === INVENTORY_PACKAGE ? <i32>inventoryMetadata[position] : itemId;
+    const amount: i32 = itemId === INVENTORY_PACKAGE ? PACKAGE_SIZE : 1;
+    const minimum = inventoryItemSellMinimum(containedItem);
+    const maximum = inventoryItemSellMaximum(containedItem);
     if (minimum <= 0 || maximum < minimum) return 0;
-    const coins = minimum + nextCombatRandom(maximum - minimum + 1);
+    let coins: i32 = 0;
+    for (let index: i32 = 0; index < amount; index++) coins += minimum + nextCombatRandom(maximum - minimum + 1);
     clearInventoryItem(position, <u8>itemId);
-    if (itemId === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, 1);
-    if (itemId === INVENTORY_WOLF_FUR) subUS(player.inventoryWolfFur, 1);
+    if (containedItem === INVENTORY_POTION_OF_SPEED) subUS(player.inventoryPotionOfSpeed, amount);
+    if (containedItem === INVENTORY_WOLF_FUR) subUS(player.inventoryWolfFur, amount);
     addUS(player.coins, coins);
     checkCoinAchievements();
     inventoryRevision++;
@@ -525,7 +552,8 @@ export function sellAllInventoryItems(includePotions: bool): i32 {
     for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
         const item = inventorySlots[position];
         if (!isInventoryItem(item)) continue;
-        if (!includePotions && (isPotion(item) || isArmor(item))) continue;
+        const containedItem = item === INVENTORY_PACKAGE ? inventoryMetadata[position] : item;
+        if (!includePotions && (isPotion(containedItem) || isArmor(containedItem))) continue;
         coins += sellInventoryItem(position, item);
     }
     if (soldFullInventory) unlockTierOneAchievement(34);
@@ -536,8 +564,8 @@ export function drinkAllPotions(): i32 {
     let consumed: i32 = 0;
     for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
         const item = inventorySlots[position];
-        if (!isPotion(item)) continue;
-        if (drinkPotion(position, item)) consumed++;
+        if (!isPotion(item) && !(item === INVENTORY_PACKAGE && isPotion(inventoryMetadata[position]))) continue;
+        if (drinkPotion(position, item)) consumed += item === INVENTORY_PACKAGE ? PACKAGE_SIZE : 1;
     }
     if (consumed >= 20) unlockTierOneAchievement(31);
     return consumed;
@@ -552,6 +580,12 @@ function isInventoryFull(): bool {
 
 function isPotion(item: i32): bool {
     return item === INVENTORY_POTION_OF_SPEED || item === INVENTORY_POTION_OF_SPEED_II || item === INVENTORY_POTION_OF_SPEED_III;
+}
+
+function availablePotionEffectSlots(itemId: i32): i32 {
+    let available: i32 = 0;
+    for (let index: i32 = 0; index < 10; index++) if (!gt(potionTimer(itemId, index), 0)) available++;
+    return available;
 }
 
 export function applyPotionEffect(itemId: i32): bool {
@@ -716,22 +750,40 @@ export function ensureInventoryPlacements(): void {
     let potions: i32 = 0;
     let needsRepair = false;
     const storedItems = new StaticArray<u8>(INVENTORY_SIZE);
+    const storedMetadata = new StaticArray<u8>(INVENTORY_SIZE);
     let storedItemCount: i32 = 0;
     for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
         const item = inventorySlots[position];
         if (isInventoryItem(item)) {
+            const metadata = item === INVENTORY_PACKAGE ? inventoryMetadata[position] : 0;
+            if (item !== INVENTORY_PACKAGE) inventoryMetadata[position] = 0;
+            if (item === INVENTORY_PACKAGE && !canPackageItem(metadata)) {
+                inventorySlots[position] = INVENTORY_EMPTY;
+                inventoryMetadata[position] = 0;
+                needsRepair = true;
+                continue;
+            }
             storedItems[storedItemCount++] = item;
+            storedMetadata[storedItemCount - 1] = metadata;
             if (!storedInventoryShapeIsValid(position, item)) needsRepair = true;
-            if (item === INVENTORY_WOLF_FUR) wolfFur++;
-            else if (item === INVENTORY_POTION_OF_SPEED) potions++;
+            const containedItem = item === INVENTORY_PACKAGE ? metadata : item;
+            const amount: i32 = item === INVENTORY_PACKAGE ? PACKAGE_SIZE : 1;
+            if (containedItem === INVENTORY_WOLF_FUR) wolfFur += amount;
+            else if (containedItem === INVENTORY_POTION_OF_SPEED) potions += amount;
         }
-        else if (!isInventoryItem(item) && item !== INVENTORY_CONTINUATION) inventorySlots[position] = INVENTORY_EMPTY;
+        else if (!isInventoryItem(item) && item !== INVENTORY_CONTINUATION) {
+            inventorySlots[position] = INVENTORY_EMPTY;
+            inventoryMetadata[position] = 0;
+        }
     }
     if (needsRepair) {
-        for (let position: i32 = 0; position < INVENTORY_SIZE; position++) inventorySlots[position] = INVENTORY_EMPTY;
+        for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
+            inventorySlots[position] = INVENTORY_EMPTY;
+            inventoryMetadata[position] = 0;
+        }
         for (let index: i32 = 0; index < storedItemCount; index++) {
             const position = findInventorySpace(storedItems[index]);
-            if (position >= 0) placeInventoryItem(position, storedItems[index]);
+            if (position >= 0) placeInventoryItem(position, storedItems[index], storedMetadata[index]);
         }
     }
     if (wolfFur === 0 && potions === 0) {
@@ -740,6 +792,7 @@ export function ensureInventoryPlacements(): void {
         wolfFur = placeInventoryItems(INVENTORY_WOLF_FUR, legacyWolfFur);
         potions = placeInventoryItems(INVENTORY_POTION_OF_SPEED, legacyPotions);
     }
+    compressAllLooseItems();
     writeNumber(player.inventoryWolfFur, wolfFur);
     writeNumber(player.inventoryPotionOfSpeed, potions);
     inventoryRevision++;
@@ -1024,6 +1077,10 @@ function rewardDroppedForItem(item: u8): i32 {
 function placeInventoryItems(item: u8, amount: i32): i32 {
     let placed: i32 = 0;
     for (; placed < amount; placed++) {
+        if (canPackageItem(item) && looseInventoryItemCount(item) >= PACKAGE_SIZE - 1) {
+            compressLooseItemsIntoPackage(item);
+            continue;
+        }
         const position = findInventorySpace(item);
         if (position < 0) break;
         placeInventoryItem(position, item);
@@ -1056,12 +1113,14 @@ function inventoryPositionFits(item: u8, position: i32, ignoredPosition: i32): b
     return true;
 }
 
-function placeInventoryItem(position: i32, item: u8): void {
+function placeInventoryItem(position: i32, item: u8, metadata: u8 = 0): void {
     const width = inventoryItemWidth(item);
     const height = inventoryItemHeight(item);
     for (let row: i32 = 0; row < height; row++) {
         for (let column: i32 = 0; column < width; column++) {
-            inventorySlots[position + row * INVENTORY_WIDTH + column] = row === 0 && column === 0 ? item : INVENTORY_CONTINUATION;
+            const checked = position + row * INVENTORY_WIDTH + column;
+            inventorySlots[checked] = row === 0 && column === 0 ? item : INVENTORY_CONTINUATION;
+            inventoryMetadata[checked] = row === 0 && column === 0 ? metadata : 0;
         }
     }
 }
@@ -1072,6 +1131,7 @@ function clearInventoryItem(position: i32, item: u8): void {
     for (let row: i32 = 0; row < height; row++) {
         for (let column: i32 = 0; column < width; column++) {
             inventorySlots[position + row * INVENTORY_WIDTH + column] = INVENTORY_EMPTY;
+            inventoryMetadata[position + row * INVENTORY_WIDTH + column] = 0;
         }
     }
 }
@@ -1085,6 +1145,51 @@ function isInventoryItem(item: u8): bool {
 function isArmor(item: u8): bool {
     const itemId = <i32>item;
     return itemId >= INVENTORY_ARMOR_START && itemId < INVENTORY_ARMOR_START + INVENTORY_ARMOR_ITEM_COUNT;
+}
+
+function canPackageItem(item: u8): bool {
+    return item !== INVENTORY_PACKAGE && isInventoryItem(item) && !isArmor(item);
+}
+
+function looseInventoryItemCount(item: u8): i32 {
+    let count: i32 = 0;
+    for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
+        if (inventorySlots[position] === item) count++;
+    }
+    return count;
+}
+
+function compressLooseItemsIntoPackage(item: u8): bool {
+    if (!canPackageItem(item) || looseInventoryItemCount(item) < PACKAGE_SIZE - 1) return false;
+    let packagePosition: i32 = -1;
+    let removed: i32 = 0;
+    for (let position: i32 = 0; position < INVENTORY_SIZE && removed < PACKAGE_SIZE - 1; position++) {
+        if (inventorySlots[position] !== item) continue;
+        if (packagePosition < 0) packagePosition = position;
+        clearInventoryItem(position, item);
+        removed++;
+    }
+    if (packagePosition < 0) return false;
+    placeInventoryItem(packagePosition, INVENTORY_PACKAGE, item);
+    return true;
+}
+
+function compressAllLooseItems(): void {
+    for (let item: i32 = 1; item < <i32>INVENTORY_PACKAGE; item++) {
+        if (!canPackageItem(<u8>item)) continue;
+        while (looseInventoryItemCount(<u8>item) >= PACKAGE_SIZE) {
+            let removed: i32 = 0;
+            let packagePosition: i32 = -1;
+            for (let position: i32 = 0; position < INVENTORY_SIZE && removed < PACKAGE_SIZE; position++) {
+                if (inventorySlots[position] !== item) continue;
+                if (packagePosition < 0) packagePosition = position;
+                clearInventoryItem(position, <u8>item);
+                removed++;
+            }
+            if (packagePosition < 0) break;
+            placeInventoryItem(packagePosition, INVENTORY_PACKAGE, <u8>item);
+        }
+    }
 }
 
 export function inventoryItemSellMinimum(item: i32): i32 {

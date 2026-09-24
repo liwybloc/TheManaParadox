@@ -249,6 +249,25 @@
   font-size: 12px;
   line-height: 1.4;
 }
+
+.inventory-item-description {
+  white-space: pre-line;
+}
+
+.inventory-item.inventory-package {
+  position: relative;
+  box-shadow: inset 0 0 0 2px rgb(235 210 145 / 55%);
+}
+
+.inventory-item.inventory-package::after {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  content: "×10";
+  color: #fff1be;
+  font-size: 9px;
+  text-shadow: 0 1px 2px #000;
+}
 .inventory-details-icon {
   display: block;
   width: 100%;

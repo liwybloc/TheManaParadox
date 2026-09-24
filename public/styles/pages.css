@@ -631,6 +631,20 @@ footer {
   cursor: grab;
 }
 
+.assigned-caster-list {
+  max-height: 190px;
+  margin-top: 7px;
+  overflow-y: auto;
+}
+
+.assigned-caster-list .assigned-caster {
+  margin-top: 3px;
+}
+
+.assigned-caster-list .assigned-caster:first-child {
+  margin-top: 0;
+}
+
 .assigned-caster small {
   margin-top: 2px;
   color: #a794ba;

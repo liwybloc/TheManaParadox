@@ -13,6 +13,7 @@ import { GUILD_QUESTS_BY_ID } from "@game/guild/quests.js";
 import { INVENTORY_ITEMS_BY_ID, Items, resolveItemDescription } from "@game/guild/items.js";
 import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
 import { AUTOCASTER_NAMES, AUTOCASTER_TASKS, AUTOCASTER_TIERS, MAX_AUTOCASTERS } from "@game/config/autocasters.js";
+import { AUTOCASTER_HANDLES } from "@game/guild/autocasters.js";
 import { castAll, condense, enterCrystal as enterCrystalAction, escapeCrystal as escapeCrystalAction, focus as focusAction, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, shatterCrystal as shatterCrystalAction, subscribeToCondense, subscribeToMemoryGain } from "@game/systems/actions.js";
 import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
 import { getUpdateRate, isOfflineProgressEnabled, setOfflineProgressEnabled, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
@@ -201,11 +202,17 @@ const combat = ref({
 const resetConfirmationVisible = ref(false);
 const changeKeybindsVisible = ref(false);
 const infoTabVisible = ref(false);
+const infoTopicId = ref("welcome");
 const updateRate = ref(getUpdateRate());
 const offlineProgress = ref(isOfflineProgressEnabled());
 const timeSimulation = ref({ active: false, totalSeconds: 0, simulatedSeconds: 0, progress: 0, speed: 1 });
 let unsubscribeFromTimeSimulation;
 let unsubscribeFromCondense;
+
+function openInfo(topicId = "welcome") {
+    infoTopicId.value = topicId;
+    infoTabVisible.value = true;
+}
 let unsubscribeFromMemoryGain;
 const statistics = ref({
     timePlayed: "00:00:00",
@@ -276,6 +283,22 @@ function displayedItemDefinition(itemId) {
             duration: namedWasm.potionDuration(itemId),
             effect: namedWasm.potionEffect(itemId).toFixed(2),
         }),
+    };
+}
+
+function displayedInventoryItemDefinition(itemId, metadata) {
+    if (itemId !== Items.PACKAGE) return displayedItemDefinition(itemId);
+    const packageDefinition = INVENTORY_ITEMS_BY_ID.get(Items.PACKAGE);
+    const contained = displayedItemDefinition(metadata);
+    if (!packageDefinition || !contained || metadata === Items.PACKAGE || contained.equipmentSlot !== undefined) return undefined;
+    return {
+        ...packageDefinition,
+        name: `Package: ${contained.name}`,
+        description: `Contains 10 of ${contained.name}.\n${contained.description}`,
+        style: `${contained.style} inventory-package`,
+        sellPrice: [contained.sellPrice[0] * 10, contained.sellPrice[1] * 10],
+        use: contained.use ? { ...contained.use, label: `${contained.use.label} 10` } : undefined,
+        containedItem: metadata,
     };
 }
 
@@ -447,29 +470,48 @@ function updateNavigationUnlockPings() {
 
 function updateAutocastersDisplay() {
     guild.value.coins = formatDecimal(HANDLES.coins, 0);
+    const achievementSpeed = namedWasm.hasTierOneAchievement(37) ? 2 : 1;
     const casters = Array.from({ length: MAX_AUTOCASTERS }, (_, id) => {
         const tier = namedWasm.autocasterTier(id);
         if (tier === 0) return null;
         const wageRemaining = namedWasm.autocasterWageTimer(id);
+        const assignment = namedWasm.autocasterAssignment(id);
+        const actionRemaining = namedWasm.autocasterActionCooldown(id);
+        const isSupporting = assignment >= 0 && namedWasm.casterAssignedToTask(assignment) !== id;
+        const actionStatus = isSupporting
+            ? "Supporting"
+            : assignment >= 0
+            ? actionRemaining > 0 ? `Next action in ${formatShortTimer(actionRemaining)}` : "Ready"
+            : "Unassigned";
+        const wageStatus = wageRemaining > 0 ? `Wage due in ${formatShortTimer(wageRemaining)}` : "No wage due";
         return {
             id,
             tier,
             name: AUTOCASTER_NAMES[namedWasm.autocasterNameIndex(id)] ?? "Mysterious Caster",
-            assignment: namedWasm.autocasterAssignment(id),
+            assignment,
             position: namedWasm.autocasterRosterPosition(id),
             wage: AUTOCASTER_TIERS[tier - 1].wage,
             sellPrice: AUTOCASTER_TIERS[tier - 1].sellPrice,
-            status: wageRemaining > 0 ? `Wage due in ${formatShortTimer(wageRemaining)}` : "Waiting for activation...",
+            status: `${actionStatus} · ${wageStatus}`,
         };
     });
     autocasters.value = {
         casters,
-        tasks: AUTOCASTER_TASKS.map((task) => ({
-            ...task,
-            caster: casters.find((caster) => caster?.assignment === task.id) ?? null,
-            castsMax: task.id < 5 ? namedWasm.producerAutocasterCastsMax(task.id) : false,
-            purifyMinimum: task.id === 6 ? namedWasm.autocasterPurifyMinimumRelativeMultiplier() : 1.01,
-        })),
+        tasks: AUTOCASTER_TASKS.map((task) => {
+            const assignedCasters = casters.filter((caster) => caster?.assignment === task.id);
+            const tierSpeed = assignedCasters.some((caster) => caster.tier >= 3) ? 2 : 1;
+            return {
+                ...task,
+                casters: assignedCasters,
+                effectiveCooldown: task.cooldown / tierSpeed / achievementSpeed / Math.max(1, assignedCasters.length),
+                castsMax: task.id < 5 ? namedWasm.producerAutocasterCastsMax(task.id) : false,
+                purifyMinimum: task.id === 6 ? namedWasm.readString(AUTOCASTER_HANDLES.purifyMinimum) : "1.01",
+                condenseGain: task.id === 5 ? namedWasm.readString(AUTOCASTER_HANDLES.condenseGain) : "1",
+                maximumOwned: task.id === 7
+                    ? namedWasm.readString(AUTOCASTER_HANDLES.sealedMeridiansMaximum)
+                    : task.id === 8 ? namedWasm.readString(AUTOCASTER_HANDLES.crystalMatricesMaximum) : "Infinity",
+            };
+        }),
         hireOptions: AUTOCASTER_TIERS.map((tier) => ({ ...tier, affordable: namedWasm.canHireAutocaster(tier.tier) })),
     };
 }
@@ -640,11 +682,13 @@ function updateGuildInventoryDisplay() {
         for (let position = 0; position < 100; position++) {
             const type = namedWasm.inventoryItemAt(position);
             if (type === 0) continue;
-            const definition = displayedItemDefinition(type);
+            const metadata = namedWasm.inventoryItemMetadata(position);
+            const definition = displayedInventoryItemDefinition(type, metadata);
             if (!definition) continue;
             inventoryItems.push({
                 position,
                 type,
+                metadata,
                 ...definition,
             });
         }
@@ -669,7 +713,7 @@ function updateGuildBoardDisplay() {
     const guildRankIndex = namedWasm.toNumber(HANDLES.guildRank);
     guild.value.rank = GUILD_RANKS[guildRankIndex] ?? "F";
     guild.value.rankIndex = guildRankIndex;
-    guild.value.nextRank = GUILD_RANKS[guildRankIndex + 1] ?? "—";
+    guild.value.nextRank = GUILD_RANKS[guildRankIndex + 1] ?? "---";
     guild.value.experience = namedWasm.getGuildExperience();
     const experienceRequirement = namedWasm.guildExperienceRequirement();
     guild.value.experienceRequirement = Number.isFinite(experienceRequirement) ? experienceRequirement : "∞";
@@ -1035,9 +1079,35 @@ function setAutocasterCastsMax(task, value) {
     void saveGame();
 }
 
-function setAutocasterPurifyMinimum(value) {
-    namedWasm.setAutocasterPurifyMinimumRelativeMultiplier(value);
+function writeAutocasterDecimal(handle, text, minimum) {
+    if (String(text).trim().toLowerCase() === "infinity") {
+        namedWasm.writeDecimal(handle, 1, 0, Infinity);
+        void saveGame();
+        return true;
+    }
+    const match = String(text).trim().match(/^(\d+(?:\.\d*)?|\.\d+)(?:e([+-]?\d+))?$/i);
+    if (!match) return false;
+    const mantissa = Number(match[1]);
+    const exponent = Number(match[2] ?? 0);
+    if (!Number.isFinite(mantissa) || mantissa < 0 || (mantissa === 0 && minimum > 0) || !Number.isFinite(exponent)) return false;
+    const decimalExponent = Math.log10(mantissa) + exponent;
+    if (decimalExponent > 308) namedWasm.writeDecimal(handle, 1, 1, decimalExponent);
+    else namedWasm.writeNumber(handle, Math.max(minimum, mantissa * 10 ** exponent));
     void saveGame();
+    return true;
+}
+
+function setAutocasterPurifyMinimum(value) {
+    return writeAutocasterDecimal(AUTOCASTER_HANDLES.purifyMinimum, value, 1.01);
+}
+
+function setAutocasterCondenseGain(value) {
+    return writeAutocasterDecimal(AUTOCASTER_HANDLES.condenseGain, value, 1);
+}
+
+function setAutocasterMaximum(task, value) {
+    const handle = task === 7 ? AUTOCASTER_HANDLES.sealedMeridiansMaximum : AUTOCASTER_HANDLES.crystalMatricesMaximum;
+    return writeAutocasterDecimal(handle, value, 0);
 }
 
 function sellAutocaster(caster) {
@@ -1118,7 +1188,7 @@ onBeforeUnmount(() => {
             type="button"
             aria-label="Open how to play"
             title="How to Play"
-            @click="infoTabVisible = true"
+            @click="openInfo()"
         >?</button>
         <NotificationStack />
         <ManaCircleExpansion
@@ -1211,6 +1281,7 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'manacircle'"
                 :active-subtab="activeSubtab"
                 :mana-circle="manaCircle"
+                @info="openInfo('mana-circle')"
             />
             <CrystalsTab
                 v-else-if="activeTab === 'crystals'"
@@ -1251,12 +1322,15 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'autocasters'"
                 :autocasters="autocasters"
                 :coins="guild.coins"
+                :mana-circle="manaCircle"
                 @hire="hireAutocaster"
                 @assign="assignAutocaster"
                 @move="moveAutocaster"
                 @sell="sellAutocaster"
                 @casts-max="setAutocasterCastsMax"
                 @purify-minimum="setAutocasterPurifyMinimum"
+                @condense-gain="setAutocasterCondenseGain"
+                @maximum-owned="setAutocasterMaximum"
             />
             <AchievementsTab
                 v-else-if="activeTab === 'achievements'"
@@ -1298,7 +1372,7 @@ onBeforeUnmount(() => {
             </section>
         </div>
         <KeybindMenu v-if="changeKeybindsVisible" @close="changeKeybindsVisible = false" />
-        <InfoTab v-if="infoTabVisible" @close="infoTabVisible = false" />
+        <InfoTab v-if="infoTabVisible" :initial-topic-id="infoTopicId" @close="infoTabVisible = false" />
         <MessageTicker
             v-if="newsTickerEnabled"
             :key="messageTickerParticles ? 'particles' : 'text'"

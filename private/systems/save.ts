@@ -10,14 +10,15 @@ import { HANDLES } from "../core/player.js";
 import { applyCondensedResetStartingValues, hasCastSpeedUsedThisCondense, hasSealedMeridianThisReset, refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, setCastSpeedUsedThisCondense, setSealedMeridianThisReset } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { isOfflineProgressEnabled, simulateTime } from "./tick.js";
-import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getGuildExperienceForQuestRank, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, initializeLegacyQuestAvailableMana, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventorySlot, refreshPotionEffectState, repairGuildCurrency, resetCombatSpellCosts, setGuildExperience, setGuildExperienceForQuestRank, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
+import { ensureInventoryPlacements, ensureShopItems, getGuildExperience, getGuildExperienceForQuestRank, getQuestRefreshRemaining, hasActivePotionEffects, hasGuildShopUpgrade, initializeLegacyQuestAvailableMana, isGuildMember, isGuildUnlocked, isQuestSlotLocked, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES, questDefinitionId, rawInventoryMetadata, rawInventorySlot, refreshPotionEffectState, repairGuildCurrency, resetCombatSpellCosts, setGuildExperience, setGuildExperienceForQuestRank, setGuildMember, setGuildShopUpgrade, setGuildUnlocked, setQuestDefinitionId, setQuestRefreshRemaining, setQuestSlotLocked, setRawInventoryMetadata, setRawInventorySlot, setShopItemCost, setShopItemId, setShopItemRefreshTimer, shopItemCost, shopItemId, shopItemRefreshTimer } from "../guild/guild.js";
 import { equippedItem, setEquippedItem } from "../guild/equipment.js";
-import { autocasterActionCooldown, autocasterAssignment, autocasterNameIndex, autocasterPurifyMinimumRelativeMultiplier, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, producerAutocasterCastsMax, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterNameIndex, setAutocasterPurifyMinimumRelativeMultiplier, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod, setProducerAutocasterCastsMax } from "../guild/autocasters.js";
+import { AUTOCASTER_HANDLES, autocasterActionCooldown, autocasterAssignment, autocasterCondenseGain, autocasterNameIndex, autocasterPurifyMinimumRelativeMultiplier, autocasterRosterPosition, autocasterTier, autocasterWageTimer, autocasterWorkedThisPeriod, producerAutocasterCastsMax, setAutocasterActionCooldown, setAutocasterAssignment, setAutocasterCondenseGain, setAutocasterNameIndex, setAutocasterPurifyMinimumRelativeMultiplier, setAutocasterRosterPosition, setAutocasterTier, setAutocasterWageTimer, setAutocasterWorkedThisPeriod, setProducerAutocasterCastsMax } from "../guild/autocasters.js";
+import { MAX_AUTOCASTERS } from "../config/autocasters.js";
 
 const STORAGE_KEY = "saveData";
 const RECOVERY_STORAGE_KEY = "saveDataRecovery";
 const SAVE_PREFIX = "TheManaParadoxSaveFormat";
-const CURRENT_SAVE_VERSION = "020";
+const CURRENT_SAVE_VERSION = "024";
 const SAVE_SUFFIX = "EndOfSaveData";
 const DECIMAL_BYTES = 13;
 const AUTOSAVE_INTERVAL = 30_000;
@@ -179,6 +180,10 @@ const inventorySlotFields: readonly SaveField[] = Array.from({ length: 100 }, (_
     () => rawInventorySlot(position),
     (item) => setRawInventorySlot(position, item),
 ));
+const inventoryMetadataFields: readonly SaveField[] = Array.from({ length: 100 }, (_, position) => callbackUint8SaveField(
+    () => rawInventoryMetadata(position),
+    (metadata) => setRawInventoryMetadata(position, metadata),
+));
 const questBoardFields: readonly SaveField[] = [
     ...Array.from({ length: 3 }, (_, index) => booleanSaveField(
         () => isQuestSlotLocked(index),
@@ -231,7 +236,10 @@ const dRankGuildFields: readonly SaveField[] = [
     )),
 ];
 const potionSpeedIIITimerFields = POTION_SPEED_III_TIMER_HANDLES.map((handle) => decimalSaveField(handle, [0, 0, 0]));
-const autocasterFields: readonly SaveField[] = Array.from({ length: 9 }, (_, index) => [
+function autocasterSaveFields(start: number, length: number): readonly SaveField[] {
+    return Array.from({ length }, (_, offset) => {
+        const index = start + offset;
+        return [
     callbackInt32SaveField(() => autocasterTier(index), (value) => setAutocasterTier(index, value), 0),
     callbackInt32SaveField(() => autocasterNameIndex(index), (value) => setAutocasterNameIndex(index, value), -1),
     callbackInt32SaveField(() => autocasterAssignment(index), (value) => setAutocasterAssignment(index, value), -1),
@@ -239,14 +247,19 @@ const autocasterFields: readonly SaveField[] = Array.from({ length: 9 }, (_, ind
     callbackNumberSaveField(() => autocasterActionCooldown(index), (value) => setAutocasterActionCooldown(index, value), 0),
     callbackNumberSaveField(() => autocasterWageTimer(index), (value) => setAutocasterWageTimer(index, value), 0),
     booleanSaveField(() => autocasterWorkedThisPeriod(index), (value) => setAutocasterWorkedThisPeriod(index, value)),
-]).flat();
+        ];
+    }).flat();
+}
+const autocasterFields: readonly SaveField[] = autocasterSaveFields(0, 9);
+const extendedAutocasterFields: readonly SaveField[] = autocasterSaveFields(9, MAX_AUTOCASTERS - 9);
+const legacyAutocasterPurifyMinimum: SaveValue<number> = { value: 1.01 };
 const autocasterSettingFields: readonly SaveField[] = [
     ...Array.from({ length: 5 }, (_, index) => booleanSaveField(
         () => producerAutocasterCastsMax(index),
         (value) => setProducerAutocasterCastsMax(index, value),
         true,
     )),
-    callbackNumberSaveField(autocasterPurifyMinimumRelativeMultiplier, setAutocasterPurifyMinimumRelativeMultiplier, 1.01),
+    numberSaveField(legacyAutocasterPurifyMinimum, 1.01),
 ];
 
 const savedFields002: readonly SaveField[] = [
@@ -397,6 +410,24 @@ const savedFields020: readonly SaveField[] = [
     ...savedFields019,
     decimalSaveField(HANDLES.quests_currentAvailableMana, [0, 0, 0]),
 ];
+const savedFields021: readonly SaveField[] = [
+    ...savedFields020,
+    ...extendedAutocasterFields,
+];
+const savedFields022: readonly SaveField[] = [
+    ...savedFields021,
+    decimalSaveField(AUTOCASTER_HANDLES.purifyMinimum, [1, 0, 1.01]),
+    decimalSaveField(AUTOCASTER_HANDLES.condenseGain, [1, 0, 1]),
+];
+const savedFields023: readonly SaveField[] = [
+    ...savedFields022,
+    decimalSaveField(AUTOCASTER_HANDLES.sealedMeridiansMaximum, [1, 0, Infinity]),
+    decimalSaveField(AUTOCASTER_HANDLES.crystalMatricesMaximum, [1, 0, Infinity]),
+];
+const savedFields024: readonly SaveField[] = [
+    ...savedFields023,
+    ...inventoryMetadataFields,
+];
 const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
     savedFields001,
     savedFields002,
@@ -418,6 +449,10 @@ const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
     savedFields018,
     savedFields019,
     savedFields020,
+    savedFields021,
+    savedFields022,
+    savedFields023,
+    savedFields024,
 ];
 
 const condenseResetFields: readonly SaveField[] = [
@@ -443,10 +478,10 @@ const condenseResetFields: readonly SaveField[] = [
 
 export async function exportSave(): Promise<string> {
     lastSaveTimestamp.value = Date.now();
-    const bytes = new Uint8Array(totalByteLength(savedFields020));
+    const bytes = new Uint8Array(totalByteLength(savedFields024));
     const view = new DataView(bytes.buffer);
     let offset = 0;
-    for (const field of savedFields020) {
+    for (const field of savedFields024) {
         field.write(view, offset);
         offset += field.byteLength;
     }
@@ -466,6 +501,7 @@ export async function importSave(saveData: string): Promise<void> {
         throw new Error(`Unsupported Mana Paradox save version ${version}`);
     }
     await importFields(encoded, fields, versionIndex >= 8);
+    if (versionIndex < 21) setAutocasterPurifyMinimumRelativeMultiplier(legacyAutocasterPurifyMinimum.value);
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();
     refreshMatrixDerivedState();
@@ -495,11 +531,11 @@ async function importFields(encoded: string, fields: readonly SaveField[], compr
     const bytesRaw = base64ToBytes(encoded);
     const bytes = compressed ? await decompressBytes(bytesRaw) : bytesRaw;
     const expectedLength = totalByteLength(fields);
-    const currentVersionFields = fields === savedFields020;
+    const currentVersionFields = fields === savedFields024;
     if (!development && (!currentVersionFields || bytes.length > expectedLength) && bytes.length !== expectedLength) {
         throw new Error(`Invalid save payload length: expected ${expectedLength} bytes, received ${bytes.length}`);
     }
-    for (const field of savedFields020) field.reset();
+    for (const field of savedFields024) field.reset();
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let offset = 0;
     for (const field of fields) {
@@ -596,7 +632,7 @@ export async function saveGame(): Promise<void> {
 
 export function resetGame(): void {
     savingEnabled = true;
-    for (const field of savedFields020) field.reset();
+    for (const field of savedFields024) field.reset();
     refreshAchievementRewards();
     refreshCondensedUpgradeState();
     refreshSealedMeridiansDerivedState();
