@@ -5,7 +5,7 @@ import { HANDLES } from "../core/player.js";
 import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState } from "../game/progression.js";
 import { refreshTierOneDerivedState } from "../game/tier_one.js";
 import { setTotalMemories } from "../game/memories.js";
-import { setQuestRefreshRemaining } from "../guild/guild.js";
+import { setGuildShopUpgrade, setQuestRefreshRemaining } from "../guild/guild.js";
 
 (globalThis as any).readValue = (value: keyof typeof HANDLES) => {
     return readString(HANDLES[value] ?? HANDLES.mana);
@@ -38,3 +38,15 @@ import { setQuestRefreshRemaining } from "../guild/guild.js";
 (globalThis as any).refreshQuests = () => {
     setQuestRefreshRemaining(0);
 }
+
+(globalThis as any).assignShopOwned = (index: number, owned: boolean) => {
+    if (!Number.isInteger(index) || index < 0 || index >= 12) {
+        throw new Error("Guild shop upgrade index must be an integer from 0 to 11");
+    }
+
+    setGuildShopUpgrade(index, owned);
+
+    refreshTierOneDerivedState();
+    refreshSealedMeridiansDerivedState();
+    refreshMatrixDerivedState();
+};
