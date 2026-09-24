@@ -48,8 +48,6 @@ const PURIFICATION_SOFTCAP_POWER: f64 = 0.5;
 const CONDENSED_PRODUCER_MULTIPLIER: i32 = 2;
 const CONDENSED_STAFF_MULTIPLIER: i32 = 5;
 
-// Past this many purchases, each purchase's cost growth rate itself grows exponentially.
-// A large rate keeps the transition gradual instead of immediately making the cost double-exponential.
 const EXPONENTIAL_COST_START_PURCHASES: i32 = 10000;
 const EXPONENTIAL_COST_RATE: i32 = 1000;
 const LOG10_E: f64 = 0.4342944819032518;
@@ -290,8 +288,6 @@ export function buyMaxTierOne(index: i32): bool {
     return true;
 }
 
-// Once past EXPONENTIAL_COST_START_PURCHASES, cost growth per unit varies, so an exact bulk-sum isn't tractable; approximate total spend as the cost of the last unit bought (agreed with the user).
-// scratch.tierOneExponent tracks the transition index T: the cost register at bought=T is the price of buying the T->T+1 unit, so once the largest affordable T is found, the final bought count is T+1.
 function buyMaxTierOneAccelerated(index: i32): void {
     const boughtHandle = tierOneBoughtHandle(index);
 
