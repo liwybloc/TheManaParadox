@@ -26,7 +26,7 @@ defineEmits(["cast", "abandon"]);
                 :disabled="!spell.affordable"
                 @click="$emit('cast', spell.index)"
             >
-                <strong>{{ spell.name }}</strong><span>{{ spell.effect }}</span><small>{{ spell.cost }} mana</small>
+                <strong>{{ spell.name }}</strong><span>{{ spell.effect }}</span><small>Divides mana by {{ spell.cost }}</small>
             </button>
         </div>
         <button class="abandon-quest" type="button" @click="$emit('abandon')">Abandon Quest</button>

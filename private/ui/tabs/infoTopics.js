@@ -126,6 +126,7 @@ export const topics = [
         summary: "Fight monsters with mana-powered combat spells.",
         paragraphs: [
             "Starting a quest snapshots your highest mana reached into a separate quest mana pool. Mana production pauses during combat, and spells spend the snapshot instead of your normal mana.",
+            "Spells divide your mana rather than subtract from it, so 1e240 / 1e40 = 1e200.",
             "Your maximum Mana Shield is log10(highest mana), multiplied by equipment bonuses. Enemy health by rank is 150, 250, 500, 2,500, 15,000, and 100,000.",
             "Enemy attacks deal a random 20 to 50 damage, multiplied by 2^rank and reduced by armor. Freeze deals damage and skips the next two enemy turns.",
             "After every cast, the new spell cost is old cost^1.1 × 10^s. The scaling exponent s is 10, 20, 30, 30, 40, and 50 from Fireball through Arcane Nova. Freeze's exponent falls from 30 to 10 after its challenge achievement.",
