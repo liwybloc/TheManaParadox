@@ -328,7 +328,7 @@ let updateRate = loadUpdateRate();
 setUpdateRate(updateRate);
 let offlineProgress = loadOfflineProgress();
 
-const BASE_SIMULATION_BATCH_SIZE = 5000;
+const BASE_SIMULATION_BATCH_SIZE = 500;
 const simulationListeners = new Set<(state: TimeSimulationState) => void>();
 let simulationActive = false;
 let simulationStepMilliseconds = DEFAULT_UPDATE_RATE;

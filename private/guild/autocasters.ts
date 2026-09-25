@@ -204,8 +204,10 @@ export function updateAutocasters(deltaSeconds: f64): void {
     for (let caster: i32 = 0; caster < MAX_AUTOCASTERS; caster++) {
         if (!isAutocasterHired(caster)) continue;
         updateWage(caster, deltaSeconds);
-        if (!isAutocasterHired(caster) || assignments[caster] < 0) continue;
-        updateAction(caster, deltaSeconds);
+    }
+    for (let task: i32 = 0; task < AUTOCASTER_TASK_COUNT; task++) {
+        const caster = casterAssignedToTask(task);
+        if (caster >= 0) updateAction(caster, task, deltaSeconds);
     }
 }
 
@@ -242,9 +244,7 @@ function updateWage(caster: i32, deltaSeconds: f64): void {
     subUS(player.coins, wage);
 }
 
-function updateAction(caster: i32, deltaSeconds: f64): void {
-    const task = assignments[caster];
-    if (casterAssignedToTask(task) !== caster) return;
+function updateAction(caster: i32, task: i32, deltaSeconds: f64): void {
     actionCooldowns[caster] = Math.max(0, actionCooldowns[caster] - deltaSeconds);
     if (actionCooldowns[caster] > 0) return;
     let acted = false;

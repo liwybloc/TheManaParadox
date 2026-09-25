@@ -25,37 +25,14 @@ input {
 #sky {
   position: fixed;
   inset: 0;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   pointer-events: none;
   opacity: 0.28;
 }
-.star {
-  position: absolute;
-  width: var(--star-size);
-  height: var(--star-size);
-  border-radius: 50%;
-  background: #fff;
-  will-change: transform, opacity;
-  animation: star-twinkle var(--twinkle-duration) ease-in-out var(--twinkle-delay) infinite alternate;
-}
-@keyframes star-twinkle {
-  from {
-    opacity: var(--twinkle-minimum);
-  }
-  to {
-    opacity: 1;
-  }
-}
 body.effects-disabled #sky {
   display: none;
-}
-body.star-animation-disabled .star {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .star {
-    animation: none;
-  }
 }
 
 .notification-stack {

@@ -185,7 +185,7 @@ export const topics = [
         paragraphs: [
             "The game saves automatically every 30 seconds and when the page is left. Saves can also be exported or imported from the Options tab.",
             "Offline Progress is enabled by default. Disabling it prevents the game from simulating time that passed while the game was closed or suspended.",
-            "Update Rate changes how often the simulation updates, from 10 ms to 200 ms. It can change smoothness and performance, but not the intended amount produced over time.",
+            "Update Rate changes how often the simulation updates, from 10 ms to 200 ms. Render Update Rate separately controls live display refreshes from 10 ms to 250 ms. These can change smoothness and performance, but not the intended amount produced over time.",
         ],
     },
 ];

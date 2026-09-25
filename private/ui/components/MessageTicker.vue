@@ -26,6 +26,7 @@ const config = {
     msPerCharacter: 125,
     minimumReadTime: 3000
 };
+const PARTICLE_FRAME_INTERVAL = 1000 / 30;
 
 function getMessageDuration() {
     return message.value.length * config.msPerCharacter + config.minimumReadTime;
@@ -81,6 +82,10 @@ let particles = [];
 let animationFrame;
 let startTime = 0;
 let canvasInitialized = false;
+let previousParticleFrame = 0;
+let canvasWidth = 0;
+let canvasHeight = 0;
+let holdTime = 0;
 
 function resizeCanvas() {
     const el = canvas.value;
@@ -89,6 +94,8 @@ function resizeCanvas() {
     el.width = rect.width * dpr;
     el.height = rect.height * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    canvasWidth = rect.width;
+    canvasHeight = rect.height;
     buildParticles();
 }
 
@@ -136,6 +143,7 @@ function buildParticles() {
             }
         }
     }
+    holdTime = getHoldTime();
     startTime = performance.now();
 }
 
@@ -156,8 +164,11 @@ function animate(time) {
     if (!el || !ctx) {
         return;
     }
-    const width = el.clientWidth;
-    const height = el.clientHeight;
+    animationFrame = requestAnimationFrame(animate);
+    if (document.hidden || time - previousParticleFrame < PARTICLE_FRAME_INTERVAL) return;
+    previousParticleFrame = time;
+    const width = canvasWidth;
+    const height = canvasHeight;
     ctx.clearRect(0, 0, width, height);
     const elapsed = time - startTime;
     for (const particle of particles) {
@@ -174,13 +185,13 @@ function animate(time) {
             x = lerp(particle.x, particle.targetX, progress);
             y = lerp(particle.y, particle.targetY, progress);
             alpha = progress;
-        } else if (localTime < config.assembleTime + getHoldTime()) {
+        } else if (localTime < config.assembleTime + holdTime) {
             x = particle.targetX;
             y = particle.targetY;
             x += Math.sin(time * 0.003 + particle.targetY * 0.15) * 0.25;
             y += Math.cos(time * 0.002 + particle.targetX * 0.15) * 0.25;
         } else {
-            const scatterStart = config.assembleTime + getHoldTime();
+            const scatterStart = config.assembleTime + holdTime;
             const progress = Math.min(
                 (localTime - scatterStart) / config.scatterTime, 1);
             const easedProgress = easeInCubic(progress);
@@ -207,7 +218,6 @@ function animate(time) {
     }
     ctx.globalAlpha = 1;
     ctx.shadowBlur = 0;
-    animationFrame = requestAnimationFrame(animate);
 }
 function initializeCanvas() {
     if (canvasInitialized || !canvas.value) return;

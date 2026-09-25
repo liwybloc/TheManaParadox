@@ -203,7 +203,11 @@ const resetConfirmationVisible = ref(false);
 const changeKeybindsVisible = ref(false);
 const infoTabVisible = ref(false);
 const infoTopicId = ref("welcome");
+const showFpsCounter = window.location.hostname === "localhost";
+const displayedFps = ref(0);
 const updateRate = ref(getUpdateRate());
+const RENDER_UPDATE_RATE_STORAGE_KEY = "renderUpdateRate";
+const renderUpdateRate = ref(loadRenderUpdateRate());
 const offlineProgress = ref(isOfflineProgressEnabled());
 const timeSimulation = ref({ active: false, totalSeconds: 0, simulatedSeconds: 0, progress: 0, speed: 1 });
 let unsubscribeFromTimeSimulation;
@@ -317,12 +321,14 @@ function selectSubtab(id) {
     localStorage.setItem("selectedSubTab", id);
 }
 
-const FAST_UI_INTERVAL = 50;
 const SLOW_UI_INTERVAL = 250;
 let lastFastUiUpdate = 0;
 let lastSlowUiUpdate = 0;
+let fpsWindowStart = 0;
+let fpsFrameCount = 0;
 
 function updateFastDisplay() {
+    PerformanceStats.begin("fastDisplay");
     updateGlobalDisplay();
 
     switch (activeTab.value) {
@@ -333,9 +339,12 @@ function updateFastDisplay() {
             updateQuestDisplay();
             break;
     }
+    PerformanceStats.end("fastDisplay");
 }
 
 function updateSlowDisplay() {
+    PerformanceStats.begin("slowDisplay");
+    updateProgressionDisplay();
     updateAchievementNotifications();
 
     switch (activeTab.value) {
@@ -358,11 +367,22 @@ function updateSlowDisplay() {
             updateStatisticsDisplay();
             break;
     }
+    PerformanceStats.end("slowDisplay");
 }
 
 function updateDisplay(timestamp) {
     try {
-        if (timestamp - lastFastUiUpdate >= FAST_UI_INTERVAL) {
+        if (showFpsCounter) {
+            if (fpsWindowStart === 0) fpsWindowStart = timestamp;
+            fpsFrameCount++;
+            const fpsElapsed = timestamp - fpsWindowStart;
+            if (fpsElapsed >= 500) {
+                displayedFps.value = Math.round(fpsFrameCount * 1000 / fpsElapsed);
+                fpsFrameCount = 0;
+                fpsWindowStart = timestamp;
+            }
+        }
+        if (timestamp - lastFastUiUpdate >= renderUpdateRate.value) {
             lastFastUiUpdate = timestamp;
             updateFastDisplay();
         }
@@ -386,15 +406,8 @@ function updateGlobalDisplay() {
     canCondense.value = namedWasm.canCondense();
     condensedUnlocked.value = namedWasm.hasCondensed();
     if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
-    ascensionHallUnlocked.value = namedWasm.isAscensionHallUnlocked();
     manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier);
-    crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
-    memoriesUnlocked.value = namedWasm.hasCompletedCrystal(2);
-    libraryUnlocked.value = namedWasm.hasMemoryMilestone(25);
     memories.value.focusing = namedWasm.isFocusing();
-    activeCrystal.value = namedWasm.getActiveCrystal();
-    crystalGoalReached.value = namedWasm.isActiveCrystalGoalReached();
-    crystalCanShatter.value = namedWasm.canShatterActiveCrystal();
     if (manaCircle.value > 0 && canCondense.value) {
         namedWasm.refreshCondenseGain();
         condenseManaGained.value = formatDecimal(SCRATCH_HANDLES.condenseGain, 2);
@@ -402,6 +415,19 @@ function updateGlobalDisplay() {
             memories.value.nextChance = (namedWasm.memoryChance(SCRATCH_HANDLES.condenseGain) * 100).toFixed(2);
         }
     }
+    questActive.value = namedWasm.isQuestActive();
+    if (namedWasm.consumeAutoCondenseRequest()) condense();
+    if (!questActive.value && activeTab.value === "quest") selectTab("guild");
+}
+
+function updateProgressionDisplay() {
+    ascensionHallUnlocked.value = namedWasm.isAscensionHallUnlocked();
+    crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
+    memoriesUnlocked.value = namedWasm.hasCompletedCrystal(2);
+    libraryUnlocked.value = namedWasm.hasMemoryMilestone(25);
+    activeCrystal.value = namedWasm.getActiveCrystal();
+    crystalGoalReached.value = namedWasm.isActiveCrystalGoalReached();
+    crystalCanShatter.value = namedWasm.canShatterActiveCrystal();
     autocastersUnlocked.value = namedWasm.hasGuildShopUpgrade(1);
     if (!ascensionHallUnlocked.value && activeSubtabs.value.guild === "guild-ascension-hall") {
         activeSubtabs.value.guild = "guild-main";
@@ -416,8 +442,6 @@ function updateGlobalDisplay() {
         namedWasm.enterAscensionHall();
     }
     guildUnlocked.value = namedWasm.isGuildUnlocked();
-    questActive.value = namedWasm.isQuestActive();
-    if (namedWasm.consumeAutoCondenseRequest()) condense();
     if (activeCrystal.value >= 0) {
         const goalHandle = CRYSTAL_GOALS[activeCrystal.value];
         nextGoal.value = crystalGoalReached.value ? "Shatter the Crystal" : formatCrystalGoal(goalHandle);
@@ -429,7 +453,6 @@ function updateGlobalDisplay() {
         nextGoalProgress.value = progressionGoalProgress(goal);
     }
     setStarManaProgress(namedWasm.manaCondenseProgress());
-    if (!questActive.value && activeTab.value === "quest") selectTab("guild");
     updateNavigationUnlockPings();
 }
 
@@ -471,13 +494,14 @@ function updateNavigationUnlockPings() {
 function updateAutocastersDisplay() {
     guild.value.coins = formatDecimal(HANDLES.coins, 0);
     const achievementSpeed = namedWasm.hasTierOneAchievement(37) ? 2 : 1;
+    const primaryCasterByTask = AUTOCASTER_TASKS.map((task) => namedWasm.casterAssignedToTask(task.id));
     const casters = Array.from({ length: MAX_AUTOCASTERS }, (_, id) => {
         const tier = namedWasm.autocasterTier(id);
         if (tier === 0) return null;
         const wageRemaining = namedWasm.autocasterWageTimer(id);
         const assignment = namedWasm.autocasterAssignment(id);
         const actionRemaining = namedWasm.autocasterActionCooldown(id);
-        const isSupporting = assignment >= 0 && namedWasm.casterAssignedToTask(assignment) !== id;
+        const isSupporting = assignment >= 0 && primaryCasterByTask[assignment] !== id;
         const actionStatus = isSupporting
             ? "Supporting"
             : assignment >= 0
@@ -891,6 +915,16 @@ function updateTickRate(value) {
     updateRate.value = setUpdateRate(value);
 }
 
+function loadRenderUpdateRate() {
+    const saved = Number(localStorage.getItem(RENDER_UPDATE_RATE_STORAGE_KEY));
+    return Number.isFinite(saved) && saved >= 10 ? Math.max(10, Math.min(250, Math.round(saved))) : 50;
+}
+
+function setRenderUpdateRate(value) {
+    renderUpdateRate.value = Math.max(10, Math.min(250, Math.round(value)));
+    localStorage.setItem(RENDER_UPDATE_RATE_STORAGE_KEY, String(renderUpdateRate.value));
+}
+
 function setOfflineProgress(enabled) {
     offlineProgress.value = enabled;
     setOfflineProgressEnabled(enabled);
@@ -1165,6 +1199,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="game-shell">
+        <output v-if="showFpsCounter" class="fps-counter" aria-label="Frames per second">{{ displayedFps }} FPS</output>
         <div
             v-if="activeCrystal >= 0"
             class="active-crystal-screen"
@@ -1342,6 +1377,7 @@ onBeforeUnmount(() => {
                 v-else-if="activeTab === 'options'"
                 :active-subtab="activeSubtab"
                 :update-rate="updateRate"
+                :render-update-rate="renderUpdateRate"
                 :offline-progress="offlineProgress"
                 :stars-visible="starsVisible"
                 :stars-animated="starsAnimated"
@@ -1356,6 +1392,7 @@ onBeforeUnmount(() => {
                 @import-save="importGameSave"
                 @reset-game="resetGame"
                 @update-rate="updateTickRate"
+                @render-update-rate="setRenderUpdateRate"
                 @offline-progress="setOfflineProgress"
             />
 
@@ -1385,6 +1422,19 @@ onBeforeUnmount(() => {
 </template>
 
 <style>
+.fps-counter {
+    position: fixed;
+    z-index: 2000;
+    top: 5px;
+    right: 6px;
+    padding: 3px 6px;
+    border: 1px solid #51425f;
+    color: #d8c4ed;
+    background: rgb(9 9 15 / 82%);
+    font: 11px/1.2 monospace;
+    pointer-events: none;
+}
+
 .info-launcher {
     position: fixed;
     z-index: 40;

@@ -2,13 +2,14 @@
 defineProps({
     activeSubtab: { type: String, required: true },
     updateRate: { type: Number, required: true },
+    renderUpdateRate: { type: Number, required: true },
     offlineProgress: { type: Boolean, required: true },
     starsVisible: { type: Boolean, required: true },
     starsAnimated: { type: Boolean, required: true },
     newsTickerEnabled: { type: Boolean, required: true },
     messageTickerParticles: { type: Boolean, required: true },
 });
-const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "news-ticker-enabled", "message-ticker-particles", "export-save", "import-save", "reset-game", "update-rate", "offline-progress"]);
+const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "news-ticker-enabled", "message-ticker-particles", "export-save", "import-save", "reset-game", "update-rate", "render-update-rate", "offline-progress"]);
 </script>
 
 <template>
@@ -37,6 +38,17 @@ const emit = defineEmits(["edit-keybinds", "stars-visible", "stars-animated", "n
         <div v-else-if="activeSubtab === 'visuals'">
             <div class="section-title"><h1>Visual Options</h1><p>Configure decorative elements.</p></div>
             <div class="option-list">
+                <label>
+                    <span><strong>Render Update Rate</strong><small>{{ renderUpdateRate }} ms between display updates</small></span>
+                    <input
+                        type="range"
+                        min="10"
+                        max="250"
+                        step="1"
+                        :value="renderUpdateRate"
+                        @input="emit('render-update-rate', Number($event.currentTarget.value))"
+                    />
+                </label>
                 <label><span><strong>Show star background</strong><small>Display background stars.</small></span><input type="checkbox" :checked="starsVisible" @change="emit('stars-visible', $event.currentTarget.checked)" /></label>
                 <label><span><strong>Animate stars</strong><small>Allow stars to twinkle and move with mana.</small></span><input type="checkbox" :checked="starsAnimated" @change="emit('stars-animated', $event.currentTarget.checked)" /></label>
                 <label><span><strong>News Ticker Enabled</strong><small>Display news ticker messages.</small></span><input type="checkbox" :checked="newsTickerEnabled" @change="emit('news-ticker-enabled', $event.currentTarget.checked)" /></label>
