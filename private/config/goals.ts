@@ -18,7 +18,7 @@ export interface ProgressionGoal {
 }
 
 export const PROGRESSION_GOALS: readonly ProgressionGoal[] = [
-    { id: "sealed-meridians", label: "Purifying Circuits", completion: "sealed-meridians", progress: { type: "mana", startExponent: 0, endExponent: 16, maximumBeforeCompletion: 1 } },
+    { id: "sealed-meridians", label: "Sealing Meridians", completion: "sealed-meridians", progress: { type: "mana", startExponent: 0, endExponent: 16, maximumBeforeCompletion: 1 } },
     { id: "meridian-purification", label: "Purification of Meridians", completion: "meridian-purification", progress: { type: "mana", startExponent: 16, endExponent: 71, maximumBeforeCompletion: 1 } },
     { id: "guild", label: "the Guild", completion: "guild-member", progress: { type: "mana", startExponent: 71, endExponent: 210, maximumBeforeCompletion: 1 } },
     { id: "courage", label: "unleashing Courage", completion: "courage", progress: { type: "mana", startExponent: 210, endExponent: 290, maximumBeforeCompletion: 1 } },
