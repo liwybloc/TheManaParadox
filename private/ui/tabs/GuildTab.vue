@@ -131,8 +131,8 @@ function finishDrag() {
     if (drag && equipmentTarget) {
         const targetSlot = Number(equipmentTarget.dataset.equipmentSlot);
         if (drag.sourceEquipmentSlot === null
-            && drag.item?.equipmentSlot !== undefined
-            && drag.item.equipmentSlot === targetSlot) {
+            && drag.equipmentSlot !== undefined
+            && drag.equipmentSlot === targetSlot) {
             emit("equip-item", drag.sourcePosition, targetSlot);
         }
         dragging.value = null;
