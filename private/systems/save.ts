@@ -692,15 +692,17 @@ export async function loadGame(): Promise<boolean> {
 function writeDecimalRecord(view: DataView, offset: number, handle: i32): void {
     const layer = getLayer(handle);
     const sign = getSign(handle);
+    const magnitude = getMagnitude(handle);
     if (!Number.isInteger(layer) || layer < -0x80000000 || layer > 0x7fffffff) {
         throw new Error(`Decimal layer ${layer} cannot be represented by the save format`);
     }
     if (sign !== -1 && sign !== 0 && sign !== 1) {
         throw new Error(`Decimal sign ${sign} cannot be represented by the save format`);
     }
+    if (Number.isNaN(magnitude)) throw new Error("NaN Decimal cannot be represented by the save format");
     view.setInt32(offset, layer, true);
     view.setInt8(offset + 4, sign);
-    view.setFloat64(offset + 5, getMagnitude(handle), true);
+    view.setFloat64(offset + 5, magnitude, true);
 }
 
 function readDecimalRecord(

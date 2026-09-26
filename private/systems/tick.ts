@@ -253,6 +253,7 @@ function calculateModifier(scope: i32, target: i32, type: i32): f64 {
 }
 
 export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
+    if (!(deltaMilliseconds > 0) || !isFinite(deltaMilliseconds)) return;
     if (isAllProducersManaAbsorbersCrystalActive()) synchronizeCrystal11Multipliers();
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
     updatePotionEffects(secondsHandle);
