@@ -486,7 +486,7 @@ function updateProgressionDisplay() {
     ascensionHallUnlocked.value = namedWasm.isAscensionHallUnlocked();
     crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
     memoriesUnlocked.value = namedWasm.hasCompletedCrystal(2);
-    libraryUnlocked.value = namedWasm.hasMemoryMilestone(25);
+    libraryUnlocked.value = namedWasm.hasMemoryMilestone(75);
     activeCrystal.value = namedWasm.getActiveCrystal();
     crystalGoalReached.value = namedWasm.isActiveCrystalGoalReached();
     crystalCanShatter.value = namedWasm.canShatterActiveCrystal();
