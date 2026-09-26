@@ -50,12 +50,15 @@ export function displayKey(key: string): string {
 }
 
 const keyDown: {[key: string]: boolean} = {};
+const keyPressed: {[key: string]: boolean} = {};
 
 export function tickKeybinds() {
-    for(const [key, value] of Object.entries(keyDown)) {
-        if(!value) continue;
-        const id = KEYBIND_DEFINITIONS.find((entry) => bindings[entry.id] === normalizeKey(key))?.id;
+    const keys = new Set([...Object.keys(keyDown), ...Object.keys(keyPressed)]);
+    for (const key of keys) {
+        if (!keyDown[key] && !keyPressed[key]) continue;
+        const id = actionForKey(key);
         if (id) runAction(id);
+        keyPressed[key] = false;
     }
 }
 
@@ -65,12 +68,16 @@ function isInvalid(event: KeyboardEvent) {
 
 window.addEventListener("keydown", (event) => {
     if (isInvalid(event)) return;
+    if (!keyDown[event.key]) keyPressed[event.key] = true;
     keyDown[event.key] = true;
 });
-window.addEventListener('keyup', (event) => {
-    if (isInvalid(event)) return;
+window.addEventListener("keyup", (event) => {
     keyDown[event.key] = false;
 });
+
+function actionForKey(key: string): string | undefined {
+    return KEYBIND_DEFINITIONS.find((entry) => bindings[entry.id] === normalizeKey(key))?.id;
+}
 
 function runAction(id: string): void {
     switch (id) {
