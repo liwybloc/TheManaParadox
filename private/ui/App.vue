@@ -1590,7 +1590,7 @@ onBeforeUnmount(() => {
             :particles="messageTickerParticles"
             @message-displayed="updateMessageTickerStatistics"
         />
-        <footer>The Mana Paradox v0.0.13</footer>
+        <footer>The Mana Paradox v0.0.14</footer>
         <GoalProgressBar :goal="nextGoal" :progress="nextGoalProgress" />
     </div>
 </template>

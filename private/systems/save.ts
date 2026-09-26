@@ -568,7 +568,7 @@ export function decimalSaveField(handle: i32, defaultValue: readonly [number, nu
     return {
         byteLength: DECIMAL_BYTES,
         write: (view, offset) => writeDecimalRecord(view, offset, handle),
-        read: (view, offset) => readDecimalRecord(view, offset, handle),
+        read: (view, offset) => readDecimalRecord(view, offset, handle, defaultValue),
         reset: () => writeDecimal(handle, defaultValue[0], defaultValue[1], defaultValue[2]),
     };
 }
@@ -703,11 +703,24 @@ function writeDecimalRecord(view: DataView, offset: number, handle: i32): void {
     view.setFloat64(offset + 5, getMagnitude(handle), true);
 }
 
-function readDecimalRecord(view: DataView, offset: number, handle: i32): void {
+function readDecimalRecord(
+    view: DataView,
+    offset: number,
+    handle: i32,
+    defaultValue: readonly [number, number, number],
+): void {
     const layer = view.getInt32(offset, true);
     const sign = view.getInt8(offset + 4);
     const magnitude = view.getFloat64(offset + 5, true);
     if (sign !== -1 && sign !== 0 && sign !== 1) throw new Error(`Invalid Decimal sign ${sign}`);
+    if (Number.isNaN(magnitude)) {
+        writeDecimal(handle, defaultValue[0], defaultValue[1], defaultValue[2]);
+        return;
+    }
+    if (sign === 0) {
+        writeDecimal(handle, 0, 0, 0);
+        return;
+    }
     writeDecimal(handle, sign, layer, magnitude);
 }
 
