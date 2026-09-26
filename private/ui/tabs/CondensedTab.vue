@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { MEMORY_MILESTONES, MEMORY_MILESTONE_REWARDS } from "@game/game/memories.js";
 
 const props = defineProps({
@@ -9,8 +9,28 @@ const props = defineProps({
     placeholders: { type: Object, required: true },
     isAscended: { type: Boolean, required: true },
     memories: { type: Object, required: true },
+    remembrance: { type: Object, required: true },
 });
-defineEmits(["buy", "focus"]);
+defineEmits(["buy", "focus", "buy-memorial", "buy-remembrance", "respec", "export-remembrance", "import-remembrance"]);
+
+const remembranceZoom = ref(1);
+const remembranceTreeScroll = ref(null);
+
+function centerRemembranceTree() {
+    nextTick(() => {
+        const element = remembranceTreeScroll.value;
+        if (element) element.scrollLeft = (element.scrollWidth - element.clientWidth) / 2;
+    });
+}
+
+watch(() => props.activeSubtab, (subtab) => {
+    if (subtab === "remembrance") centerRemembranceTree();
+}, { immediate: true });
+
+function changeRemembranceZoom(amount) {
+    remembranceZoom.value = Math.min(2.5, Math.max(0.75, Math.round((remembranceZoom.value + amount) * 4) / 4));
+    centerRemembranceTree();
+}
 
 const visibleMemoryMilestones = computed(() => {
     const firstLocked = MEMORY_MILESTONES.findIndex((milestone) => milestone > props.memories.remembered);
@@ -33,7 +53,26 @@ function resolvePlaceholders(text) {
 }
 
 function resolveMemoryReward(reward) {
-    return reward?.replace("{amount}", props.memories.manaMultiplier);
+    return reward?.replace(/\{(memoryManaMult|memoryProdMult|memoryMemMult|memoryCostStartAdd)\}/g, (token, key) => ({
+        memoryManaMult: props.memories.manaMultiplier,
+        memoryProdMult: props.memories.productionMultiplier,
+        memoryMemMult: props.memories.gainMultiplier,
+        memoryCostStartAdd: props.memories.costStartAdd,
+    })[key] ?? token);
+}
+
+function nodeCoordinate(upgrades, nodeNumber, axis) {
+    const node = upgrades[nodeNumber - 1];
+    if (!node) return 0;
+    return (node[axis] - 1) * (axis === 'column' ? 152 : 108) + (axis === 'column' ? 66 : 44);
+}
+
+function connectionNode(connection, side) {
+    return connection?.[side] ?? 0;
+}
+
+function connectionKey(connection) {
+    return `${connectionNode(connection, 0)}-${connectionNode(connection, 1)}`;
 }
 </script>
 
@@ -108,6 +147,62 @@ function resolveMemoryReward(reward) {
                     <span v-if="entry.unlocked && entry.reward" class="memory-reward">{{ resolveMemoryReward(entry.reward) }}</span>
                     <span v-else class="memory-unknown" aria-label="Unknown memory milestone">?</span>
                 </div>
+            </div>
+        </div>
+        <div v-else-if="activeSubtab === 'remembrance'">
+            <div class="section-title">
+                <h1>Remembrance</h1>
+                <p>You have {{ remembrance.memorials }} Memorials.</p>
+                <div class="remembrance-import-export">
+                    <button type="button" @click="$emit('export-remembrance')">Export tree</button>
+                    <button type="button" @click="$emit('import-remembrance')">Import tree</button>
+                    <button type="button" class="remembrance-respec" :class="{ enabled: remembrance.respec }" @click="$emit('respec')">
+                        Respec on next Condense
+                    </button>
+                </div>
+            </div>
+            <div class="remembrance-zoom-controls" aria-label="Remembrance tree zoom">
+                <button type="button" @click="changeRemembranceZoom(-0.25)" :disabled="remembranceZoom <= 0.75">−</button>
+                <span>{{ Math.round(remembranceZoom * 100) }}%</span>
+                <button type="button" @click="changeRemembranceZoom(0.25)" :disabled="remembranceZoom >= 2.5">+</button>
+            </div>
+            <div ref="remembranceTreeScroll" class="remembrance-tree-scroll">
+                <div class="remembrance-tree" :style="{ zoom: remembranceZoom }">
+                    <svg class="remembrance-connections" viewBox="0 0 1044 1492" aria-hidden="true">
+                    <line
+                        v-for="connection in remembrance.connections"
+                        :key="connectionKey(connection)"
+                        :x1="nodeCoordinate(remembrance.upgrades, connectionNode(connection, 0), 'column')"
+                        :y1="nodeCoordinate(remembrance.upgrades, connectionNode(connection, 0), 'row')"
+                        :x2="nodeCoordinate(remembrance.upgrades, connectionNode(connection, 1), 'column')"
+                        :y2="nodeCoordinate(remembrance.upgrades, connectionNode(connection, 1), 'row')"
+                    />
+                    </svg>
+                    <button
+                    v-for="upgrade in remembrance.upgrades"
+                    :key="upgrade.index"
+                    type="button"
+                    class="remembrance-node"
+                    :class="{
+                        purchased: upgrade.purchased,
+                        purchasable: !upgrade.purchased && upgrade.available,
+                        unpurchasable: !upgrade.purchased && !upgrade.available,
+                    }"
+                    :style="{ gridColumn: upgrade.column, gridRow: upgrade.row }"
+                    :disabled="upgrade.purchased || !upgrade.available"
+                    @click="$emit('buy-remembrance', upgrade.index)"
+                >
+                    <strong class="remembrance-number">{{ upgrade.index + 1 }}</strong>
+                    <small :class="{ 'remembrance-glitch': upgrade.index >= 13 }">{{ upgrade.description }}</small>
+                    <em>Cost: {{ upgrade.costFormatted }} Memorial{{ upgrade.cost === 1 ? '' : 's' }}</em>
+                    </button>
+                </div>
+            </div>
+            <div class="remembrance-controls">
+                <button type="button" class="memorial-buy" @click="$emit('buy-memorial')">
+                    <strong>Buy Memorial</strong>
+                    <span>Cost: {{ remembrance.cost }} Condensed Mana</span>
+                </button>
             </div>
         </div>
     </section>
@@ -189,5 +284,174 @@ function resolveMemoryReward(reward) {
     color: #ddd8e4;
     font-weight: 600;
     text-align: center;
+}
+
+.remembrance-tree {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(7, 132px);
+    grid-auto-rows: 88px;
+    gap: 20px;
+    justify-content: start;
+    margin: 28px auto;
+}
+
+.remembrance-tree-scroll {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 100vh) {
+    .remembrance-tree-scroll {
+        width: min(1100px, calc(100vw - 48px));
+        margin-left: 0;
+        margin-right: 0;
+        transform: none;
+    }
+}
+
+.remembrance-zoom-controls {
+    display: none;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 8px auto -12px;
+    max-width: 1044px;
+}
+
+@media (max-width: 700px) {
+    .remembrance-zoom-controls {
+        display: flex;
+    }
+}
+
+.remembrance-zoom-controls button {
+    width: 32px;
+    height: 28px;
+    padding: 0;
+    border: 1px solid #b8a35d;
+    background: #aaa;
+    color: #332b1d;
+    font-size: 1.1rem;
+    font-weight: 700;
+}
+
+.remembrance-zoom-controls button:disabled {
+    opacity: 0.45;
+}
+
+.remembrance-zoom-controls span {
+    min-width: 48px;
+    color: #d3ceda;
+    text-align: center;
+    font-size: 0.8rem;
+}
+
+.remembrance-connections {
+    position: absolute;
+    left: 0;
+    z-index: 0;
+    width: 1044px;
+    height: 1492px;
+    overflow: visible;
+    pointer-events: none;
+    display: block;
+}
+
+.remembrance-connections line {
+    stroke: #8f7b45;
+    stroke-width: 3;
+}
+
+.remembrance-node {
+    position: relative;
+    position: relative;
+    z-index: 1;
+    width: 132px;
+    height: 88px;
+    border: 1px solid #b8a35d;
+    background: #aaa;
+    color: #332b1d;
+    font-weight: 700;
+}
+
+.remembrance-node.purchased { background: #e7c85d; }
+.remembrance-node.purchasable:hover { background: #b8d7ad; }
+.remembrance-node.unpurchasable:hover { background: #d2a3a3; }
+
+.remembrance-node {
+    display: flex;
+    padding: 8px;
+    align-items: center;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    overflow: hidden;
+    text-align: center;
+}
+
+.remembrance-node strong { font-size: 1.05rem; }
+.remembrance-node span,
+.remembrance-node small,
+.remembrance-node em { max-width: 100%; font-size: 0.62rem; line-height: 1.1; }
+.remembrance-node small { color: #4a402a; }
+.remembrance-node small.remembrance-glitch { font-family: monospace; }
+.remembrance-node em { font-style: normal; font-weight: 700; }
+.remembrance-number {
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    font-size: 0.3rem;
+}
+
+.remembrance-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin: 18px auto;
+}
+
+.remembrance-controls button,
+.remembrance-import-export button {
+    padding: 9px 16px;
+    border: 1px solid #8f7b45;
+    border-radius: 4px;
+    color: #f7eac2;
+    background: linear-gradient(180deg, #665632, #40361f);
+    cursor: pointer;
+    font: inherit;
+}
+
+.remembrance-controls button:hover,
+.remembrance-import-export button:hover {
+    border-color: #d8bd66;
+    background: linear-gradient(180deg, #806c3d, #524522);
+}
+
+.remembrance-import-export {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.memorial-buy {
+    display: flex;
+    min-width: 240px;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.remembrance-respec.enabled {
+    border-color: #e66b9a;
+    background: #b83d72;
+    color: #fff;
+}
+
+.remembrance-respec.enabled:hover {
+    background: #cf4b83;
 }
 </style>

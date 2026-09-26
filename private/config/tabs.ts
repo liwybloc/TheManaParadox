@@ -13,6 +13,7 @@ export const TABS = [
         subtabs: [
             { id: "condensed-upgrades", label: "Condensed Upgrades" },
             { id: "memories", label: "Memories", requiresMemory: true },
+            { id: "remembrance", label: "Remembrance", requiresMemory: true },
         ],
     },
     {

@@ -1,6 +1,6 @@
 import { addUS, copyInto, createDecimal, createZero, divUS, gt, gte, log10Into, lte, mulUS, powUS, subUS, toNumber, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { checkCoinAchievements, consumeCircularHabitsReward, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
-import { isProducerOnlyCrystalActive } from "../game/crystals.js";
+import { crystalRewardHandle, hasCompletedCrystal, isAllMultipliersDisabledCrystalActive, isCrystalActive, isPotionDisabledCrystalActive, isProducerOnlyCrystalActive } from "../game/crystals.js";
 import { focusGameSpeedMultiplier, isFocusing } from "../game/memories.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
@@ -291,6 +291,7 @@ export function buyGuildShopUpgrade(index: i32): bool {
     writeNumber(scratch.productionModifier, guildShopUpgradeCost(index));
     subUS(player.coins, scratch.productionModifier);
     setGuildShopUpgrade(index, true);
+    if (index === 2) unlockTierOneAchievement(51);
     refreshPotionEffectState();
     inventoryRevision++;
     return true;
@@ -459,7 +460,9 @@ export function getInventoryRevision(): i32 {
 export function equipInventoryItem(position: i32, slot: i32): bool {
     if (!hasGuildShopUpgrade(5) || slot < 0 || slot >= EQUIPMENT_SLOT_COUNT) return false;
     const item = inventoryItemAt(position);
-    if (item < INVENTORY_ARMOR_START || (item - INVENTORY_ARMOR_START) % INVENTORY_ARMOR_ITEMS_PER_SET !== slot) return false;
+    if (item < INVENTORY_ARMOR_START
+        || item >= INVENTORY_ARMOR_START + INVENTORY_ARMOR_ITEM_COUNT
+        || (item - INVENTORY_ARMOR_START) % INVENTORY_ARMOR_ITEMS_PER_SET !== slot) return false;
     clearInventoryItem(position, <u8>item);
     const replacedItem = equippedItem(slot);
     setEquippedItem(slot, item);
@@ -589,6 +592,7 @@ function availablePotionEffectSlots(itemId: i32): i32 {
 }
 
 export function applyPotionEffect(itemId: i32): bool {
+    if (isPotionDisabledCrystalActive()) return false;
     const duration = potionDuration(itemId);
     const effect = potionEffect(itemId);
     return duration > 0 && effect > 0 && applyTimedPotionEffect(itemId, duration, effect);
@@ -625,14 +629,19 @@ export function clearPotionEffect(itemId: i32, effectIndex: i32): bool {
 
 export function clearAllPotionEffects(): void {
     for (let index: i32 = 0; index < 10; index++) {
-        clearPotionEffect(INVENTORY_POTION_OF_SPEED, index);
-        clearPotionEffect(INVENTORY_POTION_OF_SPEED_II, index);
-        clearPotionEffect(INVENTORY_POTION_OF_SPEED_III, index);
+        writeNumber(potionSpeedTimers[index], 0);
+        writeNumber(potionSpeedIITimers[index], 0);
+        writeNumber(potionSpeedIIITimers[index], 0);
     }
+    writeNumber(scratch.gameSpeed, 1);
 }
 
 export function refreshPotionEffectState(): void {
     writeNumber(scratch.gameSpeed, 1);
+    if (isPotionDisabledCrystalActive()) {
+        clearAllPotionEffects();
+        return;
+    }
     for (let index: i32 = 0; index < 10; index++) {
         if (gt(potionSpeedTimers[index], 0)) addPotionSpeed(potionSpeedEffect(4));
         if (gt(potionSpeedIITimers[index], 0)) addPotionSpeed(potionSpeedEffect(14));
@@ -644,6 +653,7 @@ function potionSpeedEffect(baseEffect: f64): f64 {
     let effect = baseEffect;
     if (hasTierOneAchievement(30)) effect *= 1.25;
     if (hasGuildShopUpgrade(3)) effect *= 1.5;
+    if (isCrystalActive() && hasCompletedCrystal(6)) effect *= toNumber(crystalRewardHandle(6, 0));
     return effect;
 }
 
@@ -695,7 +705,7 @@ function potionTimer(itemId: i32, index: i32): i32 {
 }
 
 export function getGameSpeed(): i32 {
-    if (isProducerOnlyCrystalActive()) {
+    if (isProducerOnlyCrystalActive() || isAllMultipliersDisabledCrystalActive()) {
         writeNumber(scratch.effectiveGameSpeed, 1);
         return scratch.effectiveGameSpeed;
     }

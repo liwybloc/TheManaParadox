@@ -7,7 +7,7 @@ const props = defineProps({
     manaCircle: { type: Number, required: true },
 });
 
-const emit = defineEmits(["hire", "assign", "move", "sell", "casts-max", "purify-minimum", "condense-gain", "maximum-owned"]);
+const emit = defineEmits(["hire", "assign", "move", "sell", "casts-max", "purify-minimum", "condense-gain", "maximum-owned", "toggle"]);
 const rosterGrid = ref(null);
 const selectedCasterId = ref(null);
 const dragging = ref(null);
@@ -139,7 +139,14 @@ onBeforeUnmount(() => {
 
 <template>
     <section class="autocasters-tab">
-        <div class="section-title"><h1>Guild Autocasters</h1><p>You have {{ coins }} {{ coinLabel(coins) }}.</p></div>
+        <div class="section-title">
+            <h1>Guild Autocasters</h1>
+            <p>You have {{ coins }} {{ coinLabel(coins) }}.</p>
+            <p>You can equip multiple autocasters to the same spell to make it faster.</p>
+        </div>
+        <button type="button" @click="$emit('toggle')">
+            {{ autocasters.enabled ? "Pause Autocasters" : "Resume Autocasters" }}
+        </button>
         <div class="autocaster-hiring">
             <button v-for="option in autocasters.hireOptions" :key="option.tier" type="button" :disabled="!option.affordable" @click="$emit('hire', option.tier)">
                 Hire Tier {{ option.tier }}<small>{{ option.hireCost }} {{ coinLabel(option.hireCost) }} · {{ option.wage }} {{ coinLabel(option.wage) }} / 10 min</small>

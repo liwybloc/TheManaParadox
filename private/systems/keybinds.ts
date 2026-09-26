@@ -1,4 +1,4 @@
-import { buyMaxTierOne, castAll, castSpeed, condense, increaseMatrix, sealMeridians } from "./actions.js";
+import { buyMaxTierOne, castAll, castSpeed, condense, increaseMatrix, purifyMeridians, sealMeridians } from "./actions.js";
 
 export const KEYBIND_DEFINITIONS = [
     { id: "buy-tier-1", label: "Cast Max: Mana Absorber", defaultKey: "1" },
@@ -11,6 +11,7 @@ export const KEYBIND_DEFINITIONS = [
     { id: "cast-speed", label: "Meditate", defaultKey: "s" },
     { id: "matrix", label: "Buy Crystal Matrix", defaultKey: "x" },
     { id: "seal-meridians", label: "Seal Meridians", defaultKey: "y" },
+    { id: "purify-meridians", label: "Purify Meridians", defaultKey: "p" },
 ];
 
 const STORAGE_KEY = "TheManaParadoxKeybinds";
@@ -83,6 +84,7 @@ function runAction(id: string): void {
         case "cast-speed": castSpeed(); break;
         case "matrix": increaseMatrix(); break;
         case "seal-meridians": sealMeridians(); break;
+        case "purify-meridians": purifyMeridians(); break;
     }
 }
 

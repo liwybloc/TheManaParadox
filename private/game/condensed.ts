@@ -1,8 +1,9 @@
-import { addInto, addUS, ceilInto, copyInto, createDecimal, createZero, divInto, divUS, eq, gt, gte, log10Into, lt, lte, mulUS, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import { addInto, addUS, ceilInto, copyInto, createDecimal, createZero, divInto, divUS, eq, gt, gte, log10Into, lt, lte, mulUS, powInto, subUS, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { isQuestActive } from "../guild/guild.js";
 import { isCrystalActive } from "./crystals.js";
 import { hasMemoryMilestone } from "./memories.js";
+import { applyRemembranceRespec } from "./remembrance.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -15,6 +16,8 @@ type CondensedUpgradeDefinition = {
         cost: [number, number, number];
     };
 }
+
+export const REMEMBRANCE_UPGRADE_COUNT = 36;
 
 export const CONDENSED_HANDLES = {
     ascensionHallUnlocked: createZero(),
@@ -150,6 +153,7 @@ export function calculateCondenseGain(): bool {
 }
 
 export function completeCondense(): void {
+    applyRemembranceRespec();
     addUS(player.condensedMana, scratch.condenseGain);
     addUS(player.statistics_condenses, 1);
     if (gte(player.condensedMana, 10)) unlockTierOneAchievement(22);

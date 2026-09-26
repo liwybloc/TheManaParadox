@@ -23,8 +23,9 @@ import {
 } from "../core/break_eternity.js";
 import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.js";
 import { hasAscendedCondensedEffect, hasCondensedEffect } from "./condensed.js";
-import { crystalEffectHandle, crystalRewardHandle, hasCompletedCrystal, isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isSpecificCrystalActive } from "./crystals.js";
+import { applyCrystalCostModifiers, applyCrystalMultModifiers, crystalEffectHandle, crystalRewardHandle, hasCompletedCrystal, isAllMultipliersDisabledCrystalActive, isAllProducersManaAbsorbersCrystalActive, isCostGrowthCrystalActive, isCrossProducerCostCrystalActive, isCrossProducerMultiplierCrystalActive, isCrystalActive, isManaAbsorberOnlyCrystalActive, isProducerOnlyCrystalActive, isProductionDecayCrystalActive, isSpecificCrystalActive } from "./crystals.js";
 import { applyManaGainModifiers } from "./currencies.js";
+import { getTotalMemories, hasMemoryMilestone } from "./memories.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -53,14 +54,28 @@ const EXPONENTIAL_COST_RATE: i32 = 1000;
 const LOG10_E: f64 = 0.4342944819032518;
 const LN_10: f64 = 2.302585092994046;
 
+function exponentialCostStartPurchases(): i32 {
+    return EXPONENTIAL_COST_START_PURCHASES + (hasMemoryMilestone(250) ? getTotalMemories() * 25 : 0);
+}
+
 export function refreshTierOneDerivedState(): void {
+    writeNumber(scratch.expCostIncreasesAt, exponentialCostStartPurchases());
     for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
         refreshTierOneCost(index);
         refreshTierOneMultiplier(index);
         refreshEmpowermentCost(index);
     }
+    if (isCrossProducerMultiplierCrystalActive()) refreshCrossProducerMultipliers();
+    if (isAllProducersManaAbsorbersCrystalActive()) synchronizeCrystal11Multipliers();
     refreshMeridianPurificationRequirement();
     refreshMeridianPurificationEffect();
+}
+
+export function refreshCrystalProducerCosts(): void {
+    if (!isCostGrowthCrystalActive()) return;
+    for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
+        refreshTierOneCost(index);
+    }
 }
 
 export function refreshMeridianPurificationRequirement(): void {
@@ -237,15 +252,19 @@ export function resetMeridianPurification(): void {
 
 export function buyTierOne(index: i32): bool {
     if (index < 0 || index >= TIER_ONE_COUNT || !isTierOneVisible(index)) return false;
+    markProducerPurchaseStart();
     const cost = tierOneCostHandle(index);
     if (!gte(player.mana, cost)) return false;
     recordProducerBoost(index);
     subUS(player.mana, cost);
     addUS(tierOneAmountHandle(index), 1);
     addUS(tierOneBoughtHandle(index), 1);
+    markCrystal13Purchase();
     unlockTierOneAchievement(index);
+    markCrystal13Purchase();
     refreshTierOneCost(index);
     refreshTierOneMultiplier(index);
+    if (isCrossProducerMultiplierCrystalActive() || isCrossProducerCostCrystalActive()) refreshTierOneDerivedState();
     return true;
 }
 
@@ -255,11 +274,12 @@ export function buyAllTierOne(): void {
 
 export function buyMaxTierOne(index: i32): bool {
     if (index < 0 || index >= TIER_ONE_COUNT || !isTierOneVisible(index)) return false;
+    markProducerPurchaseStart();
     const cost = tierOneCostHandle(index);
     if (!gte(player.mana, cost)) return false;
     recordProducerBoost(index);
 
-    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    writeNumber(scratch.tierOneCostAcceleration, exponentialCostStartPurchases());
     if (gte(tierOneBoughtHandle(index), scratch.tierOneCostAcceleration)) {
         buyMaxTierOneAccelerated(index);
     } else {
@@ -285,7 +305,12 @@ export function buyMaxTierOne(index: i32): bool {
     unlockTierOneAchievement(index);
     refreshTierOneCost(index);
     refreshTierOneMultiplier(index);
+    if (isCrossProducerMultiplierCrystalActive() || isCrossProducerCostCrystalActive()) refreshTierOneDerivedState();
     return true;
+}
+
+function refreshCrossProducerMultipliers(): void {
+    for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) applyCrystal12MultiplierEffect(index);
 }
 
 function buyMaxTierOneAccelerated(index: i32): void {
@@ -298,10 +323,12 @@ function buyMaxTierOneAccelerated(index: i32): void {
 
     computeTierOneCostExponent(scratch.productionModifier, index, scratch.tierOneExponent);
     powInto(scratch.tierOneProduction, 10, scratch.productionModifier);
+    applyCrystalCostModifiers(scratch.tierOneProduction);
     while (gt(scratch.tierOneProduction, player.mana) && gte(scratch.tierOneExponent, boughtHandle)) {
         subUS(scratch.tierOneExponent, 1);
         computeTierOneCostExponent(scratch.productionModifier, index, scratch.tierOneExponent);
         powInto(scratch.tierOneProduction, 10, scratch.productionModifier);
+        applyCrystalCostModifiers(scratch.tierOneProduction);
     }
     if (!gte(scratch.tierOneExponent, boughtHandle)) return;
 
@@ -310,12 +337,27 @@ function buyMaxTierOneAccelerated(index: i32): void {
     subUS(scratch.tierOneExponent, boughtHandle);
     addUS(tierOneAmountHandle(index), scratch.tierOneExponent);
     addUS(tierOneBoughtHandle(index), scratch.tierOneExponent);
+    markCrystal13Purchase();
 }
 
 function recordProducerBoost(index: i32): void {
     if (index < TIER_ONE_COUNT - 1 && gt(tierOneBoughtHandle(index + 1), 0)) {
         player.boostedProducerThisCondense = true;
     }
+}
+
+function markProducerPurchaseStart(): void {
+    if (!isCostGrowthCrystalActive()) return;
+    if (gt(player.count_manaConduit, 0)
+        || gt(player.count_conduitConjugation, 0)
+        || gt(player.count_conjugationCreation, 0)
+        || gt(player.count_creationManufactory, 0)
+        || gt(player.count_manufactureStaff, 0)) return;
+    copyInto(player.timeBeforeProducerBought, player.statistics_gameTimeThisCondense);
+}
+
+function markCrystal13Purchase(): void {
+    if (isProductionDecayCrystalActive()) copyInto(player.timeBeforeProducerBought, player.statistics_gameTimeThisCondense);
 }
 
 export function buyMaxAllTierOne(): void {
@@ -346,6 +388,20 @@ export function tierOneAffordabilityProgress(index: i32): f64 {
         computeTierOneCostExponent(scratch.tierOneExponent, index, scratch.tierOneProduction);
     } else {
         writeNumber(scratch.tierOneExponent, 0);
+    }
+
+    if (isCrossProducerCostCrystalActive()) {
+        writeNumber(scratch.crystal12BoostTotal, 0);
+        for (let other: i32 = 0; other < TIER_ONE_COUNT; other++) {
+            if (other !== index) addUS(scratch.crystal12BoostTotal, tierOneBoughtHandle(other));
+        }
+        if (gt(scratch.crystal12BoostTotal, 0)) {
+            writeNumber(scratch.crystal12Power, 1.1);
+            log10Into(scratch.crystal12Power, scratch.crystal12Power);
+            mulUS(scratch.crystal12Power, scratch.crystal12BoostTotal);
+            addUS(scratch.tierOneExponent, scratch.crystal12Power);
+            addUS(scratch.productionModifier, scratch.crystal12Power);
+        }
     }
 
     log10Into(scratch.tierOneProduction, player.mana);
@@ -390,7 +446,19 @@ export function tierOneDisplayMultiplierHandle(index: i32): i32 {
         player.castSpeedMagnitude,
     );
     if (index === 0) applyManaGainModifiers(scratch.tierOneDisplayMultiplier);
+    if (index === 0) applyCrystal11ManaAbsorberReward(scratch.tierOneDisplayMultiplier);
     return scratch.tierOneDisplayMultiplier;
+}
+
+export function applyCrystal11ManaAbsorberReward(amount: i32): void {
+    if (!hasCompletedCrystal(10)) return;
+    writeNumber(scratch.crystal11CbrtExponent, 1 / 3);
+    for (let index: i32 = 1; index < TIER_ONE_COUNT; index++) {
+        if (!gt(tierOneMultiplierHandle(index), 1)) continue;
+        copyInto(scratch.crystal11TemporaryMultiplier, tierOneMultiplierHandle(index));
+        powUS(scratch.crystal11TemporaryMultiplier, scratch.crystal11CbrtExponent);
+        mulUS(amount, scratch.crystal11TemporaryMultiplier);
+    }
 }
 
 export function tierOneBoughtHandle(index: i32): i32 {
@@ -417,19 +485,37 @@ function tierOneAmountHandle(index: i32): i32 {
 
 function refreshTierOneCost(index: i32): void {
     computeTierOneCostExponent(scratch.tierOneExponent, index, tierOneBoughtHandle(index));
+    if (isCrossProducerCostCrystalActive()) {
+        writeNumber(scratch.productionModifier, 0);
+        for (let other: i32 = 0; other < TIER_ONE_COUNT; other++) {
+            if (other !== index) addUS(scratch.productionModifier, tierOneBoughtHandle(other));
+        }
+    }
     powInto(tierOneCostHandle(index), 10, scratch.tierOneExponent);
+    if (isCrossProducerCostCrystalActive()) {
+        writeNumber(scratch.tierOneExponent, 1.1);
+        powUS(scratch.tierOneExponent, scratch.productionModifier);
+        mulUS(tierOneCostHandle(index), scratch.tierOneExponent);
+    }
+    if (hasCompletedCrystal(13) && index < TIER_ONE_COUNT - 1) {
+        writeNumber(scratch.productionModifier, 0.9);
+        powInto(scratch.tierOneExponent, scratch.productionModifier, tierOneBoughtHandle(index + 1));
+        mulUS(tierOneCostHandle(index), scratch.tierOneExponent);
+    }
+    applyCrystalCostModifiers(tierOneCostHandle(index));
 }
 
 // Writes log10(cost(boughtHandle)) into result. Through EXPONENTIAL_COST_START_PURCHASES this is the original linear formula; above it, the closed-form solution of the accelerating recurrence.
 function computeTierOneCostExponent(result: i32, index: i32, boughtHandle: i32): void {
-    const baseExponent = 1 << index;
+    const baseExponent = tierOneBaseCostExponent(index);
     const scalingExponent = index + 1;
     multiplyInto(result, boughtHandle, scalingExponent);
     addUS(result, baseExponent);
-    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    if (isSpecificCrystalActive(9)) return;
+    writeNumber(scratch.tierOneCostAcceleration, exponentialCostStartPurchases());
     if (!gt(boughtHandle, scratch.tierOneCostAcceleration)) return;
 
-    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    writeNumber(scratch.tierOneCostAcceleration, exponentialCostStartPurchases());
     subInto(result, boughtHandle, scratch.tierOneCostAcceleration);
     writeNumber(scratch.tierOneCostAcceleration, (<f64>scalingExponent / <f64>EXPONENTIAL_COST_RATE) * LOG10_E);
     multiplyInto(result, result, scratch.tierOneCostAcceleration);
@@ -440,20 +526,20 @@ function computeTierOneCostExponent(result: i32, index: i32, boughtHandle: i32):
     multiplyInto(result, result, scratch.tierOneCostAcceleration);
     writeNumber(
         scratch.tierOneCostAcceleration,
-        baseExponent + scalingExponent * EXPONENTIAL_COST_START_PURCHASES,
+        baseExponent + scalingExponent * exponentialCostStartPurchases(),
     );
     addUS(result, scratch.tierOneCostAcceleration);
 }
 
 // Inverse of computeTierOneCostExponent: writes the bought-count n such that E(n) == targetExponent.
 function computeTierOneBoughtCountForExponent(result: i32, index: i32, targetExponent: i32): void {
-    const baseExponent = 1 << index;
+    const baseExponent = tierOneBaseCostExponent(index);
     const scalingExponent = index + 1;
     writeNumber(
         scratch.tierOneCostAcceleration,
-        baseExponent + scalingExponent * EXPONENTIAL_COST_START_PURCHASES,
+        baseExponent + scalingExponent * exponentialCostStartPurchases(),
     );
-    if (!gt(targetExponent, scratch.tierOneCostAcceleration)) {
+    if (!gt(targetExponent, scratch.tierOneCostAcceleration) || isSpecificCrystalActive(9)) {
         subInto(result, targetExponent, baseExponent);
         divUS(result, scalingExponent);
         return;
@@ -468,11 +554,19 @@ function computeTierOneBoughtCountForExponent(result: i32, index: i32, targetExp
     multiplyInto(result, result, scratch.tierOneCostAcceleration);
     writeNumber(scratch.tierOneCostAcceleration, <f64>EXPONENTIAL_COST_RATE / <f64>scalingExponent);
     multiplyInto(result, result, scratch.tierOneCostAcceleration);
-    writeNumber(scratch.tierOneCostAcceleration, EXPONENTIAL_COST_START_PURCHASES);
+    writeNumber(scratch.tierOneCostAcceleration, exponentialCostStartPurchases());
     addUS(result, scratch.tierOneCostAcceleration);
 }
 
+function tierOneBaseCostExponent(index: i32): i32 {
+    return isAllMultipliersDisabledCrystalActive() ? index + 1 : 1 << index;
+}
+
 function refreshTierOneMultiplier(index: i32): void {
+    if (isAllMultipliersDisabledCrystalActive()) {
+        writeNumber(tierOneMultiplierHandle(index), 1);
+        return;
+    }
     if (isSpecificCrystalActive(4)) {
         copyInto(scratch.productionModifier, crystalEffectHandle(4, 0));
     } else {
@@ -488,6 +582,7 @@ function refreshTierOneMultiplier(index: i32): void {
         }
         if (hasCompletedCrystal(4)) addUS(scratch.productionModifier, crystalRewardHandle(4, 0));
     }
+    if (hasCompletedCrystal(11)) addUS(scratch.productionModifier, crystalRewardHandle(11, 0));
     powInto(tierOneMultiplierHandle(index), scratch.productionModifier, tierOneBoughtHandle(index));
     if (index < TIER_ONE_COUNT - 1) {
         let empowermentMultiplier: f64 = hasAscendedCondensedEffect(16) ? 250 : hasCondensedEffect(16) ? 50 : 10;
@@ -501,6 +596,10 @@ function refreshTierOneMultiplier(index: i32): void {
     if (index === 0 && hasCompletedCrystal(3)) {
         mulUS(tierOneMultiplierHandle(index), crystalRewardHandle(3, 0));
     }
+    if (index === 0 && hasCompletedCrystal(8)) {
+        addUS(tierOneMultiplierHandle(index), crystalRewardHandle(8, 0));
+    }
+    if (hasCompletedCrystal(12)) applyCrystal13Reward(tierOneMultiplierHandle(index));
     if (index === 4 && hasCondensedEffect(4)) {
         mulUS(tierOneMultiplierHandle(index), CONDENSED_STAFF_MULTIPLIER);
     } else if ((index === 0 && hasCondensedEffect(2))
@@ -527,6 +626,44 @@ function refreshTierOneMultiplier(index: i32): void {
     } else if (index === 4 && hasAscendedCondensedEffect(4)) {
         writeNumber(scratch.productionModifier, 1.25);
         powUS(tierOneMultiplierHandle(index), scratch.productionModifier);
+    }
+    applyCrystalMultModifiers(tierOneMultiplierHandle(index));
+    if (isAllProducersManaAbsorbersCrystalActive()) synchronizeCrystal11Multipliers();
+}
+
+function applyCrystal13Reward(multiplier: i32): void {
+    writeNumber(scratch.crystal13RewardPurchases, 0);
+    for (let producer: i32 = 0; producer < TIER_ONE_COUNT; producer++) {
+        addUS(scratch.crystal13RewardPurchases, tierOneBoughtHandle(producer));
+    }
+    if (lte(scratch.crystal13RewardPurchases, 0)) return;
+    copyInto(scratch.crystal13RewardPower, crystalRewardHandle(12, 0));
+    powUS(scratch.crystal13RewardPower, scratch.crystal13RewardPurchases);
+    mulUS(multiplier, scratch.crystal13RewardPower);
+}
+
+function applyCrystal12MultiplierEffect(index: i32): void {
+    if (!gt(tierOneMultiplierHandle(index), 1)) return;
+    writeNumber(scratch.crystal12BoostTotal, 0);
+    for (let producer: i32 = 0; producer < TIER_ONE_COUNT; producer++) {
+        addUS(scratch.crystal12BoostTotal, tierOneBoughtHandle(producer));
+    }
+    subUS(scratch.crystal12BoostTotal, tierOneBoughtHandle(index));
+    if (gt(scratch.crystal12BoostTotal, 0)) {;
+        powInto(scratch.crystal12Power, scratch.D0_1, scratch.crystal12BoostTotal);
+        mulUS(tierOneMultiplierHandle(index), scratch.crystal12Power);
+    }
+}
+
+export function synchronizeCrystal11Multipliers(): void {
+    copyInto(scratch.crystal11HighestMultiplier, tierOneMultiplierHandle(0));
+    for (let index: i32 = 1; index < TIER_ONE_COUNT; index++) {
+        if (gt(tierOneMultiplierHandle(index), scratch.crystal11HighestMultiplier)) {
+            copyInto(scratch.crystal11HighestMultiplier, tierOneMultiplierHandle(index));
+        }
+    }
+    for (let index: i32 = 0; index < TIER_ONE_COUNT; index++) {
+        copyInto(tierOneMultiplierHandle(index), scratch.crystal11HighestMultiplier);
     }
 }
 

@@ -129,8 +129,11 @@ function finishDrag() {
         .elementFromPoint(drag?.cursorX ?? 0, drag?.cursorY ?? 0)
         ?.closest("[data-equipment-slot]");
     if (drag && equipmentTarget) {
-        if (drag.sourceEquipmentSlot === null) {
-            emit("equip-item", drag.sourcePosition, Number(equipmentTarget.dataset.equipmentSlot));
+        const targetSlot = Number(equipmentTarget.dataset.equipmentSlot);
+        if (drag.sourceEquipmentSlot === null
+            && drag.item?.equipmentSlot !== undefined
+            && drag.item.equipmentSlot === targetSlot) {
+            emit("equip-item", drag.sourcePosition, targetSlot);
         }
         dragging.value = null;
         return;

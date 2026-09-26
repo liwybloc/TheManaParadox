@@ -67,6 +67,7 @@ export async function generateScalarTypes(options: ResolvedOptions): Promise<str
 }
 
 function rawType(type: string): string {
+    if (/^StaticArray<.+>$/.test(type)) return "number";
     return type === "i64" || type === "u64" ? "bigint" : type === "void" ? "void" : "number";
 }
 

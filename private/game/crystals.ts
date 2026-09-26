@@ -1,5 +1,6 @@
-import { addUS, copyInto, createDecimal, createZero, gte, multiplyInto, mulUS, powUS, toNumber } from "../core/break_eternity.js";
+import { addUS, copyInto, createDecimal, createZero, divInto, divUS, gte, multiplyInto, mulUS, powUS, subInto, toNumber } from "../core/break_eternity.js";
 import type { Player } from "../core/player.js";
+import type { Scratch } from "../core/scratch.js";
 import { hasTierOneAchievement } from "./achievements.js";
 
 export interface CrystalDefinition {
@@ -14,8 +15,8 @@ export interface CrystalDefinition {
 
 const CRYSTAL_GOAL_EXPONENTS = [
     1600, 4500, 450, 40, 200,
-    2500, 25000, 40000, 65000, 100000,
-    160000, 250000, 400000, 650000, 1000000,
+    95, 11200, 11000, 8.477121254719663, 24250,
+    8600, 1200, 23000, 650000, 1000000,
 ] as const;
 
 export const CRYSTAL_GOALS: readonly i32[] = CRYSTAL_GOAL_EXPONENTS.map((exponent) =>
@@ -28,39 +29,86 @@ export const CRYSTALS: readonly CrystalDefinition[] = [
     { id: 3,  color: "#49b7f2", variant: 3, effects: ["Only producers are enabled"], rewards: ["Unlock Memories"] },
     { id: 4,  color: "#2877d2", variant: 4, effects: ["Only Mana Absorbers are available", "Sealed Meridians and Crystal Matrix costs are modified", "Start with 10 mana"], rewards: ["Mana Absorbers are buffed based on Sealed Meridians (×{manaAbsorberSMBuff})"] },
     { id: 5,  color: "#173b91", variant: 5, effects: ["Per-boost multiplier is fixed to ×1.1"], rewards: ["Per-boost multiplier is increased by +0.05×"] },
-    { id: 6,  color: "#422d83", variant: 1, effects: ["All multipliers are raised ^0.1"], rewards: ["×10 All Production"], possible: false, locked: true },
-    { id: 7,  color: "#78265f", variant: 2, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder."], possible: false },
-    { id: 8,  color: "#ae2d48", variant: 3, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 9,  color: "#dc3d32", variant: 4, effects: ["Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 10, color: "#eb612d", variant: 5, effects: ["Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 11, color: "#f1812e", variant: 1, effects: ["Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 12, color: "#f5a83c", variant: 2, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 13, color: "#f5c76f", variant: 3, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 14, color: "#fae5b5", variant: 4, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder"], possible: false },
-    { id: 15, color: "#ffffff", variant: 5, effects: ["Placeholder", "Placeholder", "Placeholder"], rewards: ["Placeholder", "Placeholder"], possible: false },
+    { id: 6,  color: "#422d83", variant: 1, effects: ["All multipliers are raised ^0.1", "Start with 10 mana"], rewards: ["×10 All Production"] },
+    { id: 7,  color: "#78265f", variant: 2, effects: ["Potions are disabled"], rewards: ["Potions are ×1.5 stronger inside of crystals"] },
+    { id: 8,  color: "#ae2d48", variant: 3, effects: ["Producer costs increase by ×100 each second of game time"], rewards: ["Raise the reward of Achievement 23 ^3"] },
+    { id: 9,  color: "#dc3d32", variant: 4, effects: ["All multipliers are always ×1.00", "Game speed is always ×1.00", "Start with 11,111 mana", "Costs are slightly reduced"], rewards: ["Per-boost multiplier of Mana Absorbers is increased by +0.05×"] },
+    { id: 10, color: "#eb612d", variant: 5, effects: ["Increase 25th Memory Milestone reward by a lot", "Prices do not increase exponentially past 10,000 purchases"], rewards: ["Increase 25th Memory Milestone reward"] },
+    { id: 11, color: "#f1812e", variant: 1, effects: ["Producers only produce Mana Absorbers", "Multipliers are equal to the highest among producers"], rewards: ["All producer multipliers increase Mana Absorber's multiplier at a reduced rate"] },
+    { id: 12, color: "#f5a83c", variant: 2, effects: ["Boosting each producer will modify the multipliers of other producers by ×0.1"], rewards: ["Per-boost multiplier is increased by +0.05×"] },
+    { id: 13, color: "#f5c76f", variant: 3, effects: ["Production quickly drops towards ^0 and resets to ^1 when anything is purchased"], rewards: ["Gain a small boost to all multipliers after buying producers"] },
+    { id: 14, color: "#fae5b5", variant: 4, effects: ["Buying any producer increases the cost of all other producers"], rewards: ["Buying any producer reduces the cost of the previous producer by ×0.9"] },
+    { id: 15, color: "#ffffff", variant: 5, effects: ["Effects of all previous crystals are applied"], rewards: ["Unlock the Abyss"] },
 ];
 
-const unusedEffectHandle = createZero();
-const unusedRewardHandle = createZero();
-const crystalTwoEmpowermentBuff = createZero();
-const crystalFourManaAbsorberBuff = createZero();
+const unusedHandle = createZero();
 const crystalEffectHandles = [
-    createDecimal(1, 0, 0.9), unusedEffectHandle, unusedEffectHandle,
+    // crystal 1 effects: mana production power
+    createDecimal(1, 0, 0.9), unusedHandle, unusedHandle,
+    // crystal 2 effects: disabled empowerments, disabled matrices, empowerment reward exponent
     createDecimal(1, 0, 1), createDecimal(1, 0, 1), createDecimal(1, 0, 0.1),
-    ...Array(6).fill(unusedEffectHandle),
-    createDecimal(1, 0, 1.1), unusedEffectHandle, unusedEffectHandle,
-    ...Array(CRYSTALS.length * 3 - 15).fill(unusedEffectHandle),
+    // crystal 3 effects: producer-only restriction
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 4 effects: absorber-only restriction and modified progression costs, 10 for start mana
+    createDecimal(1, 0, 10), unusedHandle, unusedHandle,
+    // crystal 5 effects: fixed per-boost multiplier
+    createDecimal(1, 0, 1.1), unusedHandle, unusedHandle,
+    // crystal 6 effects: all multiplier power, 10 for start mana
+    createDecimal(1, 0, 0.1), createDecimal(1, 0, 10), unusedHandle,
+    // crystal 7 effects: potion use restriction without a decimal value
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 8 effects: cost growth per second of game time
+    createDecimal(1, 0, 500), unusedHandle, unusedHandle,
+    // crystal 9 effects: all multipliers disabled, 10 for start mana
+    createDecimal(1, 0, 11111), unusedHandle, unusedHandle,
+    // crystal 10 effects: memory-scaled mana multiplier base
+    createDecimal(1, 0, 100), unusedHandle, unusedHandle,
+    // crystal 11 effects: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 12 effects: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 13 effects: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 14 effects: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 15 effects: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
 ];
 const crystalRewardHandles = [
-    createDecimal(1, 0, 10), unusedRewardHandle, unusedRewardHandle,
-    crystalTwoEmpowermentBuff, unusedRewardHandle, unusedRewardHandle,
-    unusedRewardHandle, unusedRewardHandle, unusedRewardHandle,
-    crystalFourManaAbsorberBuff, unusedRewardHandle, unusedRewardHandle,
-    createDecimal(1, 0, 0.05), unusedRewardHandle, unusedRewardHandle,
-    ...Array(CRYSTALS.length * 3 - 15).fill(unusedRewardHandle),
+    // crystal 1 rewards: global mana production multiplier
+    createDecimal(1, 0, 10), unusedHandle, unusedHandle,
+    // crystal 2 rewards: matrix-scaled empowerment multiplier
+    createZero(), unusedHandle, unusedHandle,
+    // crystal 3 rewards: memory unlock without a decimal value
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 4 rewards: sealed-meridian-scaled absorber multiplier
+    createZero(), unusedHandle, unusedHandle,
+    // crystal 5 rewards: per-boost multiplier increase
+    createDecimal(1, 0, 0.05), unusedHandle, unusedHandle,
+    // crystal 6 rewards: global mana production multiplier
+    createDecimal(1, 0, 10), unusedHandle, unusedHandle,
+    // crystal 7 rewards: potion strength multiplier inside crystals
+    createDecimal(1, 0, 1.5), unusedHandle, unusedHandle,
+    // crystal 8 rewards: achievement 23 reward power
+    createDecimal(1, 0, 3), unusedHandle, unusedHandle,
+    // crystal 9 rewards: Mana Absorber per-boost multiplier increase
+    createDecimal(1, 0, 0.05), unusedHandle, unusedHandle,
+    // crystal 10 rewards: memory-scaled mana multiplier base
+    createDecimal(1, 0, 25), unusedHandle, unusedHandle,
+    // crystal 11 rewards: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 12 rewards: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 13 rewards: per-purchase multiplier boost
+    createDecimal(1, 0, 1.01), unusedHandle, unusedHandle,
+    // crystal 14 rewards: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
+    // crystal 15 rewards: unused placeholders
+    unusedHandle, unusedHandle, unusedHandle,
 ];
 
 declare const player: Player;
+declare const scratch: Scratch;
 
 /** [WASM] */
 
@@ -131,11 +179,49 @@ export function isSpecificCrystalActive(index: i32): bool {
 }
 
 export function isProducerOnlyCrystalActive(): bool {
-    return activeCrystal === 2;
+    return activeCrystal === 2 || activeCrystal === 14;
 }
 
 export function isManaAbsorberOnlyCrystalActive(): bool {
-    return activeCrystal === 3;
+    return activeCrystal === 3 || activeCrystal === 14;
+}
+
+export function isPotionDisabledCrystalActive(): bool {
+    return activeCrystal === 6 || activeCrystal === 14;
+}
+
+export function isCostGrowthCrystalActive(): bool {
+    return activeCrystal === 7 || activeCrystal === 14;
+}
+
+export function isAllMultipliersDisabledCrystalActive(): bool {
+    return activeCrystal === 8 || activeCrystal === 14;
+}
+
+export function isAllProducersManaAbsorbersCrystalActive(): bool {
+    return activeCrystal === 10 || activeCrystal === 14;
+}
+
+export function isCrossProducerMultiplierCrystalActive(): bool {
+    return activeCrystal === 11 || activeCrystal === 14;
+}
+
+export function isProductionDecayCrystalActive(): bool {
+    return activeCrystal === 12 || activeCrystal === 14;
+}
+
+export function isCrossProducerCostCrystalActive(): bool {
+    return activeCrystal === 13 || activeCrystal === 14;
+}
+
+export function getCrystalStartMana(): i32 {
+    if (!isCrystalActive()) return 0;
+    switch (activeCrystal) {
+        case 3: return crystalEffectHandle(3, 0);
+        case 5: return crystalEffectHandle(5, 1);
+        case 8: return crystalEffectHandle(8, 0);
+        default: return 0;
+    }
 }
 
 export function isCrystalUnlocked(index: i32): bool {
@@ -200,8 +286,31 @@ export function shatterActiveCrystal(): bool {
 }
 
 export function applyCrystalManaGainModifiers(amount: i32): void {
-    if (activeCrystal === 0) powUS(amount, crystalEffectHandle(0, 0));
+    if (activeCrystal === 0 || activeCrystal === 14) powUS(amount, crystalEffectHandle(0, 0));
     if (hasCompletedCrystal(0)) mulUS(amount, crystalRewardHandle(0, 0));
+    if (hasCompletedCrystal(5)) mulUS(amount, crystalRewardHandle(5, 0));
+}
+
+export function applyCrystal13ProductionDecay(amount: i32): void {
+    if (!isProductionDecayCrystalActive()) return;
+    subInto(scratch.crystal13Elapsed, player.statistics_gameTimeThisCondense, player.timeBeforeProducerBought);
+    addUS(scratch.crystal13Elapsed, 1);
+    divInto(scratch.crystal13Power, 1, scratch.crystal13Elapsed);
+    powUS(amount, scratch.crystal13Power);
+}
+
+export function applyCrystalMultModifiers(amount: i32): void {
+    if (activeCrystal === 5 || activeCrystal === 14) powUS(amount, crystalEffectHandle(5, 0));
+}
+
+export function applyCrystalCostModifiers(cost: i32): void {
+    if (isCrossProducerCostCrystalActive()) return;
+    if (!isCostGrowthCrystalActive()) return;
+    copyInto(scratch.productionModifier, crystalEffectHandle(7, 0));
+    subInto(scratch.currencyGain, player.statistics_gameTimeThisCondense, player.timeBeforeProducerBought);
+    divUS(scratch.currencyGain, 1000);
+    powUS(scratch.productionModifier, scratch.currencyGain);
+    mulUS(cost, scratch.productionModifier);
 }
 
 export function refreshCrystalRewardEffects(): void {

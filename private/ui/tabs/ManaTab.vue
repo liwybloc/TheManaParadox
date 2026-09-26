@@ -15,9 +15,12 @@ const props = defineProps({
     manaPerSecond: { type: String, required: true },
     oomPerSecond: { type: String, required: true },
     showOoMPerSecond: { type: Boolean, required: true },
+    hideCostWarning: Boolean,
     producersOnly: Boolean,
+    crystalPuzzleReset: Boolean,
+    expCostIncreasesAt: { type: String, required: true },
 });
-defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "seal-meridians", "increase-matrix", "activate-courage", "purify-meridians"]);
+defineEmits(["buy", "empower", "buy-all", "toggle-cast-mode", "cast-speed", "seal-meridians", "increase-matrix", "activate-courage", "purify-meridians", "sealed-meridian-reset-no-gain"]);
 
 function producerActionLabel(upgrade) {
     if (upgrade.hasNextTier) return props.castMode === "Cast Max" ? "Boost max" : "Boost once";
@@ -55,7 +58,15 @@ function producerActionLabel(upgrade) {
             <span>{{ castSpeed.timer }} · {{ castSpeed.magnitude }}</span>
             <small>Cost: {{ castSpeed.cost }}</small>
         </button>
-        <p v-if="upgrades.some(upgrade => upgrade.boughtGT10000)" class="cost-increase-warning">Costs start increasing exponentially after 10,000 purchases.</p>
+        <button
+            v-if="crystalPuzzleReset"
+            class="purify-meridians"
+            type="button"
+            @click="$emit('sealed-meridian-reset-no-gain')"
+        >
+            <strong>Perform a Sealed Meridian reset for no gain</strong>
+        </button>
+        <p v-if="!hideCostWarning && upgrades.some(upgrade => upgrade.boughtGT10000)" class="cost-increase-warning">Costs start increasing exponentially after {{ expCostIncreasesAt }} purchases.</p>
         <div class="upgrade-list">
             <UpgradeRow
                 v-for="upgrade in upgrades"

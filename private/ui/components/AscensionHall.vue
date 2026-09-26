@@ -8,7 +8,6 @@ let context;
 let animationFrame;
 let resizeObserver;
 let previousTime = 0;
-let distance = 0;
 let crossedGate = false;
 const keyDownListener = (event) => handleKey(event, true);
 const keyUpListener = (event) => handleKey(event, false);
@@ -21,6 +20,7 @@ const FLOOR_LEVEL = 230;
 const DEPTH_CURVE = 2;
 const GATE_DISTANCE = 7600;
 const GATE_CROSSING_DISTANCE = GATE_DISTANCE - 42;
+let distance = GATE_DISTANCE / 2;
 
 function setWalking(value) {
     walking.value = value;

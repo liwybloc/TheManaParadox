@@ -1,18 +1,23 @@
-import { addUS, copyInto, divUS, gt, log10Into, powInto, subUS, toNumber, writeNumber } from "../core/break_eternity.js";
-import { hasCompletedCrystal, isCrystalActive } from "./crystals.js";
+import { addUS, copyInto, divUS, gt, log10Into, mulUS, powInto, subUS, toNumber, writeNumber } from "../core/break_eternity.js";
+import { crystalEffectHandle, crystalRewardHandle, hasCompletedCrystal, isCrystalActive, isSpecificCrystalActive } from "./crystals.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
 export const MEMORY_MILESTONES = [
-    1, 3, 5, 10, 25, 50, 100, 250, 1_000, 2_500, 5_000, 10_000, 50_000, 100_000,
+    1, 3, 5, 10, 25, 50, 75, 100, 250, 500, 1_000, 2_500, 5_000, 10_000, 50_000, 100_000,
 ] as const;
 
 export const MEMORY_MILESTONE_REWARDS: Readonly<Record<number, string>> = {
     1: "Gain ×2 more condensed mana",
     3: "Courage is ×2 stronger",
-    5: "Mana is multiplied based on current mana (Currently: ×{amount})",
+    5: "Mana is multiplied based on current mana (Currently: ×{memoryManaMult})",
     10: "The game speed decrease in focus is slightly weaker",
-    25: "Unlock the Guild's Library",
+    25: "Production is multiplied based on memories (Currently: ×{memoryProdMult})",
+    50: "You gain more memories based on memories (Currently: ×{memoryMemMult})",
+    75: "Unlock the Guild's library",
+    100: "You gain ×10 more mana inside of crystals",
+    250: "Increase start of exponential cost scaling of producers based on memories (Currently: +{memoryCostStartAdd})",
+    500: "Unlock Remembrance upgrades",
 };
 
 declare const scratch: Scratch;
@@ -53,22 +58,22 @@ export function memoryChance(condensedManaGained: i32): f64 {
     copyInto(scratch.currencyGain, condensedManaGained);
     addUS(scratch.currencyGain, 1);
     log10Into(scratch.currencyGain, scratch.currencyGain);
-    divUS(scratch.currencyGain, 50);
-    const condensedManaBonus = Math.max(0, toNumber(scratch.currencyGain));
-    return Math.min(1, baseChance + condensedManaBonus);
+    const condensedManaBonus = Math.max(1, 1 + toNumber(scratch.currencyGain));
+    return Math.min(1, baseChance * condensedManaBonus);
 }
 
 export function focusGameSpeedMultiplier(): i32 {
     log10Into(scratch.manaExponent, player.mana);
     if (gt(scratch.manaExponent, 1)) {
         subUS(scratch.manaExponent, 1);
-        divUS(scratch.manaExponent, 25);
+        divUS(scratch.manaExponent, 40);
     } else {
         writeNumber(scratch.manaExponent, 0);
     }
-    writeNumber(scratch.currencyGain, -0.5);
-    subUS(scratch.currencyGain, scratch.manaExponent);
-    powInto(scratch.manaExponent, hasMemoryMilestone(10) ? 95 : 100, scratch.currencyGain);
+    // Keep scratch.currencyGain available for the active currency calculation.
+    writeNumber(scratch.tierOneProduction, -0.5);
+    subUS(scratch.tierOneProduction, scratch.manaExponent);
+    powInto(scratch.manaExponent, hasMemoryMilestone(10) ? 95 : 100, scratch.tierOneProduction);
     return scratch.manaExponent;
 }
 
@@ -81,6 +86,32 @@ export function memoryManaMultiplierHandle(): i32 {
     return scratch.manaExponent;
 }
 
+export function memoryProductionMultiplierHandle(): i32 {
+    if (!hasMemoryMilestone(25)) {
+        writeNumber(scratch.memoryProductionMultiplier, 1);
+        return scratch.memoryProductionMultiplier;
+    }
+    writeNumber(scratch.memoryProductionExponent, totalMemories + 1);
+    powInto(scratch.memoryProductionMultiplier, 2, scratch.memoryProductionExponent);
+    if (isSpecificCrystalActive(9)) applyCrystal10MemoryReward(crystalEffectHandle(9, 0));
+    if (hasCompletedCrystal(9)) applyCrystal10MemoryReward(crystalRewardHandle(9, 0));
+    return scratch.memoryProductionMultiplier;
+}
+
+function applyCrystal10MemoryReward(base: i32): void {
+    writeNumber(scratch.memoryProductionExponent, totalMemories + 1);
+    powInto(scratch.memoryCrystalMultiplier, base, scratch.memoryProductionExponent);
+    mulUS(scratch.memoryProductionMultiplier, scratch.memoryCrystalMultiplier);
+}
+
+export function memoryGainMultiplier(): i32 {
+    return hasMemoryMilestone(50) ? 1 + totalMemories / 50 : 1;
+}
+
+export function memoryCostStartAdd(): i32 {
+    return hasMemoryMilestone(250) ? totalMemories * 25 : 0;
+}
+
 export function toggleFocus(): bool {
     if (focusing) {
         focusing = false;
@@ -91,11 +122,20 @@ export function toggleFocus(): bool {
     return true;
 }
 
-export function resolveFocusedCondense(roll: f64, chance: f64): bool {
-    if (!focusing) return false;
-    if (roll >= chance) return false;
-    totalMemories++;
-    return true;
+export function resolveFocusedCondense(roll: f64, chance: f64): i32 {
+    if (!focusing) return 0;
+    let memoriesGained = 0;
+    while (chance >= 1) {
+        memoriesGained++;
+        chance--;
+    }
+    if (roll < chance) memoriesGained++;
+    if (memoriesGained === 0) return 0;
+    memoriesGained *= memoryGainMultiplier();
+    totalMemories += memoriesGained;
+    return memoriesGained;
 }
 
 /** [/WASM] */
+
+

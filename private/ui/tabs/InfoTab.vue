@@ -51,6 +51,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeOnEscape));
                 <article class="info-article">
                     <h2>{{ selectedTopic.title }}</h2>
                     <p class="info-summary">{{ selectedTopic.summary }}</p>
+                    <pre v-if="selectedTopic.tree" class="info-tree">{{ selectedTopic.tree }}</pre>
                     <p v-for="paragraph in selectedTopic.paragraphs" :key="paragraph">{{ paragraph }}</p>
                 </article>
             </div>
@@ -193,6 +194,17 @@ onBeforeUnmount(() => window.removeEventListener("keydown", closeOnEscape));
     margin-top: 0;
     color: #a98bc9;
     text-align: center;
+}
+
+.info-tree {
+    width: fit-content;
+    margin: 20px auto;
+    padding: 16px 22px;
+    border: 1px solid #694a91;
+    color: #d7c5e8;
+    background: #12101a;
+    font: 700 16px/1.5 monospace;
+    letter-spacing: 0.2em;
 }
 
 @media (max-width: 680px) {

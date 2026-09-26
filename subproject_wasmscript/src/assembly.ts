@@ -168,7 +168,12 @@ export function createAssemblySource(program: ts.Program, wasmModule: WasmModule
         }
     });
 
-    return [...declarations, ...extractedBlocks].join("\n\n");
+    const typeDeclarations = program.getSourceFiles().flatMap((sourceFile) =>
+        sourceFile.statements
+            .filter((statement) => ts.isClassDeclaration(statement) && statement.name?.text === "Scratch")
+            .map((statement) => printer.printNode(ts.EmitHint.Unspecified, statement, sourceFile)),
+    );
+    return [...typeDeclarations, ...declarations, ...extractedBlocks].join("\n\n");
 
     function printMethod(
         declaration: ts.FunctionDeclaration | ts.MethodDeclaration,

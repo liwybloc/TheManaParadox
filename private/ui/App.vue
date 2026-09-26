@@ -6,6 +6,7 @@ import { ACHIEVEMENTS } from "@game/game/achievements.js";
 import { CRYSTALS, CRYSTAL_GOALS } from "@game/game/crystals.js";
 import { getTotalMessageTickersSeen, getUniqueMessageTickersSeen } from "@game/game/message_tickers.js";
 import { CONDENSED_UPGRADES, CONDENSED_UPGRADE_PLACEHOLDERS } from "@game/game/condensed.js";
+import { REMEMBRANCE_CONNECTIONS, REMEMBRANCE_LAYOUT, REMEMBRANCE_UPGRADES, REMEMBRANCE_UPGRADE_COUNT, remembrancePrerequisites, remembranceUpgradeCost } from "@game/game/remembrance.js";
 import { TABS } from "@game/config/tabs.js";
 import { PROGRESSION_GOALS } from "@game/config/goals.js";
 import { ADVANCED_COMBAT_SPELL_COST_HANDLES, GUILD_RANKS, POTION_SPEED_II_TIMER_HANDLES, POTION_SPEED_III_TIMER_HANDLES, POTION_SPEED_TIMER_HANDLES } from "@game/guild/guild.js";
@@ -14,11 +15,11 @@ import { INVENTORY_ITEMS_BY_ID, Items, resolveItemDescription } from "@game/guil
 import { GUILD_SHOP_UPGRADES } from "@game/guild/shop.js";
 import { AUTOCASTER_NAMES, AUTOCASTER_TASKS, AUTOCASTER_TIERS, MAX_AUTOCASTERS } from "@game/config/autocasters.js";
 import { AUTOCASTER_HANDLES } from "@game/guild/autocasters.js";
-import { castAll, condense, enterCrystal as enterCrystalAction, escapeCrystal as escapeCrystalAction, focus as focusAction, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, shatterCrystal as shatterCrystalAction, subscribeToCondense, subscribeToMemoryGain } from "@game/systems/actions.js";
+import { castAll, condense, enterCrystal as enterCrystalAction, escapeCrystal as escapeCrystalAction, focus as focusAction, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, sealedMeridianResetNoGain as sealedMeridianResetNoGainAction, shatterCrystal as shatterCrystalAction, subscribeToCondense, subscribeToMemoryGain } from "@game/systems/actions.js";
 import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
 import { getUpdateRate, isOfflineProgressEnabled, setOfflineProgressEnabled, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
 import { setStarManaProgress, setStarsAnimated as applyStarsAnimated, setStarsVisible as applyStarsVisible, starsAnimated as loadStarsAnimated, starsVisible as loadStarsVisible } from "@game/systems/background.js";
-import { formatCompletionTime, formatCrystalGoal, formatDecimal, formatDecimalCompact } from "@game/ui/formatting.js";
+import { formatCompletionTime, formatCrystalGoal, formatDecimal, formatDecimalCompact, formatDecimals } from "@game/ui/formatting.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
 import GoalProgressBar from "./components/GoalProgressBar.vue";
@@ -40,6 +41,7 @@ import KeybindMenu from "./components/KeybindMenu.vue";
 import MessageTicker from "./components/MessageTicker.vue";
 import ManaCircleExpansion from "./components/ManaCircleExpansion.vue";
 import { showNotification } from "./notifications.js";
+import { createGlitchPositions, renderGlitchText } from "./textoptions.js";
 
 function tabDefinition(tabId) {
     return TABS.find((tab) => tab.id === tabId);
@@ -73,6 +75,7 @@ const questActive = ref(false);
 const manaCircle = ref(0);
 const manaCircleExpansionVisible = ref(false);
 const crystalsUnlocked = ref(false);
+const crystalStateRevision = ref(0);
 const memoriesUnlocked = ref(false);
 const libraryUnlocked = ref(false);
 const activeCrystal = ref(-1);
@@ -83,6 +86,7 @@ const cantRankUp = ref(false);
 const pingedTabs = ref([]);
 const pingedSubtabs = ref([]);
 const manaPerSecond = ref("0.00");
+const expCostIncreasesAt = ref("10,000");
 const oomPerSecond = ref("0.00");
 const showOoMPerSecond = ref(false);
 const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
@@ -99,6 +103,22 @@ const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
 const condensedUpgradePlaceholders = ref(Object.fromEntries(
     Object.keys(CONDENSED_UPGRADE_PLACEHOLDERS).map((key) => [key, ""]),
 ));
+const remembrance = ref({
+    memorials: "0",
+    cost: "1",
+    respec: false,
+    upgrades: Array.from({ length: REMEMBRANCE_UPGRADE_COUNT }, (_, index) => ({
+        index,
+        row: REMEMBRANCE_LAYOUT[index]?.[1] ?? 1,
+        column: REMEMBRANCE_LAYOUT[index]?.[0] ?? 1,
+        purchased: false,
+        available: index === 0,
+        description: index < 13 ? REMEMBRANCE_UPGRADES[index].description : "????????",
+        cost: REMEMBRANCE_UPGRADES[index].cost,
+        costFormatted: REMEMBRANCE_UPGRADES[index].costFormatted,
+    })),
+    connections: REMEMBRANCE_CONNECTIONS,
+});
 const nextGoal = ref("Condense");
 const nextGoalProgress = ref(0);
 const tierOneDefinitions = [
@@ -227,6 +247,7 @@ const statistics = ref({
     condenses: "0",
     condensedManaProduced: "0.00",
     timeThisCondense: "00:00:00",
+    gameTimeThisCondense: "00:00:00",
     fastestCondense: "00:00:00",
     hasCondensed: false,
 });
@@ -236,6 +257,9 @@ const memories = ref({
     nextChance: "100.00",
     focusing: false,
     manaMultiplier: "1.00",
+    productionMultiplier: "1.00",
+    gainMultiplier: "1",
+    costStartAdd: "0",
 });
 
 function updateMessageTickerStatistics({ total, unique }) {
@@ -326,6 +350,22 @@ let lastFastUiUpdate = 0;
 let lastSlowUiUpdate = 0;
 let fpsWindowStart = 0;
 let fpsFrameCount = 0;
+let lastRemembranceGlitchRender = 0;
+let lastRemembranceGlitchPositionUpdate = 0;
+let remembranceGlitchPositions = createGlitchPositions(15, 3);
+
+function updateRemembranceGlitch(timestamp) {
+    if (timestamp - lastRemembranceGlitchRender < 50) return;
+    lastRemembranceGlitchRender = timestamp;
+    if (timestamp - lastRemembranceGlitchPositionUpdate >= 300) {
+        lastRemembranceGlitchPositionUpdate = timestamp;
+        remembranceGlitchPositions = createGlitchPositions(15, 3);
+    }
+    for (const upgrade of remembrance.value.upgrades) {
+        if (upgrade.index < 13) continue;
+        upgrade.description = renderGlitchText(15, remembranceGlitchPositions);
+    }
+    }
 
 function updateFastDisplay() {
     PerformanceStats.begin("fastDisplay");
@@ -382,7 +422,8 @@ function updateDisplay(timestamp) {
                 fpsWindowStart = timestamp;
             }
         }
-        if (timestamp - lastFastUiUpdate >= renderUpdateRate.value) {
+        updateRemembranceGlitch(timestamp);
+        if (timestamp - lastFastUiUpdate >= FAST_UI_INTERVAL) {
             lastFastUiUpdate = timestamp;
             updateFastDisplay();
         }
@@ -407,6 +448,9 @@ function updateGlobalDisplay() {
     condensedUnlocked.value = namedWasm.hasCondensed();
     if (condensedUnlocked.value) condensedMana.value = formatDecimal(HANDLES.condensedMana, 0);
     manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier);
+    crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
+    memoriesUnlocked.value = namedWasm.hasCompletedCrystal(2);
+    libraryUnlocked.value = namedWasm.hasMemoryMilestone(75);
     memories.value.focusing = namedWasm.isFocusing();
     if (manaCircle.value > 0 && canCondense.value) {
         namedWasm.refreshCondenseGain();
@@ -505,7 +549,7 @@ function updateAutocastersDisplay() {
         const actionStatus = isSupporting
             ? "Supporting"
             : assignment >= 0
-            ? actionRemaining > 0 ? `Next action in ${formatShortTimer(actionRemaining)}` : "Ready"
+            ? actionRemaining > 0 ? `Running in ${formatShortTimer(actionRemaining)}` : "Ready"
             : "Unassigned";
         const wageStatus = wageRemaining > 0 ? `Wage due in ${formatShortTimer(wageRemaining)}` : "No wage due";
         return {
@@ -536,6 +580,7 @@ function updateAutocastersDisplay() {
                     : task.id === 8 ? namedWasm.readString(AUTOCASTER_HANDLES.crystalMatricesMaximum) : "Infinity",
             };
         }),
+        enabled: namedWasm.isAutocastersEnabled(),
         hireOptions: AUTOCASTER_TIERS.map((tier) => ({ ...tier, affordable: namedWasm.canHireAutocaster(tier.tier) })),
     };
 }
@@ -592,6 +637,7 @@ function countCompleted(definitions, predicate) {
 }
 
 function updateManaDisplay() {
+    namedWasm.refreshCrystalProducerCosts();
     const potionSpeedTimers = POTION_SPEED_TIMER_HANDLES
         .map((handle) => namedWasm.toNumber(handle))
         .filter((seconds) => seconds > 0);
@@ -604,6 +650,7 @@ function updateManaDisplay() {
     gameSpeed.value = formatGameSpeed(namedWasm.getGameSpeed());
     gameSpeedIncreased.value = namedWasm.isGameSpeedIncreased();
     manaPerSecond.value = formatDecimal(SCRATCH_HANDLES.manaPerSecond);
+    expCostIncreasesAt.value = formatDecimal(SCRATCH_HANDLES.expCostIncreasesAt, 0);
     oomPerSecond.value = formatOoMPerSecond(SCRATCH_HANDLES.oomPerSecond);
     showOoMPerSecond.value = namedWasm.getIncType() === 1;
     potionEffects.value = potionSpeedTimers.map((seconds, index) => ({
@@ -618,38 +665,50 @@ function updateManaDisplay() {
     })));
     for (const upgrade of tierOneUpgrades.value) {
         const bought = namedWasm.tierOneBoughtHandle(upgrade.index);
-        upgrade.amount = formatDecimal(upgrade.handle, 0);
-        upgrade.bought = formatDecimal(bought, 0);
+        const displayMultiplier = namedWasm.tierOneDisplayMultiplierHandle(upgrade.index);
+        const [amount, boughtAmount, empowered, cost, multiplier, empowerCost] = formatDecimals([
+            upgrade.handle, bought, upgrade.empowermentHandle,
+            upgrade.costHandle, displayMultiplier, upgrade.empowermentCostHandle,
+        ], [0, 0, 0, 2, 2, 2]);
+        upgrade.amount = amount;
+        upgrade.bought = boughtAmount;
         upgrade.boughtGT10000 = namedWasm.gt(bought, SCRATCH_HANDLES.D10000);
-        upgrade.cost = `${formatDecimal(upgrade.costHandle)} mana`;
-        upgrade.multiplier = `×${formatDecimal(namedWasm.tierOneDisplayMultiplierHandle(upgrade.index))}`;
+        upgrade.cost = `${cost} mana`;
+        upgrade.multiplier = `×${multiplier}`;
         upgrade.visible = namedWasm.isTierOneVisible(upgrade.index);
         upgrade.affordable = namedWasm.canBuyTierOne(upgrade.index);
-        upgrade.empowerCost = formatDecimal(upgrade.empowermentCostHandle);
-        upgrade.empowered = formatDecimal(upgrade.empowermentHandle, 0);
+        upgrade.empowerCost = empowerCost;
+        upgrade.empowered = empowered;
         upgrade.empowerVisible = namedWasm.canEmpowerTierOne(upgrade.index);
         upgrade.hasNextTier = upgrade.index < tierOneUpgrades.value.length - 1
             && namedWasm.gt(namedWasm.tierOneBoughtHandle(upgrade.index + 1), 0);
         upgrade.affordabilityProgress = namedWasm.tierOneAffordabilityProgress(upgrade.index);
     }
     castSpeedSpell.value.timer = formatDuration(HANDLES.castSpeedTimer);
-    castSpeedSpell.value.magnitude = `×${formatDecimal(HANDLES.castSpeedMagnitude)}`;
+    const [castSpeedMagnitude, castSpeedCost] = formatDecimals([HANDLES.castSpeedMagnitude, HANDLES.castSpeedCost]);
+    castSpeedSpell.value.magnitude = `×${castSpeedMagnitude}`;
     castSpeedSpell.value.power = formatDecimalCompact(HANDLES.matrixSpeedPower);
     castSpeedSpell.value.showPower = !namedWasm.eq(HANDLES.matrixSpeedPower, 2);
-    castSpeedSpell.value.cost = `${formatDecimal(HANDLES.castSpeedCost)} mana`;
+    castSpeedSpell.value.cost = `${castSpeedCost} mana`;
     castSpeedSpell.value.affordable = namedWasm.canCastSpeed();
-    sealedMeridians.value.level = formatDecimal(HANDLES.sealedMeridians, 0);
-    sealedMeridians.value.effect = formatDecimal(HANDLES.sealedMeridiansSpeedEffect, 0);
+    const [sealedMeridianLevel, sealedMeridianEffect, sealedMeridianCost] = formatDecimals([
+        HANDLES.sealedMeridians,
+        HANDLES.sealedMeridiansSpeedEffect,
+        HANDLES.sealMeridiansCost,
+    ], 0);
+    sealedMeridians.value.level = sealedMeridianLevel;
+    sealedMeridians.value.effect = sealedMeridianEffect;
     sealedMeridians.value.magnitude = formatDecimalCompact(namedWasm.sealedMeridianMagnitudeHandle());
     const progressionCostResource = activeCrystal.value === 3 ? "Mana Absorbers" : "Meridians";
-    sealedMeridians.value.cost = `${formatDecimal(HANDLES.sealMeridiansCost, 0)} ${progressionCostResource}`;
+    sealedMeridians.value.cost = `${sealedMeridianCost} ${progressionCostResource}`;
     sealedMeridians.value.affordable = namedWasm.canSealMeridians();
     sealedMeridians.value.visible = namedWasm.areSealedMeridiansVisible();
-    matrix.value.level = formatDecimal(HANDLES.matrixOwned, 0);
+    const [matrixLevel, matrixCost] = formatDecimals([HANDLES.matrixOwned, HANDLES.matrixCost], 0);
+    matrix.value.level = matrixLevel;
     matrix.value.other = formatDecimalCompact(namedWasm.matrixOtherEffectHandle());
     matrix.value.effect = formatDecimalCompact(namedWasm.crystalMatrixEffectHandle());
     matrix.value.power = formatDecimalCompact(namedWasm.matrixMagnitudeHandle());
-    matrix.value.cost = `${formatDecimal(HANDLES.matrixCost, 0)} ${progressionCostResource}`;
+    matrix.value.cost = `${matrixCost} ${progressionCostResource}`;
     matrix.value.affordable = namedWasm.canIncreaseMatrix();
     matrix.value.visible = namedWasm.isMatrixVisible();
     courage.value.visible = namedWasm.isCourageVisible();
@@ -661,10 +720,16 @@ function updateManaDisplay() {
     courage.value.multiplier = formatDecimal(HANDLES.courageMultiplier);
     meridianPurification.value.affordable = namedWasm.canPurifyMeridians();
     meridianPurification.value.visible = namedWasm.hasTierOneAchievement(7);
-    meridianPurification.value.effect = `×${formatDecimal(HANDLES.meridianPurificationEffect)}`;
-    meridianPurification.value.relIncrease = `×${formatDecimal(SCRATCH_HANDLES.purificationRelativeIncrease)}`;
-    meridianPurification.value.multiplier = `×${formatDecimal(HANDLES.purifiedMeridiansMultiplier)}`;
-    meridianPurification.value.requirement = formatDecimal(HANDLES.meridianPurificationRequirement);
+    const [purificationEffect, purificationIncrease, purificationMultiplier, purificationRequirement] = formatDecimals([
+        HANDLES.meridianPurificationEffect,
+        SCRATCH_HANDLES.purificationRelativeIncrease,
+        HANDLES.purifiedMeridiansMultiplier,
+        HANDLES.meridianPurificationRequirement,
+    ]);
+    meridianPurification.value.effect = `×${purificationEffect}`;
+    meridianPurification.value.relIncrease = `×${purificationIncrease}`;
+    meridianPurification.value.multiplier = `×${purificationMultiplier}`;
+    meridianPurification.value.requirement = purificationRequirement;
 }
 
 function updateGuildDisplay(subtab) {
@@ -773,14 +838,20 @@ function updateQuestDisplay() {
     if (!questActive.value) return;
     const activeQuestId = namedWasm.questDefinitionId(namedWasm.activeQuestIndex());
     const activeQuest = GUILD_QUESTS_BY_ID.get(activeQuestId);
+    const [enemyHealth, enemyMaximumHealth, shield, freezeTurns] = formatDecimals([
+        HANDLES.enemyHealth,
+        namedWasm.enemyMaximumHealth(namedWasm.activeQuestIndex()),
+        namedWasm.combatShieldHandle(),
+        HANDLES.combatFreezeTurns,
+    ], 0);
     combat.value.monster = activeQuest?.monster ?? "Monsters";
     combat.value.rank = GUILD_RANKS[activeQuest?.rank ?? 0] ?? "F";
-    combat.value.enemyHealth = formatDecimal(HANDLES.enemyHealth, 0);
-    combat.value.enemyMaximumHealth = formatDecimal(namedWasm.enemyMaximumHealth(namedWasm.activeQuestIndex()), 0);
+    combat.value.enemyHealth = enemyHealth;
+    combat.value.enemyMaximumHealth = enemyMaximumHealth;
     combat.value.enemyPercent = namedWasm.wolfineHealthPercent();
-    combat.value.shield = formatDecimal(namedWasm.combatShieldHandle(), 0);
+    combat.value.shield = shield;
     combat.value.shieldPercent = namedWasm.combatShieldPercent();
-    combat.value.freezeTurns = formatDecimal(HANDLES.combatFreezeTurns, 0);
+    combat.value.freezeTurns = freezeTurns;
     for (const spell of combat.value.spells) {
         spell.unlocked = spell.upgrade === undefined || namedWasm.hasGuildShopUpgrade(spell.upgrade);
         spell.cost = formatDecimal(spell.costHandle);
@@ -793,7 +864,13 @@ function updateCondensedDisplay() {
     namedWasm.refreshCondenseGain();
     memories.value.remembered = namedWasm.getTotalMemories();
     memories.value.focusing = namedWasm.isFocusing();
-    memories.value.manaMultiplier = formatDecimal(namedWasm.memoryManaMultiplierHandle());
+    const [manaMultiplier, productionMultiplier] = formatDecimals([
+        namedWasm.memoryManaMultiplierHandle(), namedWasm.memoryProductionMultiplierHandle(),
+    ]);
+    memories.value.manaMultiplier = manaMultiplier;
+    memories.value.productionMultiplier = productionMultiplier;
+    memories.value.gainMultiplier = String(namedWasm.memoryGainMultiplier());
+    memories.value.costStartAdd = String(namedWasm.memoryCostStartAdd());
     const memoryChance = memories.value.focusing
         ? namedWasm.memoryChance(SCRATCH_HANDLES.condenseGain)
         : namedWasm.baseMemoryChance();
@@ -811,18 +888,36 @@ function updateCondensedDisplay() {
         upgrade.affordable = namedWasm.canBuyCondensedUpgrade(upgrade.index);
         upgrade.visible = !finalUpgrade || manaCircle.value > 0 || namedWasm.canSeeAscensionHallUpgrade();
     }
+    remembrance.value.memorials = String(namedWasm.getMemorials());
+    remembrance.value.cost = formatDecimal(namedWasm.remembranceUpgradeCostHandle(), 0);
+    remembrance.value.respec = namedWasm.isRespecRemembranceOnCondense();
+    for (const upgrade of remembrance.value.upgrades) {
+        upgrade.purchased = namedWasm.hasRemembranceUpgrade(upgrade.index);
+        const purchased = remembrance.value.upgrades.filter((entry) => entry.purchased).map((entry) => entry.index + 1);
+        upgrade.available = upgrade.index !== 13
+            && namedWasm.getMemorials() >= remembranceUpgradeCost(upgrade.index + 1)
+            && remembrancePrerequisites(upgrade.index + 1).every((required) => purchased.includes(required));
+        if (!upgrade.costFormatted) {
+            namedWasm.writeNumber(SCRATCH_HANDLES.remembranceCostFormat, upgrade.cost);
+            upgrade.costFormatted = formatDecimal(SCRATCH_HANDLES.remembranceCostFormat, 0);
+        }
+    }
     for (const [key, placeholder] of Object.entries(CONDENSED_UPGRADE_PLACEHOLDERS)) {
         condensedUpgradePlaceholders.value[key] = `${placeholder.prefix}${formatDecimal(placeholder.handle)}`;
     }
 }
 
 function updateStatisticsDisplay() {
+    const [manaProduced, condensedManaProduced] = formatDecimals([
+        HANDLES.statistics_totalManaProduced, HANDLES.statistics_condensedManaProduced,
+    ], 2, ["Maximum", "Unknown"]);
     statistics.value.timePlayed = formatTotalTime(HANDLES.statistics_totalTimePlayed);
     statistics.value.gameTimePlayed = formatTotalTime(HANDLES.statistics_gameTimePlayed);
-    statistics.value.manaProduced = formatDecimal(HANDLES.statistics_totalManaProduced, 2, "Maximum");
-    statistics.value.condensedManaProduced = formatDecimal(HANDLES.statistics_condensedManaProduced);
+    statistics.value.manaProduced = manaProduced;
+    statistics.value.condensedManaProduced = condensedManaProduced;
     statistics.value.condenses = formatDecimal(HANDLES.statistics_condenses, 0);
     statistics.value.timeThisCondense = formatTotalTime(HANDLES.statistics_timeThisCondense);
+    statistics.value.gameTimeThisCondense = formatTotalTime(HANDLES.statistics_gameTimeThisCondense);
     statistics.value.fastestCondense = formatCompletionTime(
         namedWasm.toNumber(HANDLES.statistics_fastestCondense),
         3,
@@ -946,6 +1041,7 @@ async function importGameSave() {
     try {
         achievementsInitialized = false;
         await importSave(saveData.trim());
+        crystalStateRevision.value++;
         await saveGame();
         window.alert("Save imported successfully.");
     } catch (error) {
@@ -979,6 +1075,10 @@ function sealMeridians() {
     sealMeridiansAction();
 }
 
+function sealedMeridianResetNoGain() {
+    sealedMeridianResetNoGainAction();
+}
+
 function increaseMatrix() {
     increaseMatrixAction();
 }
@@ -1002,7 +1102,7 @@ function handlePrimaryResetAction() {
         condense();
         return;
     }
-    shatterCrystalAction();
+    if (shatterCrystalAction()) crystalStateRevision.value++;
 }
 
 function escapeCrystal() {
@@ -1019,6 +1119,33 @@ function buyCondensedUpgrade(index) {
     namedWasm.refreshSealedMeridiansDerivedState();
     namedWasm.refreshTierOneDerivedState();
     if (index === 11) namedWasm.resetCastSpeed();
+}
+
+function buyMemorial() {
+    namedWasm.buyMemorial();
+}
+
+function buyRemembranceUpgrade(index) {
+    const upgrade = remembrance.value.upgrades[index];
+    if (upgrade) namedWasm.buyRemembranceUpgrade(index, upgrade.cost);
+}
+
+function toggleRemembranceRespec() {
+    namedWasm.setRespecRemembranceOnCondense(!namedWasm.isRespecRemembranceOnCondense());
+}
+
+function exportRemembrance() {
+    const value = remembrance.value.upgrades.filter((upgrade) => upgrade.purchased).map((upgrade) => upgrade.index + 1).join(",");
+    navigator.clipboard?.writeText(value);
+}
+
+function importRemembrance() {
+    const value = window.prompt("Paste a Remembrance tree export");
+    if (value === null) return;
+    for (const token of value.split(",")) {
+        const index = Number.parseInt(token.trim(), 10) - 1;
+        if (Number.isInteger(index) && index >= 0) buyRemembranceUpgrade(index);
+    }
 }
 
 function focus() {
@@ -1144,6 +1271,11 @@ function setAutocasterMaximum(task, value) {
     return writeAutocasterDecimal(handle, value, 0);
 }
 
+function toggleAutocasters() {
+    namedWasm.setAutocastersEnabled(!namedWasm.isAutocastersEnabled());
+    updateAutocastersDisplay();
+}
+
 function sellAutocaster(caster) {
     if (namedWasm.sellAutocaster(caster)) void saveGame();
 }
@@ -1167,6 +1299,7 @@ function cancelResetGame() {
 
 function confirmResetGame() {
     resetGameData();
+    crystalStateRevision.value++;
     achievementsInitialized = false;
     castMax.value = false;
     resetConfirmationVisible.value = false;
@@ -1179,8 +1312,9 @@ function recordClick() {
 onMounted(() => {
     document.addEventListener("click", recordClick);
     unsubscribeFromCondense = subscribeToCondense(handleCondensed);
-    unsubscribeFromMemoryGain = subscribeToMemoryGain(() => {
-        showNotification("You gained a Memory!");
+    unsubscribeFromMemoryGain = subscribeToMemoryGain((total, milestoneReached, gained) => {
+        showNotification(`You gained ${gained == 1 ? "a" : gained} memor${gained == 1 ? "y" : "ies"}! (${total.toLocaleString()})`);
+        if (milestoneReached) showNotification("You reached a memory milestone!");
     });
     unsubscribeFromTimeSimulation = subscribeToTimeSimulation((state) => {
         timeSimulation.value = state;
@@ -1254,7 +1388,7 @@ onBeforeUnmount(() => {
             type="button"
             @click="escapeCrystal"
         >
-            Escape Crystal
+                Escape Crystal {{ activeCrystal + 1 }}
         </button>
         <div v-if="condensedUnlocked" class="condensed-mana-display">
             <span>You have</span>
@@ -1286,7 +1420,10 @@ onBeforeUnmount(() => {
                 :manaPerSecond="manaPerSecond"
                 :oom-per-second="oomPerSecond"
                 :show-oo-m-per-second="showOoMPerSecond"
+                :exp-cost-increases-at="expCostIncreasesAt"
+                :hide-cost-warning="activeCrystal === 9"
                 :producers-only="activeCrystal === 2"
+                :crystal-puzzle-reset="activeCrystal >= 11"
                 @buy="buyTierOne"
                 @empower="empowerTierOne"
                 @buy-all="buyAllTierOne"
@@ -1296,6 +1433,7 @@ onBeforeUnmount(() => {
                 @increase-matrix="increaseMatrix"
                 @activate-courage="activateCourage"
                 @purify-meridians="purifyMeridians"
+                @sealed-meridian-reset-no-gain="sealedMeridianResetNoGain"
             />
             <StatisticsTab
                 v-else-if="activeTab === 'statistics'"
@@ -1308,9 +1446,15 @@ onBeforeUnmount(() => {
                 :upgrades="condensedUpgrades"
                 :placeholders="condensedUpgradePlaceholders"
                 :memories="memories"
+                :remembrance="remembrance"
                 :isAscended="manaCircle > 0"
                 @buy="buyCondensedUpgrade"
                 @focus="focus"
+                @buy-memorial="buyMemorial"
+                @buy-remembrance="buyRemembranceUpgrade"
+                @respec="toggleRemembranceRespec"
+                @export-remembrance="exportRemembrance"
+                @import-remembrance="importRemembrance"
             />
             <ManaCircleTab
                 v-else-if="activeTab === 'manacircle'"
@@ -1321,6 +1465,7 @@ onBeforeUnmount(() => {
             <CrystalsTab
                 v-else-if="activeTab === 'crystals'"
                 :active-subtab="activeSubtab"
+                :state-revision="crystalStateRevision"
                 @enter="enterCrystal"
             />
             <GuildTab
@@ -1366,6 +1511,7 @@ onBeforeUnmount(() => {
                 @purify-minimum="setAutocasterPurifyMinimum"
                 @condense-gain="setAutocasterCondenseGain"
                 @maximum-owned="setAutocasterMaximum"
+                @toggle="toggleAutocasters"
             />
             <AchievementsTab
                 v-else-if="activeTab === 'achievements'"
@@ -1433,6 +1579,9 @@ onBeforeUnmount(() => {
     background: rgb(9 9 15 / 82%);
     font: 11px/1.2 monospace;
     pointer-events: none;
+}
+body {
+    overflow-x: hidden;
 }
 
 .info-launcher {

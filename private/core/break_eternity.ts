@@ -381,8 +381,9 @@ export function allocateDecimal(): i32 {
     return handle;
 }
 
-export function writeNumber(handle: i32, value: f64): void {
+export function writeNumber(handle: i32, value: f64): i32 {
     normalizeInto(handle, signOf(value), 0, Math.abs(value));
+    return handle;
 }
 
 export function writeDecimal(handle: i32, sign: f64, layer: f64, magnitude: f64): void {

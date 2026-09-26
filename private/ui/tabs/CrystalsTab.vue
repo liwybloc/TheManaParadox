@@ -1,21 +1,22 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { CRYSTALS, CRYSTAL_GOALS } from "@game/game/crystals.js";
 import { formatCompletionTime, formatCrystalGoal, formatDecimal } from "@game/ui/formatting.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 
-defineProps({
+const props = defineProps({
     activeSubtab: { type: String, required: true },
+    stateRevision: { type: Number, required: true },
 });
 
 const VISIBLE_CRYSTALS = 3;
-const crystals = CRYSTALS.map((crystal, index) => ({
+const crystals = reactive(CRYSTALS.map((crystal, index) => ({
     ...crystal,
     goal: formatCrystalGoal(CRYSTAL_GOALS[index]),
     unlocked: namedWasm.isCrystalUnlocked(index),
     completed: namedWasm.hasCompletedCrystal(index),
     fastestShatter: namedWasm.getFastestCrystalShatter(index),
-}));
+})));
 const emit = defineEmits(["enter"]);
 const firstVisibleCrystal = ref(0);
 const finalFirstVisibleCrystal = crystals.length - VISIBLE_CRYSTALS;
@@ -24,6 +25,24 @@ const canGoForward = computed(() => firstVisibleCrystal.value < finalFirstVisibl
 const trackStyle = computed(() => ({
     transform: `translateX(calc(-${firstVisibleCrystal.value * 100 / VISIBLE_CRYSTALS}% - ${firstVisibleCrystal.value * 16 / VISIBLE_CRYSTALS}px))`,
 }));
+
+watch(() => props.stateRevision, () => {
+    crystals.forEach((crystal, index) => {
+        crystal.unlocked = namedWasm.isCrystalUnlocked(index);
+        crystal.completed = namedWasm.hasCompletedCrystal(index);
+        crystal.fastestShatter = namedWasm.getFastestCrystalShatter(index);
+    });
+    showNextAvailableCrystal();
+});
+
+function showNextAvailableCrystal() {
+    const nextIndex = crystals.findIndex((crystal) => crystal.unlocked && !crystal.completed);
+    const fallbackIndex = crystals.findLastIndex((crystal) => crystal.unlocked);
+    const targetIndex = nextIndex >= 0 ? nextIndex : Math.max(0, fallbackIndex);
+    firstVisibleCrystal.value = Math.max(0, Math.min(finalFirstVisibleCrystal, targetIndex - 1));
+}
+
+onMounted(showNextAvailableCrystal);
 
 function showPreviousCrystal() {
     if (!canGoBack.value) return;

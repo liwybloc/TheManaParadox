@@ -2,7 +2,7 @@ import { addUS, createDecimal, gte, lt, subUS, toNumber, writeNumber } from "../
 import { canCondense, refreshCondenseGain } from "../game/condensed.js";
 import { activateCourage } from "../game/courage.js";
 import { castSpeed, increaseMatrix, sealMeridians } from "../game/progression.js";
-import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplierHandle, empowerTierOne, purifyMeridians } from "../game/tier_one.js";
+import { buyMaxTierOne, buyTierOne, canPurifyMeridiansAtRelativeMultiplierHandle, empowerTierOne, purifyMeridians, refreshCrystalProducerCosts } from "../game/tier_one.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 import { checkCoinAchievements, hasTierOneAchievement, unlockTierOneAchievement } from "../game/achievements.js";
@@ -33,6 +33,7 @@ const actionCooldowns = new StaticArray<f64>(MAX_AUTOCASTERS);
 const wageTimers = new StaticArray<f64>(MAX_AUTOCASTERS);
 const workedThisPeriod = new StaticArray<u8>(MAX_AUTOCASTERS);
 let autoCondenseRequested: bool = false;
+let autocastersEnabled: bool = true;
 const producerCastOne = new StaticArray<u8>(5);
 let purifyMinimumHandle: i32 = 0;
 let autoCondenseGainHandle: i32 = 0;
@@ -200,7 +201,7 @@ export function casterAssignedToTask(task: i32): i32 {
 }
 
 export function updateAutocasters(deltaSeconds: f64): void {
-    if (deltaSeconds <= 0) return;
+    if (!autocastersEnabled || deltaSeconds <= 0) return;
     for (let caster: i32 = 0; caster < MAX_AUTOCASTERS; caster++) {
         if (!isAutocasterHired(caster)) continue;
         updateWage(caster, deltaSeconds);
@@ -209,6 +210,14 @@ export function updateAutocasters(deltaSeconds: f64): void {
         const caster = casterAssignedToTask(task);
         if (caster >= 0) updateAction(caster, task, deltaSeconds);
     }
+}
+
+export function isAutocastersEnabled(): bool {
+    return autocastersEnabled;
+}
+
+export function setAutocastersEnabled(enabled: bool): void {
+    autocastersEnabled = enabled;
 }
 
 export function consumeAutoCondenseRequest(): bool {
@@ -249,6 +258,7 @@ function updateAction(caster: i32, task: i32, deltaSeconds: f64): void {
     if (actionCooldowns[caster] > 0) return;
     let acted = false;
     if (task < 5) {
+        refreshCrystalProducerCosts();
         if (tiers[caster] >= 2 && empowerTierOne(task)) acted = true;
         if (producerAutocasterCastsMax(task) ? buyMaxTierOne(task) : buyTierOne(task)) acted = true;
     } else {

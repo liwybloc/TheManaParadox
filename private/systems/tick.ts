@@ -6,7 +6,8 @@ import { getGameSpeed, isQuestActive, updatePotionEffects, updateQuestBoard } fr
 import { HANDLES } from "../core/player.js";
 import { refreshMatrixDerivedState, refreshSealedMeridiansDerivedState, resetCastSpeed } from "../game/progression.js";
 import { SCRATCH_HANDLES } from "../core/scratch.js";
-import { refreshTierOneDerivedState } from "../game/tier_one.js";
+import { applyCrystal11ManaAbsorberReward, refreshTierOneDerivedState, synchronizeCrystal11Multipliers } from "../game/tier_one.js";
+import { isAllProducersManaAbsorbersCrystalActive, isCrystalActive } from "../game/crystals.js";
 import { PerformanceStats } from "./performance-stats.js";
 import { tickKeybinds } from "./keybinds.js";
 import { updateAutocasters } from "../guild/autocasters.js";
@@ -40,6 +41,7 @@ let castSpeedTimerHandle: i32 = 0;
 let castSpeedMagnitudeHandle: i32 = 0;
 let castSpeedCostHandle: i32 = 0;
 let manaCurrencyHandle: i32 = 0;
+let manaAbsorberCurrencyHandle: i32 = 0;
 
 const modifierScope = new StaticArray<i32>(MAX_MODIFIERS);
 const modifierTarget = new StaticArray<i32>(MAX_MODIFIERS);
@@ -95,6 +97,7 @@ export function registerProductionEntity(
     entityBaseProductionHandle[entity] = baseProductionHandle;
     entityBaseMultiplierHandle[entity] = baseMultiplierHandle;
     entityGroup[entity] = group;
+    if (entity === 3) manaAbsorberCurrencyHandle = destinationHandle;
     return entity;
 }
 
@@ -155,7 +158,11 @@ function tickProduction(deltaMilliseconds: f64, countTimePlayed: bool): void {
         mulUS(mulUS(productionHandle, entityBaseProductionHandle[entity]), entityBaseMultiplierHandle[entity]);
         writeNumber(modifierHandle, productionMultiplierFor(entity) * speedMultiplierFor(entity));
         mulUS(productionHandle, modifierHandle);
-        gainProductionCurrency(entityDestinationHandle[entity], productionHandle);
+        const destination = isAllProducersManaAbsorbersCrystalActive() && entity < productionEntityCount - 1
+            ? manaAbsorberCurrencyHandle
+            : entityDestinationHandle[entity];
+        if (entity === productionEntityCount - 1) applyCrystal11ManaAbsorberReward(productionHandle);
+        gainProductionCurrency(destination, productionHandle);
     }
 }
 
@@ -246,12 +253,13 @@ function calculateModifier(scope: i32, target: i32, type: i32): f64 {
 }
 
 export function tick(deltaMilliseconds: f64, countTimePlayed: bool): void {
+    if (isAllProducersManaAbsorbersCrystalActive()) synchronizeCrystal11Multipliers();
     writeNumber(secondsHandle, deltaMilliseconds / 1000);
     updatePotionEffects(secondsHandle);
     updateQuestBoard(deltaMilliseconds / 1000);
     updateAutocasters(deltaMilliseconds / 1000);
     tickProduction(deltaMilliseconds, countTimePlayed);
-    updateHighestManaReached();
+    if (!isCrystalActive()) updateHighestManaReached();
     if (consumeTierOneRewardsChanged()) {
         refreshSealedMeridiansDerivedState();
         refreshMatrixDerivedState();
@@ -318,6 +326,7 @@ registerProductionEntity(
     HANDLES.multiplier_manaConduit,
     0,
 );
+
 
 const UPDATE_RATE_STORAGE_KEY = "updateRate";
 const OFFLINE_PROGRESS_STORAGE_KEY = "offlineProgress";

@@ -1,6 +1,7 @@
-import { addUS, divInto, gt, gte, log10Into, mulUS, reachesLayerBoundary, writeDecimal, writeNumber } from "../core/break_eternity.js";
+import { addUS, divInto, gt, gte, log10Into, mulUS, powUS, reachesLayerBoundary, writeDecimal, writeNumber } from "../core/break_eternity.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
+import { crystalRewardHandle, hasCompletedCrystal } from "./crystals.js";
 
 export const ACHIEVEMENTS = [
     { id: "achievement_difficulty", number: 13, title: "I think this is called difficulty", description: "Reach the limit of your mana circle without any Crystal Matrices.", reward: "Increase Crystal Matrix effect by +0.1×", category: "challenge" },
@@ -42,37 +43,42 @@ export const ACHIEVEMENTS = [
     { id: "achievement_firstquest", number: 27, title: "That was a battle! Literally", description: "Complete your first quest." },
     { id: "achievement_drinkpotion", number: 28, title: "It's bitter!", description: "Drink a potion." },
     { id: "achievement_tenquests", number: 29, title: "Will I rank up?", description: "Complete 10 quests." },
-    { id: "achievement_rankupe", number: 30, title: "Yes you will!", description: "Rank up to E tier." },
     { id: "achievement_hireautocaster", number: 36, title: "Today's topic.", description: "Hire your first auto-caster", reward: "10 coins"},
 
     { id: "achievement_imrich", number: 37, title: "I'm rich!", description: "Get 100 or more coins", reward: "The rich get richer (10 coins)" },
+    { id: "achievement_fourthquestslot", number: 52, title: "It's just growing there... menacingly!", description: "Unlock a 4th quest slot." },
     { id: "achievement_buytier3caster", number: 38, title: "Faster!!", description: "Hire a tier 3 or higher auto-caster", reward: "Autocasters work ×2 faster" },
     { id: "achievement_completeachallenge", number: 39, title: "Rough place", description: "Acquire any challenge achievement", reward: "A sense of accomplishment" },
     { id: "achievement_empowerthrice", number: 42, title: "This was expected!", description: "Empower any producer thrice.", reward: "Empowerment is 10% stronger." },
     { id: "achievement_enterascensionhall", number: 41, title: "To face the gods", description: "Enter the ascension hall...", reward: "Gain ×2 more condensed mana" },
 
     { id: "achievement_newhorizons", circle: 2, number: 25, title: "LilysMana: New Horizons", description: "Expand your mana circle." },
+    { id: "achievement_rankupe", circle: 2, number: 30, title: "Yes you will!", description: "Rank up to E tier." },
     { id: "achievement_beatdtier", circle: 2, number: 40, title: "Boi that was so Tuff", description: "Defeat a D-tier or higher enemy", reward: "5 Potion of Speed III" },
     { id: "achievement_get1e500mana", circle: 2, number: 43, title: "Half way there!", description: "Reach 1.00e500 Mana" },
     { id: "achievement_unlockcrystals", circle: 2, number: 44, title: "Icicles", description: "Unlock Crystals" },
-    { id: "achievement_dontevenlad", circle: 2, number: 45, title: "Don't even joke, lad", description: "Reach 1.00e6767 Mana" },
 
+    { id: "achievement_dontevenlad", circle: 2, number: 45, title: "Don't even joke, lad", description: "Reach 1.00e6767 Mana" },
     { id: "achievement_shattercrystal", circle: 2, number: 46, title: "Shattered Hearts", description: "Shatter a Crystal" },
     { id: "achievement_get25memories", circle: 2, number: 47, title: "Remembrance", description: "Gain 25 memories" },
+    { id: "achievement_defeatctier", circle: 2, number: 50, title: "C your way out of this", description: "Defeat a C tier enemy" },
+
+    { id: "achievement_beatcrystal7", circle: 2, number: 51, title: "Keyboard Warrior", description: "Shatter Crystal 7 (Tip: Hold M, X, Y, and press P every few seconds!)" },
     { id: "achievement_shatter15crystal", circle: 2, number: 48, title: "Into the Abyss", description: "Shatter the first 15 Crystals" },
     { id: "achievement_loopabyss", circle: 2, number: 49, title: "Déjà vu", description: "Loop the abyss" },
-    { id: "achievement_defeatctier", circle: 2, number: 50, title: "C your way out of this", description: "Defeat a C tier enemy" },
 ];
 
 export const PROGRESSION_ACHIEVEMENT_ORDER = [
      1,  2,  3,  4,  5,
     14, 15,  9, 10, 20,
     11,  7,  8, 26, 27,
-    28, 29, 30, 37, 12,
-    17, 39,  6, 19, 38,
-    36, 42, 23, 24, 41,
-    25, 40, 43, 44, 45,
-    46, 47, 48, 49, 50,
+    28, 29, 37, 12, 17,
+    39,  6, 19,
+    36, 52, 38, 42, 23, 24, 41,
+
+    25, 30, 40, 43, 44,
+    45, 46, 47, 51, 50,
+    48, 49,
 ];
 
 declare const player: Player;
@@ -81,7 +87,7 @@ declare const scratch: Scratch;
 /** [WASM] */
 
 const TIER_ONE_ACHIEVEMENT_COUNT: i32 = 5;
-const ACHIEVEMENT_COUNT: i32 = 50;
+const ACHIEVEMENT_COUNT: i32 = 52;
 const unlockedAchievements = new StaticArray<u8>(ACHIEVEMENT_COUNT);
 let tierOneRewardsChanged = false;
 let circularHabitsRewardPending = false;
@@ -196,6 +202,7 @@ export function refreshAchievementRewards(): void {
             addUS(player.multiplier_timePlayedAchievement, scratch.currencyGain);
         }
     }
+    if (hasCompletedCrystal(7)) powUS(player.multiplier_timePlayedAchievement, crystalRewardHandle(7, 0));
     mulUS(player.multiplier_currencyGlobal, player.multiplier_timePlayedAchievement);
     writeNumber(player.multiplier_tierOnePerPurchase, 2);
     if (hasTierOneAchievement(10)) {

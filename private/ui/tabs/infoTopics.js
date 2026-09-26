@@ -1,3 +1,5 @@
+import { REMEMBRANCE_ROWS } from "@game/game/remembrance.js";
+
 export const topics = [
     {
         id: "welcome",
@@ -109,6 +111,16 @@ export const topics = [
             "Focus slows the game more as mana rises. Its speed multiplier is 100^(-0.5 - max(0, (log10(mana) - 1) / 25)). At 10 Memories, the base becomes 95 and the slowdown is slightly weaker.",
             "Milestones begin at 1, 3, 5, 10, and 25 Memories. They improve Condensed Mana, Courage, mana production, Focus, and later Guild progression.",
         ],
+    },
+    {
+        id: "remembrance",
+        title: "Remembrance Tree",
+        summary: "A branching upgrade tree unlocked at 500 Memories.",
+        paragraphs: [
+            "Buy Memorials with Condensed Mana, then spend them on connected Remembrance upgrades. Nodes in later rows cost more Memorials, while nodes in the same row share a cost.",
+            "The tree can be exported and imported as a comma-separated list of upgrade numbers. Respec schedules a refund of all purchased nodes on your next Condense.",
+        ],
+        tree: REMEMBRANCE_ROWS.join("\n"),
     },
     {
         id: "guild",

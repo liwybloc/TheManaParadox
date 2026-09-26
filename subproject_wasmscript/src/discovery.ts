@@ -411,13 +411,19 @@ function createHashedName(sourceFile: ts.SourceFile, projectDirectory: string, i
 
 function assertAbiType(type: ts.TypeNode, sourceFile: ts.SourceFile): void {
     const text = type.getText(sourceFile);
-    if (!WASM_TYPES.has(text)) {
+    if (!WASM_TYPES.has(text) && !isStaticArrayType(text)) {
         throw errorAt(sourceFile, type, `Unsupported WASM ABI type '${text}'. Use an AssemblyScript scalar type.`);
     }
 }
 
 function abiType(type: ts.TypeNode, sourceFile: ts.SourceFile): string {
-    return abiTypeText(type.getText(sourceFile));
+    const text = type.getText(sourceFile);
+    return abiTypeText(isStaticArrayType(text) ? "i32" : text);
+}
+
+function isStaticArrayType(type: string): boolean {
+    const match = /^StaticArray<(.+)>$/.exec(type);
+    return match !== null && WASM_TYPES.has(match[1]!) && match[1] !== "string" && match[1] !== "void";
 }
 
 function abiTypeText(type: string): string {

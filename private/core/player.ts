@@ -6,6 +6,8 @@ export interface PlayerHandles {
     statistics_totalManaProduced: i32;
     statistics_totalTimePlayed: i32;
     statistics_gameTimePlayed: i32;
+    statistics_gameTimeThisCondense: i32;
+    timeBeforeProducerBought: i32;
     statistics_totalClicks: i32;
     statistics_condensedManaProduced: i32;
     statistics_condenses: i32;
@@ -101,6 +103,8 @@ export const HANDLES: PlayerHandles = {
     statistics_totalManaProduced: createZero(),
     statistics_totalTimePlayed: createZero(),
     statistics_gameTimePlayed: createZero(),
+    statistics_gameTimeThisCondense: createZero(),
+    timeBeforeProducerBought: createZero(),
     statistics_totalClicks: createZero(),
     statistics_condensedManaProduced: createZero(),
     statistics_condenses: createZero(),
@@ -186,6 +190,8 @@ export const player: Player = {
     statistics_totalManaProduced: 0,
     statistics_totalTimePlayed: 0,
     statistics_gameTimePlayed: 0,
+    statistics_gameTimeThisCondense: 0,
+    timeBeforeProducerBought: 0,
     statistics_totalClicks: 0,
     statistics_condensedManaProduced: 0,
     statistics_condenses: 0,
@@ -278,6 +284,8 @@ export function initializeCoreHandles(
     totalManaProduced: i32,
     totalTimePlayed: i32,
     gameTimePlayed: i32,
+    gameTimeThisCondense: i32,
+    timeBeforeProducerBought: i32,
     totalClicks: i32,
     infinityBreakIndex: i32,
     globalMultiplier: i32,
@@ -290,6 +298,8 @@ export function initializeCoreHandles(
     player.statistics_totalManaProduced = totalManaProduced;
     player.statistics_totalTimePlayed = totalTimePlayed;
     player.statistics_gameTimePlayed = gameTimePlayed;
+    player.statistics_gameTimeThisCondense = gameTimeThisCondense;
+    player.timeBeforeProducerBought = timeBeforeProducerBought;
     player.statistics_totalClicks = totalClicks;
     player.mana_circle_tier = infinityBreakIndex;
     player.multiplier_currencyGlobal = globalMultiplier;
@@ -421,6 +431,8 @@ initializeCoreHandles(
     HANDLES.statistics_totalManaProduced,
     HANDLES.statistics_totalTimePlayed,
     HANDLES.statistics_gameTimePlayed,
+    HANDLES.statistics_gameTimeThisCondense,
+    HANDLES.timeBeforeProducerBought,
     HANDLES.statistics_totalClicks,
     HANDLES.mana_circle_tier,
     HANDLES.multiplier_currencyGlobal,
