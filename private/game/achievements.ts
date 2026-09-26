@@ -62,7 +62,7 @@ export const ACHIEVEMENTS = [
     { id: "achievement_shattercrystal", circle: 2, number: 46, title: "Shattered Hearts", description: "Shatter a Crystal" },
     { id: "achievement_get25memories", circle: 2, number: 47, title: "I miss that kind of Memories", description: "Gain 25 memories" },
     { id: "achievement_defeatctier", circle: 2, number: 50, title: "C your way out of this", description: "Defeat a C tier enemy" },
-    { id: "achievement_beatcrystal7", circle: 2, number: 51, title: "Keyboard Warrior", description: "Shatter Crystal 7 (Tip: Hold M, X, Y, and press P every few seconds!)" },
+    { id: "achievement_beatcrystal7", circle: 2, number: 51, title: "Keyboard Warrior", description: "Shatter Crystal 8 (Tip: Hold M, X, Y, and press P every few seconds!)" },
 
     { id: "achievement_remembrance", circle: 2, number: 53, title: "Remembrance", description: "Unlock the Remembrance Upgrade Tree (Memory Milestone 500)"},
     { id: "achievement_buyapath", circle: 2, number: 54, title: "Oh no not min-maxing!", description: "Purchase Remembrance upgrade 3, 4, or 5 (they aren't unique paths, thankfully!)" },
