@@ -78,6 +78,7 @@ const manaCircleExpansionVisible = ref(false);
 const crystalsUnlocked = ref(false);
 const crystalStateRevision = ref(0);
 const memoriesUnlocked = ref(false);
+const remembranceUnlocked = ref(false);
 const libraryUnlocked = ref(false);
 const activeCrystal = ref(-1);
 const crystalGoalReached = ref(false);
@@ -297,6 +298,7 @@ const visibleTabs = computed(() => TABS.filter((tab) => {
     subtabs: tab.subtabs?.filter((subtab) =>
         (!subtab.requiresAscensionHall || ascensionHallUnlocked.value)
         && (!subtab.requiresMemory || memoriesUnlocked.value)
+        && (!subtab.requiresRemTree || remembranceUnlocked.value)
         && (!subtab.requiresLibrary || libraryUnlocked.value)
     ),
 })));
@@ -464,6 +466,7 @@ function updateGlobalDisplay() {
     manaCircle.value = namedWasm.toNumber(HANDLES.mana_circle_tier);
     crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
     memoriesUnlocked.value = namedWasm.hasCompletedCrystal(2);
+    remembranceUnlocked.value = namedWasm.hasMemoryMilestone(500);
     libraryUnlocked.value = namedWasm.hasMemoryMilestone(75);
     abyssUnlocked.value = namedWasm.hasCompletedCrystal(14);
     memories.value.focusing = namedWasm.isFocusing();
