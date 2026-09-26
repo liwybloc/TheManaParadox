@@ -21,7 +21,7 @@ function useFallbackImage(event) {
     const image = event.currentTarget;
     if (image.dataset.fallback === "true") return;
     image.dataset.fallback = "true";
-    image.src = "./img/achievement_0.png";
+    image.src = "./assets/achievements/achievement_0.png";
 }
 
 function isBeyondManaCircle(achievement) {
@@ -41,7 +41,7 @@ function isBeyondManaCircle(achievement) {
             <template v-if="!isBeyondManaCircle(achievement)">
             <img
                 class="achievement-art"
-                :src="`./img/achievement_${achievement.number}.png`"
+                :src="`./assets/achievements/achievement_${achievement.number}.png`"
                 alt=""
                 @error="useFallbackImage"
             />

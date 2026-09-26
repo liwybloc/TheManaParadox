@@ -1,39 +1,6 @@
 <script setup>
-
-import { ref, onMounted, onBeforeUnmount, defineProps, watch, nextTick } from 'vue';
-
-const props = defineProps({
+defineProps({
     activeSubtab: { type: String, required: true },
-});
-
-const source = document.getElementById('abyss-vortex');
-const target = ref(null);
-let updateTarget;
-
-watch(() => props.activeSubtab, async () => {
-    await nextTick();
-    if (updateTarget) updateTarget();
-});
-
-onMounted(() => {
-  updateTarget = () => {
-    if (!source || !target.value) return;
-    const rect = source.getBoundingClientRect();
-        const size = Math.min(window.innerWidth, window.innerHeight) * 0.6528;
-        const centerY = Math.min(window.innerHeight * 0.58, 520);
-        target.value.style.left = `${rect.left + (rect.width - size) / 2}px`;
-        target.value.style.top = `${rect.top + centerY - size / 2}px`;
-        target.value.style.width = `${size}px`;
-        target.value.style.height = `${size}px`;
-    };
-    updateTarget();
-    window.addEventListener('scroll', updateTarget, { passive: true });
-    window.addEventListener('resize', updateTarget);
-});
-onBeforeUnmount(() => {
-    if (!updateTarget) return;
-    window.removeEventListener('scroll', updateTarget);
-    window.removeEventListener('resize', updateTarget);
 });
 
 function completeBeta() {
@@ -49,12 +16,15 @@ function completeBeta() {
                 <h1>The Abyss</h1>
                 <p>Click the vortex to delve into the abyss...</p>
 
-                <button ref="target" id="enter-abyss" type="button" aria-label="Enter the Abyss" v-on:click="completeBeta"></button>
             </section>
             <section v-else>
                 <h1>Abyssal Resonance</h1>
             </section>
         </div>
+        <template v-if="activeSubtab === 'depths'">
+            <video id="abyss-vortex" :src="'./assets/videos/abyss-vortex.webm'" loop muted playsinline preload="metadata" aria-hidden="true" hidden></video>
+            <button id="enter-abyss" type="button" aria-label="Enter the Abyss" v-on:click="completeBeta"></button>
+        </template>
     </section>
 </template>
 
@@ -68,7 +38,12 @@ function completeBeta() {
     z-index: 1;
 }
 #enter-abyss {
-    position: fixed;
+    position: absolute;
+    z-index: 1;
+    top: 90px;
+    left: 50%;
+    width: min(65.28vw, 65.28vh, calc(100% - 24px));
+    height: min(65.28vw, 65.28vh, calc(100% - 24px));
     border: 0;
     padding: 0;
     background: none;
@@ -76,6 +51,18 @@ function completeBeta() {
     outline: none;
     appearance: none;
     cursor: pointer;
+    transform: translateX(-50%);
+}
+#abyss-vortex {
+    position: absolute;
+    z-index: 0;
+    top: 90px;
+    left: 50%;
+    width: min(65.28vw, 65.28vh, calc(100% - 24px));
+    height: min(65.28vw, 65.28vh, calc(100% - 24px));
+    pointer-events: none;
+    opacity: 0.96;
+    transform: translateX(-50%);
 }
 #enter-abyss:focus,
 #enter-abyss:focus-visible,

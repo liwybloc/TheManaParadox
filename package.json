@@ -8,6 +8,7 @@
         "watch": "webpack --watch --mode development"
     },
     "devDependencies": {
+        "@napi-rs/canvas": "^1.0.9",
         "@vue/compiler-sfc": "^3.5.42",
         "assemblyscript": "^0.28.8",
         "typescript": "^5.9.2",

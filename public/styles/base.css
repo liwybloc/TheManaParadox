@@ -43,20 +43,6 @@ body.abyss-active #sky {
   width: 100vw;
   height: 100vh;
 }
-#abyss-vortex {
-  position: absolute !important;
-  z-index: 0;
-  top: 30%;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  pointer-events: none;
-  opacity: 0.96;
-}
-body:not(.abyss-active) #abyss-vortex {
-  display: none;
-}
-
 .notification-stack {
   position: fixed;
   z-index: 1000;

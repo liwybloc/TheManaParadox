@@ -1374,7 +1374,7 @@ onBeforeUnmount(() => {
             rel="noopener noreferrer"
             aria-label="Join The Mana Paradox Discord"
             title="Join The Mana Paradox Discord"
-        ><img :src="'./img/discord.png'" alt=""></a>
+        ><img :src="'./assets/images/discord.png'" alt=""></a>
         <button
             class="info-launcher"
             type="button"

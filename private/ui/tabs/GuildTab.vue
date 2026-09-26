@@ -14,7 +14,7 @@ const props = defineProps({
 });
 const emit = defineEmits([
     "apply", "accept", "dismiss-result", "move-item", "equip-item", "unequip-item", "use-item", "sell-item",
-    "sell-all-materials", "sell-spare-equipment", "sell-all-items", "drink-all-potions",
+    "sell-all-materials", "sell-equipment", "sell-all-items", "drink-all-potions",
     "buy-shop-item", "buy-shop-upgrade", "ascend",
 ]);
 const selectedQuest = ref(null);
