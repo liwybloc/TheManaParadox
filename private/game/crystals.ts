@@ -299,7 +299,6 @@ export function applyCrystalCostModifiers(cost: i32): void {
     if (!isCostGrowthCrystalActive()) return;
     copyInto(scratch.productionModifier, crystalEffectHandle(7, 0));
     subInto(scratch.currencyGain, player.statistics_gameTimeThisCondense, player.timeBeforeProducerBought);
-    divUS(scratch.currencyGain, 1000);
     powUS(scratch.productionModifier, scratch.currencyGain);
     mulUS(cost, scratch.productionModifier);
 }
