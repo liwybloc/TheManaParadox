@@ -551,15 +551,24 @@ export function sellInventoryItem(position: i32, itemId: i32): i32 {
 
 export function sellAllInventoryItems(includePotions: bool): i32 {
     const soldFullInventory = includePotions && isInventoryFull();
+    const coins = sellInventoryItems(true, includePotions, includePotions);
+    if (soldFullInventory) unlockTierOneAchievement(34);
+    return coins;
+}
+
+export function sellSpareEquipment(): i32 {
+    return sellInventoryItems(false, false, true);
+}
+
+function sellInventoryItems(includeMaterials: bool, includePotions: bool, includeArmor: bool): i32 {
     let coins: i32 = 0;
     for (let position: i32 = 0; position < INVENTORY_SIZE; position++) {
         const item = inventorySlots[position];
         if (!isInventoryItem(item)) continue;
         const containedItem = item === INVENTORY_PACKAGE ? inventoryMetadata[position] : item;
-        if (!includePotions && (isPotion(containedItem) || isArmor(containedItem))) continue;
+        if (isPotion(containedItem) ? !includePotions : isArmor(containedItem) ? !includeArmor : !includeMaterials) continue;
         coins += sellInventoryItem(position, item);
     }
-    if (soldFullInventory) unlockTierOneAchievement(34);
     return coins;
 }
 
@@ -910,6 +919,7 @@ function finishQuest(victory: bool): void {
         if (questRank(completedSlot) >= 2 && !player.combatUsedNonFreeze) unlockTierOneAchievement(32);
         const unlockedDRankAchievement = questRank(completedSlot) >= 2 && unlockTierOneAchievement(39);
         if (questRank(completedSlot) >= 3) unlockTierOneAchievement(49);
+        if (questRank(completedSlot) >= 4) unlockTierOneAchievement(54);
         lastCompletedQuestDefinition = completedQuest;
         if (completedSlot >= 0 && completedSlot < QUEST_SLOT_COUNT) questSlotLocked[completedSlot] = 1;
         awardQuestRewards(completedQuest);

@@ -24,6 +24,7 @@ import { hasGuildShopUpgrade } from "../guild/guild.js";
 import { equipmentManaProductionMultiplier } from "../guild/equipment.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
+import { remembrance_manaGainModifiers } from "./remembrance.js";
 
 declare const player: Player;
 declare const scratch: Scratch;
@@ -74,7 +75,9 @@ export function gainProductionCurrency(currency: i32, amount: i32): void {
 function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: bool): void {
     if (currency === player.mana) {
         copyInto(scratch.currencyGain, amount);
+        
         applyManaGainModifiers(scratch.currencyGain);
+        
         if (trackProductionRate) {
             copyInto(scratch.manaPerSecond, scratch.currencyGain);
             mulUS(scratch.manaPerSecond, scratch.updatesPerSecond);
@@ -82,7 +85,9 @@ function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: b
             divUS(scratch.manaPerSecond, scratch.updatesPerSecond);
             copyInto(scratch.currencyGain, scratch.manaPerSecond);
         }
+        
         addUS(currency, scratch.currencyGain);
+        
         if (!isCrystalActive()) addUS(player.statistics_totalManaProduced, scratch.currencyGain);
         if (trackProductionRate) {
             copyInto(scratch.manaPerSecond, scratch.currencyGain);
@@ -96,9 +101,12 @@ function gainCurrencyInternal(currency: i32, amount: i32, trackProductionRate: b
                 copyInto(scratch.oomPerSecond, scratch.productionModifier);
             }
         }
+        
         clampManaToInfinityBoundary();
-        clampManaToActiveCrystalGoal();
+        
         if (!isCrystalActive()) updateHighestManaReached();
+        else clampManaToActiveCrystalGoal();
+
         checkManaAchievements();
         return;
     }
@@ -124,6 +132,7 @@ export function applyManaGainModifiers(amount: i32): void {
         mulUS(amount, scratch.productionModifier);
     }
     applyCrystalManaGainModifiers(amount);
+    remembrance_manaGainModifiers(amount);
 }
 
 export function clampManaToInfinityBoundary(): void {

@@ -3,7 +3,7 @@ import { hasTierOneAchievement, unlockTierOneAchievement } from "./achievements.
 import { isQuestActive } from "../guild/guild.js";
 import { isCrystalActive } from "./crystals.js";
 import { hasMemoryMilestone } from "./memories.js";
-import { applyRemembranceRespec } from "./remembrance.js";
+import { applyRemembranceRespec, remembrance_condensedManaModifiers } from "./remembrance.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -133,6 +133,7 @@ export function refreshCondenseGain(): void {
     if (hasTierOneAchievement(18)) mulUS(scratch.condenseGain, 2);
     if (hasTierOneAchievement(40)) mulUS(scratch.condenseGain, 2);
     if (hasMemoryMilestone(1)) mulUS(scratch.condenseGain, 2);
+    remembrance_condensedManaModifiers(scratch.condenseGain);
 }
 
 export function calculateCondenseGain(): bool {

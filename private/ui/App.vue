@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { HANDLES } from "@game/core/player.js";
 import { SCRATCH_HANDLES } from "@game/core/scratch.js";
 import { ACHIEVEMENTS } from "@game/game/achievements.js";
@@ -18,7 +18,7 @@ import { AUTOCASTER_HANDLES } from "@game/guild/autocasters.js";
 import { castAll, condense, enterCrystal as enterCrystalAction, escapeCrystal as escapeCrystalAction, focus as focusAction, increaseMatrix as increaseMatrixAction, sealMeridians as sealMeridiansAction, sealedMeridianResetNoGain as sealedMeridianResetNoGainAction, shatterCrystal as shatterCrystalAction, subscribeToCondense, subscribeToMemoryGain } from "@game/systems/actions.js";
 import { exportSave, importSave, resetGame as resetGameData, saveGame } from "@game/systems/save.js";
 import { getUpdateRate, isOfflineProgressEnabled, setOfflineProgressEnabled, setUpdateRate, skipTimeSimulation, speedUpTimeSimulation, subscribeToTimeSimulation } from "@game/systems/tick.js";
-import { setStarManaProgress, setStarsAnimated as applyStarsAnimated, setStarsVisible as applyStarsVisible, starsAnimated as loadStarsAnimated, starsVisible as loadStarsVisible } from "@game/systems/background.js";
+import { setAbyssActive, setAbyssVortexActive, setStarManaProgress, setStarsAnimated as applyStarsAnimated, setStarsVisible as applyStarsVisible, starsAnimated as loadStarsAnimated, starsVisible as loadStarsVisible } from "@game/systems/background.js";
 import { formatCompletionTime, formatCrystalGoal, formatDecimal, formatDecimalCompact, formatDecimals } from "@game/ui/formatting.js";
 import { namedWasm } from "@generated/_wasm$globals.js";
 import GameHeader from "./components/GameHeader.vue";
@@ -42,6 +42,7 @@ import MessageTicker from "./components/MessageTicker.vue";
 import ManaCircleExpansion from "./components/ManaCircleExpansion.vue";
 import { showNotification } from "./notifications.js";
 import { createGlitchPositions, renderGlitchText } from "./textoptions.js";
+import AbyssTab from "./tabs/AbyssTab.vue";
 
 function tabDefinition(tabId) {
     return TABS.find((tab) => tab.id === tabId);
@@ -89,6 +90,7 @@ const manaPerSecond = ref("0.00");
 const expCostIncreasesAt = ref("10,000");
 const oomPerSecond = ref("0.00");
 const showOoMPerSecond = ref(false);
+const abyssUnlocked = ref(false);
 const condensedUpgrades = ref(CONDENSED_UPGRADES.map((upgrade, index) => ({
     ...upgrade,
     index,
@@ -288,6 +290,7 @@ const visibleTabs = computed(() => TABS.filter((tab) => {
     if (tab.requiresQuest && !questActive.value) return false;
     if (tab.requiresAutocasters && !autocastersUnlocked.value) return false;
     if (tab.requiresCrystals && !crystalsUnlocked.value) return false;
+    if (tab.requiresAbyss && !abyssUnlocked.value) return false;
     return true;
 }).map((tab) => ({
     ...tab,
@@ -297,6 +300,17 @@ const visibleTabs = computed(() => TABS.filter((tab) => {
         && (!subtab.requiresLibrary || libraryUnlocked.value)
     ),
 })));
+
+watch(
+    [activeTab, activeSubtab],
+    ([tab, subtab]) => {
+        const abyss = tab === "abyss";
+        document.body.classList.toggle("abyss-active", abyss);
+        setAbyssActive(abyss);
+        setAbyssVortexActive(abyss && subtab === "depths");
+    },
+    { immediate: true },
+);
 
 function displayedItemDefinition(itemId) {
     const definition = INVENTORY_ITEMS_BY_ID.get(itemId);
@@ -423,7 +437,7 @@ function updateDisplay(timestamp) {
             }
         }
         updateRemembranceGlitch(timestamp);
-        if (timestamp - lastFastUiUpdate >= FAST_UI_INTERVAL) {
+        if (timestamp - lastFastUiUpdate >= renderUpdateRate.value) {
             lastFastUiUpdate = timestamp;
             updateFastDisplay();
         }
@@ -451,6 +465,7 @@ function updateGlobalDisplay() {
     crystalsUnlocked.value = namedWasm.hasAscendedCondensedEffect(19);
     memoriesUnlocked.value = namedWasm.hasCompletedCrystal(2);
     libraryUnlocked.value = namedWasm.hasMemoryMilestone(75);
+    abyssUnlocked.value = namedWasm.hasCompletedCrystal(14);
     memories.value.focusing = namedWasm.isFocusing();
     if (manaCircle.value > 0 && canCondense.value) {
         namedWasm.refreshCondenseGain();
@@ -571,7 +586,8 @@ function updateAutocastersDisplay() {
             return {
                 ...task,
                 casters: assignedCasters,
-                effectiveCooldown: task.cooldown / tierSpeed / achievementSpeed / Math.max(1, assignedCasters.length),
+                effectiveCooldown: task.cooldown / tierSpeed / achievementSpeed
+                    / (2 ** Math.max(0, assignedCasters.length - 1)),
                 castsMax: task.id < 5 ? namedWasm.producerAutocasterCastsMax(task.id) : false,
                 purifyMinimum: task.id === 6 ? namedWasm.readString(AUTOCASTER_HANDLES.purifyMinimum) : "1.01",
                 condenseGain: task.id === 5 ? namedWasm.readString(AUTOCASTER_HANDLES.condenseGain) : "1",
@@ -1206,6 +1222,10 @@ function sellAllMaterials() {
     namedWasm.sellAllInventoryItems(false);
 }
 
+function sellSpareEquipment() {
+    namedWasm.sellSpareEquipment();
+}
+
 function sellAllItems() {
     namedWasm.sellAllInventoryItems(true);
 }
@@ -1421,8 +1441,8 @@ onBeforeUnmount(() => {
                 :oom-per-second="oomPerSecond"
                 :show-oo-m-per-second="showOoMPerSecond"
                 :exp-cost-increases-at="expCostIncreasesAt"
-                :hide-cost-warning="activeCrystal === 9"
-                :producers-only="activeCrystal === 2"
+                :hide-cost-warning="activeCrystal === 9 || activeCrystal === 14"
+                :producers-only="activeCrystal === 2 || activeCrystal === 14"
                 :crystal-puzzle-reset="activeCrystal >= 11"
                 @buy="buyTierOne"
                 @empower="empowerTierOne"
@@ -1456,6 +1476,10 @@ onBeforeUnmount(() => {
                 @export-remembrance="exportRemembrance"
                 @import-remembrance="importRemembrance"
             />
+            <AbyssTab
+                v-else-if="activeTab === 'abyss'"
+                :active-subtab="activeSubtab"
+            />
             <ManaCircleTab
                 v-else-if="activeTab === 'manacircle'"
                 :active-subtab="activeSubtab"
@@ -1486,6 +1510,7 @@ onBeforeUnmount(() => {
                 @use-item="useInventoryItem"
                 @sell-item="sellInventoryItem"
                 @sell-all-materials="sellAllMaterials"
+                @sell-equipment="sellSpareEquipment"
                 @sell-all-items="sellAllItems"
                 @drink-all-potions="drinkAllPotions"
                 @buy-shop-item="buyShopItem"

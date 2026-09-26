@@ -10,13 +10,12 @@ export interface CrystalDefinition {
     readonly effects: readonly string[];
     readonly rewards: readonly string[];
     readonly possible?: boolean;
-    readonly locked?: boolean;
 }
 
 const CRYSTAL_GOAL_EXPONENTS = [
     1600, 4500, 450, 40, 200,
     95, 11200, 11000, 8.477121254719663, 24250,
-    8600, 1200, 23000, 650000, 1000000,
+    8600, 1200, 23000, 2400, 2100,
 ] as const;
 
 export const CRYSTAL_GOALS: readonly i32[] = CRYSTAL_GOAL_EXPONENTS.map((exponent) =>
@@ -38,7 +37,7 @@ export const CRYSTALS: readonly CrystalDefinition[] = [
     { id: 12, color: "#f5a83c", variant: 2, effects: ["Boosting each producer will modify the multipliers of other producers by ×0.1"], rewards: ["Per-boost multiplier is increased by +0.05×"] },
     { id: 13, color: "#f5c76f", variant: 3, effects: ["Production quickly drops towards ^0 and resets to ^1 when anything is purchased"], rewards: ["Gain a small boost to all multipliers after buying producers"] },
     { id: 14, color: "#fae5b5", variant: 4, effects: ["Buying any producer increases the cost of all other producers"], rewards: ["Buying any producer reduces the cost of the previous producer by ×0.9"] },
-    { id: 15, color: "#ffffff", variant: 5, effects: ["Effects of all previous crystals are applied"], rewards: ["Unlock the Abyss"] },
+    { id: 15, color: "#ffffff", variant: 6, effects: ["Most effects of all previous crystals are applied"], rewards: ["Unlock the Abyss"] },
 ];
 
 const unusedHandle = createZero();
@@ -72,7 +71,7 @@ const crystalEffectHandles = [
     // crystal 14 effects: unused placeholders
     unusedHandle, unusedHandle, unusedHandle,
     // crystal 15 effects: unused placeholders
-    unusedHandle, unusedHandle, unusedHandle,
+    createDecimal(1, 0, 10), unusedHandle, unusedHandle,
 ];
 const crystalRewardHandles = [
     // crystal 1 rewards: global mana production multiplier
@@ -118,7 +117,6 @@ let activeCrystal: i32 = -1;
 const completedCrystals = new StaticArray<u8>(CRYSTAL_COUNT);
 const fastestCrystalShatters = new StaticArray<f64>(CRYSTAL_COUNT);
 const possibleCrystals = new StaticArray<u8>(CRYSTAL_COUNT);
-const permanentlyLockedCrystals = new StaticArray<u8>(CRYSTAL_COUNT);
 const crystalGoalHandles = new StaticArray<i32>(CRYSTAL_COUNT);
 const effectHandles = new StaticArray<i32>(CRYSTAL_COUNT * CRYSTAL_VALUE_COUNT);
 const rewardHandles = new StaticArray<i32>(CRYSTAL_COUNT * CRYSTAL_VALUE_COUNT);
@@ -127,7 +125,6 @@ export function initializeCrystal(
     index: i32,
     goalHandle: i32,
     possible: bool,
-    permanentlyLocked: bool,
     effect0: i32,
     effect1: i32,
     effect2: i32,
@@ -135,10 +132,8 @@ export function initializeCrystal(
     reward1: i32,
     reward2: i32,
 ): void {
-    if (index < 0 || index >= CRYSTAL_COUNT) return;
     crystalGoalHandles[index] = goalHandle;
     possibleCrystals[index] = possible ? 1 : 0;
-    permanentlyLockedCrystals[index] = permanentlyLocked ? 1 : 0;
     const offset = index * CRYSTAL_VALUE_COUNT;
     effectHandles[offset] = effect0;
     effectHandles[offset + 1] = effect1;
@@ -149,16 +144,14 @@ export function initializeCrystal(
 }
 
 export function crystalGoalHandle(index: i32): i32 {
-    return index >= 0 && index < CRYSTAL_COUNT ? crystalGoalHandles[index] : 0;
+    return crystalGoalHandles[index];
 }
 
 export function crystalEffectHandle(index: i32, slot: i32): i32 {
-    if (index < 0 || index >= CRYSTAL_COUNT || slot < 0 || slot >= CRYSTAL_VALUE_COUNT) return 0;
     return effectHandles[index * CRYSTAL_VALUE_COUNT + slot];
 }
 
 export function crystalRewardHandle(index: i32, slot: i32): i32 {
-    if (index < 0 || index >= CRYSTAL_COUNT || slot < 0 || slot >= CRYSTAL_VALUE_COUNT) return 0;
     return rewardHandles[index * CRYSTAL_VALUE_COUNT + slot];
 }
 
@@ -174,44 +167,44 @@ export function isCrystalActive(): bool {
     return activeCrystal >= 0;
 }
 
-export function isSpecificCrystalActive(index: i32): bool {
-    return activeCrystal === index;
+export function isSpecificCrystalActive(index: i32, or15: bool = true): bool {
+    return activeCrystal === index || (or15 && activeCrystal === 14);
 }
 
 export function isProducerOnlyCrystalActive(): bool {
-    return activeCrystal === 2 || activeCrystal === 14;
+    return isSpecificCrystalActive(2);
 }
 
 export function isManaAbsorberOnlyCrystalActive(): bool {
-    return activeCrystal === 3 || activeCrystal === 14;
+    return isSpecificCrystalActive(3);
 }
 
 export function isPotionDisabledCrystalActive(): bool {
-    return activeCrystal === 6 || activeCrystal === 14;
+    return isSpecificCrystalActive(6);
 }
 
 export function isCostGrowthCrystalActive(): bool {
-    return activeCrystal === 7 || activeCrystal === 14;
+    return isSpecificCrystalActive(7, false);
 }
 
 export function isAllMultipliersDisabledCrystalActive(): bool {
-    return activeCrystal === 8 || activeCrystal === 14;
+    return isSpecificCrystalActive(8, false);
 }
 
 export function isAllProducersManaAbsorbersCrystalActive(): bool {
-    return activeCrystal === 10 || activeCrystal === 14;
+    return isSpecificCrystalActive(10);
 }
 
 export function isCrossProducerMultiplierCrystalActive(): bool {
-    return activeCrystal === 11 || activeCrystal === 14;
+    return isSpecificCrystalActive(11);
 }
 
 export function isProductionDecayCrystalActive(): bool {
-    return activeCrystal === 12 || activeCrystal === 14;
+    return isSpecificCrystalActive(12);
 }
 
 export function isCrossProducerCostCrystalActive(): bool {
-    return activeCrystal === 13 || activeCrystal === 14;
+    return isSpecificCrystalActive(13);
 }
 
 export function getCrystalStartMana(): i32 {
@@ -220,17 +213,17 @@ export function getCrystalStartMana(): i32 {
         case 3: return crystalEffectHandle(3, 0);
         case 5: return crystalEffectHandle(5, 1);
         case 8: return crystalEffectHandle(8, 0);
+        case 14: return crystalEffectHandle(14, 0);
         default: return 0;
     }
 }
 
 export function isCrystalUnlocked(index: i32): bool {
-    if (index < 0 || index >= CRYSTAL_COUNT || permanentlyLockedCrystals[index] !== 0) return false;
     return index === 0 || hasCompletedCrystal(index - 1);
 }
 
 export function enterCrystal(index: i32): bool {
-    if (!isCrystalUnlocked(index) || activeCrystal >= 0) return false;
+    if (!isCrystalUnlocked(index) || isCrystalActive()) return false;
     activeCrystal = index;
     return true;
 }
@@ -242,35 +235,33 @@ export function escapeCrystal(): bool {
 }
 
 export function hasCompletedCrystal(index: i32): bool {
-    return index >= 0 && index < CRYSTAL_COUNT && completedCrystals[index] !== 0;
+    return completedCrystals[index] !== 0;
 }
 
 export function setCompletedCrystal(index: i32, completed: bool): void {
-    if (index < 0 || index >= CRYSTAL_COUNT) return;
     completedCrystals[index] = completed ? 1 : 0;
 }
 
 export function getFastestCrystalShatter(index: i32): f64 {
-    return index >= 0 && index < CRYSTAL_COUNT ? fastestCrystalShatters[index] : 0;
+    return fastestCrystalShatters[index];
 }
 
 export function setFastestCrystalShatter(index: i32, seconds: f64): void {
-    if (index < 0 || index >= CRYSTAL_COUNT) return;
     fastestCrystalShatters[index] = Math.max(0, seconds);
 }
 
 export function isActiveCrystalGoalReached(): bool {
-    return activeCrystal >= 0 && gte(player.mana, crystalGoalHandle(activeCrystal));
+    return isCrystalActive() && gte(player.mana, crystalGoalHandle(activeCrystal));
 }
 
 export function clampManaToActiveCrystalGoal(): void {
-    if (activeCrystal >= 0 && possibleCrystals[activeCrystal] !== 0 && isActiveCrystalGoalReached()) {
+    if (isCrystalActive() && possibleCrystals[activeCrystal] !== 0 && isActiveCrystalGoalReached()) {
         copyInto(player.mana, crystalGoalHandle(activeCrystal));
     }
 }
 
 export function canShatterActiveCrystal(): bool {
-    return activeCrystal >= 0
+    return isCrystalActive()
         && possibleCrystals[activeCrystal] !== 0
         && isActiveCrystalGoalReached();
 }
@@ -286,7 +277,7 @@ export function shatterActiveCrystal(): bool {
 }
 
 export function applyCrystalManaGainModifiers(amount: i32): void {
-    if (activeCrystal === 0 || activeCrystal === 14) powUS(amount, crystalEffectHandle(0, 0));
+    if (isSpecificCrystalActive(0)) powUS(amount, crystalEffectHandle(0, 0));
     if (hasCompletedCrystal(0)) mulUS(amount, crystalRewardHandle(0, 0));
     if (hasCompletedCrystal(5)) mulUS(amount, crystalRewardHandle(5, 0));
 }
@@ -300,7 +291,7 @@ export function applyCrystal13ProductionDecay(amount: i32): void {
 }
 
 export function applyCrystalMultModifiers(amount: i32): void {
-    if (activeCrystal === 5 || activeCrystal === 14) powUS(amount, crystalEffectHandle(5, 0));
+    if (isSpecificCrystalActive(5)) powUS(amount, crystalEffectHandle(5, 0));
 }
 
 export function applyCrystalCostModifiers(cost: i32): void {
@@ -332,7 +323,6 @@ for (let index = 0; index < CRYSTALS.length; index++) {
         index,
         CRYSTAL_GOALS[index],
         CRYSTALS[index].possible ?? true,
-        CRYSTALS[index].locked ?? false,
         crystalEffectHandles[offset],
         crystalEffectHandles[offset + 1],
         crystalEffectHandles[offset + 2],

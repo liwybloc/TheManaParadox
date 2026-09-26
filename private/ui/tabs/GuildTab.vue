@@ -14,7 +14,7 @@ const props = defineProps({
 });
 const emit = defineEmits([
     "apply", "accept", "dismiss-result", "move-item", "equip-item", "unequip-item", "use-item", "sell-item",
-    "sell-all-materials", "sell-all-items", "drink-all-potions",
+    "sell-all-materials", "sell-spare-equipment", "sell-all-items", "drink-all-potions",
     "buy-shop-item", "buy-shop-upgrade", "ascend",
 ]);
 const selectedQuest = ref(null);
@@ -265,6 +265,7 @@ onBeforeUnmount(() => {
             </div>
             <div class="inventory-bulk-actions">
                 <button type="button" @click="$emit('sell-all-materials')">Sell All Materials</button>
+                <button type="button" @click="$emit('sell-equipment')">Sell Spare Equipment</button>
                 <button type="button" @click="$emit('sell-all-items')">Sell All Items</button>
                 <button type="button" @click="$emit('drink-all-potions')">Drink All Potions</button>
             </div>

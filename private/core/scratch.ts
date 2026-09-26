@@ -28,6 +28,8 @@ export class Scratch {
     crystal12Power: i32 = 0;
     crystal13Elapsed: i32 = 0;
     crystal13Power: i32 = 0;
+    crystal13CostBoostTotal: i32 = 0;
+    crystal13CostPower: i32 = 0;
     crystal13RewardPurchases: i32 = 0;
     crystal13RewardPower: i32 = 0;
     remembranceCostFormat: i32 = 0;
@@ -36,7 +38,10 @@ export class Scratch {
 
     D10000: i32 = 0;
     D0_1: i32 = 0;
+    D0_95: i32 = 0;
+    D1_1: i32 = 0;
     D1_25: i32 = 0;
+    D1_04: i32 = 0;
 }
 
 const Z = createZero;
@@ -70,6 +75,8 @@ export const SCRATCH_HANDLES: Scratch = {
     crystal12Power: Z(),
     crystal13Elapsed: Z(),
     crystal13Power: Z(),
+    crystal13CostBoostTotal: Z(),
+    crystal13CostPower: Z(),
     crystal13RewardPurchases: Z(),
     crystal13RewardPower: Z(),
     remembranceCostFormat: Z(),
@@ -78,7 +85,10 @@ export const SCRATCH_HANDLES: Scratch = {
     
     D10000: D(1, 0, 10000),
     D0_1: D(1, 0, 0.1),
+    D0_95: D(1, 0, 0.95),
+    D1_1: D(1, 0, 1.1),
     D1_25: D(1, 0, 1.25),
+    D1_04: D(1, 0, 1.04),
 };
 
 /** [WASM] */
@@ -93,9 +103,10 @@ export function initializeScratch(
     memoryProductionMultiplier: i32, memoryProductionExponent: i32, memoryCrystalMultiplier: i32,
     crystal11HighestMultiplier: i32, crystal11TemporaryMultiplier: i32, crystal11CbrtExponent: i32,
     expCostIncreasesAt: i32, crystal12BoostTotal: i32, crystal12Power: i32, crystal13Elapsed: i32,
-    crystal13Power: i32, crystal13RewardPurchases: i32, crystal13RewardPower: i32,
+    crystal13Power: i32, crystal13CostBoostTotal: i32, crystal13CostPower: i32,
+    crystal13RewardPurchases: i32, crystal13RewardPower: i32,
     remembranceCostFormat: i32, remembranceCostExponent: i32, remembranceCost: i32,
-    D10000: i32, D0_1: i32, D1_25: i32,
+    D10000: i32, D0_1: i32, D0_95: i32, D1_1: i32, D1_25: i32, D1_04: i32,
 ): void {
     scratch.currencyGain = currencyGain;
     scratch.tierOneSeconds = tierOneSeconds;
@@ -124,6 +135,8 @@ export function initializeScratch(
     scratch.crystal12Power = crystal12Power;
     scratch.crystal13Elapsed = crystal13Elapsed;
     scratch.crystal13Power = crystal13Power;
+    scratch.crystal13CostBoostTotal = crystal13CostBoostTotal;
+    scratch.crystal13CostPower = crystal13CostPower;
     scratch.crystal13RewardPurchases = crystal13RewardPurchases;
     scratch.crystal13RewardPower = crystal13RewardPower;
     scratch.remembranceCostFormat = remembranceCostFormat;
@@ -131,18 +144,22 @@ export function initializeScratch(
     scratch.remembranceCost = remembranceCost;
     scratch.D10000 = D10000;
     scratch.D0_1 = D0_1;
+    scratch.D0_95 = D0_95;
+    scratch.D1_1 = D1_1;
     scratch.D1_25 = D1_25;
+    scratch.D1_04 = D1_04;
 }
 
 /** [/WASM] */
 
 const scratchValues = Object.values(SCRATCH_HANDLES);
 initializeScratch(
-    scratchValues[0], scratchValues[1], scratchValues[2], scratchValues[3], scratchValues[4],
-    scratchValues[5], scratchValues[6], scratchValues[7], scratchValues[8], scratchValues[9],
+    scratchValues[0],  scratchValues[1],  scratchValues[2],  scratchValues[3],  scratchValues[4],
+    scratchValues[5],  scratchValues[6],  scratchValues[7],  scratchValues[8],  scratchValues[9],
     scratchValues[10], scratchValues[11], scratchValues[12], scratchValues[13], scratchValues[14],
     scratchValues[15], scratchValues[16], scratchValues[17], scratchValues[18], scratchValues[19],
     scratchValues[20], scratchValues[21], scratchValues[22], scratchValues[23], scratchValues[24],
     scratchValues[25], scratchValues[26], scratchValues[27], scratchValues[28], scratchValues[29],
     scratchValues[30], scratchValues[31], scratchValues[32], scratchValues[33], scratchValues[34],
+    scratchValues[35], scratchValues[36], scratchValues[37], scratchValues[38], scratchValues[39],
 );

@@ -60,12 +60,15 @@ export const ACHIEVEMENTS = [
 
     { id: "achievement_dontevenlad", circle: 2, number: 45, title: "Don't even joke, lad", description: "Reach 1.00e6767 Mana" },
     { id: "achievement_shattercrystal", circle: 2, number: 46, title: "Shattered Hearts", description: "Shatter a Crystal" },
-    { id: "achievement_get25memories", circle: 2, number: 47, title: "Remembrance", description: "Gain 25 memories" },
+    { id: "achievement_get25memories", circle: 2, number: 47, title: "I miss that kind of Memories", description: "Gain 25 memories" },
     { id: "achievement_defeatctier", circle: 2, number: 50, title: "C your way out of this", description: "Defeat a C tier enemy" },
-
     { id: "achievement_beatcrystal7", circle: 2, number: 51, title: "Keyboard Warrior", description: "Shatter Crystal 7 (Tip: Hold M, X, Y, and press P every few seconds!)" },
+
+    { id: "achievement_remembrance", circle: 2, number: 53, title: "Remembrance", description: "Unlock the Remembrance Upgrade Tree (Memory Milestone 500)"},
+    { id: "achievement_buyapath", circle: 2, number: 54, title: "Oh no not min-maxing!", description: "Purchase Remembrance upgrade 3, 4, or 5 (they aren't unique paths, thankfully!)" },
     { id: "achievement_shatter15crystal", circle: 2, number: 48, title: "Into the Abyss", description: "Shatter the first 15 Crystals" },
     { id: "achievement_loopabyss", circle: 2, number: 49, title: "Déjà vu", description: "Loop the abyss" },
+    { id: "achievement_defeatbtier", circle: 2, number: 55, title: "B yourself!", description: "Defeat a B tier enemy"},
 ];
 
 export const PROGRESSION_ACHIEVEMENT_ORDER = [
@@ -73,12 +76,12 @@ export const PROGRESSION_ACHIEVEMENT_ORDER = [
     14, 15,  9, 10, 20,
     11,  7,  8, 26, 27,
     28, 29, 37, 12, 17,
-    39,  6, 19,
-    36, 52, 38, 42, 23, 24, 41,
+    39,  6, 19, 36, 52,
+    38, 42, 23, 24, 41,
 
     25, 30, 40, 43, 44,
-    45, 46, 47, 51, 50,
-    48, 49,
+    45, 46, 47, 51, 53, 
+    54, 50, 48, 49, 55,
 ];
 
 declare const player: Player;
@@ -87,7 +90,7 @@ declare const scratch: Scratch;
 /** [WASM] */
 
 const TIER_ONE_ACHIEVEMENT_COUNT: i32 = 5;
-const ACHIEVEMENT_COUNT: i32 = 52;
+const ACHIEVEMENT_COUNT: i32 = 55;
 const unlockedAchievements = new StaticArray<u8>(ACHIEVEMENT_COUNT);
 let tierOneRewardsChanged = false;
 let circularHabitsRewardPending = false;

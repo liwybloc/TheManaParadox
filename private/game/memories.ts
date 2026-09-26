@@ -1,5 +1,6 @@
 import { addUS, copyInto, divUS, gt, log10Into, mulUS, powInto, subUS, toNumber, writeNumber } from "../core/break_eternity.js";
 import { crystalEffectHandle, crystalRewardHandle, hasCompletedCrystal, isCrystalActive, isSpecificCrystalActive } from "./crystals.js";
+import { unlockTierOneAchievement } from "./achievements.js";
 import type { Player } from "../core/player.js";
 import type { Scratch } from "../core/scratch.js";
 
@@ -17,7 +18,7 @@ export const MEMORY_MILESTONE_REWARDS: Readonly<Record<number, string>> = {
     75: "Unlock the Guild's library",
     100: "You gain ×10 more mana inside of crystals",
     250: "Increase start of exponential cost scaling of producers based on memories (Currently: +{memoryCostStartAdd})",
-    500: "Unlock Remembrance upgrades",
+    500: "Unlock Remembrance Upgrade Tree",
 };
 
 declare const scratch: Scratch;
@@ -34,6 +35,7 @@ export function getTotalMemories(): i32 {
 
 export function setTotalMemories(value: i32): void {
     totalMemories = value < 0 ? 0 : value;
+    if (totalMemories >= 500) unlockTierOneAchievement(52);
 }
 
 export function hasMemoryMilestone(requirement: i32): bool {
@@ -70,7 +72,6 @@ export function focusGameSpeedMultiplier(): i32 {
     } else {
         writeNumber(scratch.manaExponent, 0);
     }
-    // Keep scratch.currencyGain available for the active currency calculation.
     writeNumber(scratch.tierOneProduction, -0.5);
     subUS(scratch.tierOneProduction, scratch.manaExponent);
     powInto(scratch.manaExponent, hasMemoryMilestone(10) ? 95 : 100, scratch.tierOneProduction);
@@ -133,9 +134,8 @@ export function resolveFocusedCondense(roll: f64, chance: f64): i32 {
     if (memoriesGained === 0) return 0;
     memoriesGained *= memoryGainMultiplier();
     totalMemories += memoriesGained;
+    if (totalMemories >= 500) unlockTierOneAchievement(52);
     return memoriesGained;
 }
 
 /** [/WASM] */
-
-

@@ -28,6 +28,7 @@ const UNASSIGNED: i32 = -1;
 const tiers = new StaticArray<i32>(MAX_AUTOCASTERS);
 const nameIndices = new StaticArray<i32>(MAX_AUTOCASTERS);
 const assignments = new StaticArray<i32>(MAX_AUTOCASTERS);
+const assignedCasterCounts = new StaticArray<i32>(AUTOCASTER_TASK_COUNT);
 const rosterPositions = new StaticArray<i32>(MAX_AUTOCASTERS);
 const actionCooldowns = new StaticArray<f64>(MAX_AUTOCASTERS);
 const wageTimers = new StaticArray<f64>(MAX_AUTOCASTERS);
@@ -149,6 +150,7 @@ export function hireAutocaster(tier: i32, nameIndex: i32): i32 {
     tiers[index] = tier;
     nameIndices[index] = nameIndex;
     assignments[index] = UNASSIGNED;
+    refreshAssignedCasterCounts();
     rosterPositions[index] = position;
     actionCooldowns[index] = 0;
     wageTimers[index] = 0;
@@ -164,12 +166,14 @@ export function assignAutocaster(caster: i32, task: i32): bool {
         const position = firstAvailableRosterPosition();
         if (position < 0) return false;
         assignments[caster] = UNASSIGNED;
+        refreshAssignedCasterCounts();
         rosterPositions[caster] = position;
         actionCooldowns[caster] = 0;
         return true;
     }
     if (!isValidTask(task) || tiers[caster] < minimumTierForTask(task)) return false;
     assignments[caster] = task;
+    refreshAssignedCasterCounts();
     rosterPositions[caster] = UNASSIGNED;
     actionCooldowns[caster] = 0;
     return true;
@@ -230,9 +234,14 @@ export function setAutocasterTier(index: i32, value: i32): void {
     if (!isValidCaster(index)) return;
     tiers[index] = value >= 1 && value <= 3 ? value : 0;
     if (tiers[index] === 0) clearCaster(index);
+    else refreshAssignedCasterCounts();
 }
 export function setAutocasterNameIndex(index: i32, value: i32): void { if (isValidCaster(index)) nameIndices[index] = value; }
-export function setAutocasterAssignment(index: i32, value: i32): void { if (isValidCaster(index)) assignments[index] = value; }
+export function setAutocasterAssignment(index: i32, value: i32): void {
+    if (!isValidCaster(index)) return;
+    assignments[index] = value;
+    refreshAssignedCasterCounts();
+}
 export function setAutocasterRosterPosition(index: i32, value: i32): void { if (isValidCaster(index)) rosterPositions[index] = value; }
 export function setAutocasterActionCooldown(index: i32, value: f64): void { if (isValidCaster(index)) actionCooldowns[index] = Math.max(0, value); }
 export function setAutocasterWageTimer(index: i32, value: f64): void { if (isValidCaster(index)) wageTimers[index] = Math.max(0, value); }
@@ -288,16 +297,21 @@ function updateAction(caster: i32, task: i32, deltaSeconds: f64): void {
     actionCooldowns[caster] = baseCooldownForTask(task)
         / tierSpeed
         / achievementSpeed
-        / assignedCasterCount(task);
+        / (2 ** (assignedCasterCount(task) - 1));
     recordTaskWork(task);
 }
 
 function assignedCasterCount(task: i32): i32 {
-    let count: i32 = 0;
+    return task >= 0 && task < AUTOCASTER_TASK_COUNT ? assignedCasterCounts[task] : 1;
+}
+
+function refreshAssignedCasterCounts(): void {
+    for (let task: i32 = 0; task < AUTOCASTER_TASK_COUNT; task++) assignedCasterCounts[task] = 1;
     for (let caster: i32 = 0; caster < MAX_AUTOCASTERS; caster++) {
-        if (isAutocasterHired(caster) && assignments[caster] === task) count++;
+        if (!isAutocasterHired(caster)) continue;
+        const task = assignments[caster];
+        if (task >= 0 && task < AUTOCASTER_TASK_COUNT) assignedCasterCounts[task]++;
     }
-    return count > 0 ? count : 1;
 }
 
 function hasTierThreeCasterAssigned(task: i32): bool {
@@ -327,6 +341,7 @@ function clearCaster(caster: i32): void {
     actionCooldowns[caster] = 0;
     wageTimers[caster] = 0;
     workedThisPeriod[caster] = 0;
+    refreshAssignedCasterCounts();
 }
 
 function firstAvailableCaster(): i32 {
@@ -373,3 +388,4 @@ initializeAutocasterSettingHandles(
     AUTOCASTER_HANDLES.sealedMeridiansMaximum,
     AUTOCASTER_HANDLES.crystalMatricesMaximum,
 );
+refreshAssignedCasterCounts();

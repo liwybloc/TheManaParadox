@@ -422,6 +422,298 @@ function resolveReward(crystal, reward) {
     clip-path: polygon(37% 18%, 60% 7%, 49% 48%, 36% 64%);
 }
 
+.crystal-variant-6 .crystal-display {
+    isolation: isolate;
+}
+
+.crystal-variant-6 .crystal-display::before {
+    content: "";
+    position: absolute;
+    z-index: -3;
+    top: 50%;
+    left: 50%;
+    width: 175px;
+    height: 175px;
+
+    border-radius: 50%;
+
+    background:
+        radial-gradient(
+            circle,
+            color-mix(in srgb, var(--crystal-color), white 30%) 0%,
+            color-mix(in srgb, var(--crystal-color), transparent 55%) 30%,
+            transparent 70%
+        );
+
+    filter: blur(10px);
+
+    transform: translate(-50%, -52%);
+    animation: crystal-6-aura 2.8s ease-in-out infinite;
+}
+
+.crystal-variant-6 .crystal-display::after {
+    content: "";
+    position: absolute;
+    z-index: -2;
+    top: 50%;
+    left: 50%;
+
+    width: 154px;
+    height: 154px;
+
+    border: 2px solid
+        color-mix(in srgb, var(--crystal-color), white 32%);
+
+    border-radius: 50%;
+
+    box-shadow:
+        0 0 8px
+            color-mix(in srgb, var(--crystal-color), transparent 20%),
+        inset 0 0 8px
+            color-mix(in srgb, var(--crystal-color), transparent 40%);
+
+    clip-path: polygon(
+        0 0,
+        42% 0,
+        42% 8%,
+        58% 8%,
+        58% 0,
+        100% 0,
+        100% 42%,
+        92% 42%,
+        92% 58%,
+        100% 58%,
+        100% 100%,
+        58% 100%,
+        58% 92%,
+        42% 92%,
+        42% 100%,
+        0 100%,
+        0 58%,
+        8% 58%,
+        8% 42%,
+        0 42%
+    );
+
+    transform: translate(-50%, -52%);
+    animation: crystal-6-ring 9s linear infinite;
+}
+
+.crystal-variant-6 .crystal-shape {
+    z-index: 2;
+
+    inset: 2px 14px 15px;
+
+    clip-path: polygon(
+        50% 0%,
+        71% 13%,
+        91% 38%,
+        82% 76%,
+        63% 91%,
+        50% 100%,
+        35% 91%,
+        15% 75%,
+        7% 38%,
+        29% 13%
+    );
+
+    background:
+        linear-gradient(
+            115deg,
+            color-mix(in srgb, var(--crystal-color), white 26%),
+            var(--crystal-color) 34%,
+            color-mix(in srgb, var(--crystal-color), #140524 28%) 72%,
+            color-mix(in srgb, var(--crystal-color), white 14%)
+        );
+
+    filter:
+        drop-shadow(
+            0 0 7px
+            color-mix(in srgb, var(--crystal-color), white 30%)
+        )
+        drop-shadow(
+            0 0 19px
+            color-mix(in srgb, var(--crystal-color), transparent 18%)
+        )
+        drop-shadow(
+            0 0 32px
+            color-mix(in srgb, var(--crystal-color), transparent 50%)
+        );
+
+    animation: crystal-6-float 3.2s ease-in-out infinite;
+}
+
+.crystal-variant-6 .facet-center {
+    clip-path: polygon(
+        50% 0,
+        69% 25%,
+        62% 70%,
+        50% 100%,
+        38% 70%,
+        31% 25%
+    );
+
+    background:
+        linear-gradient(
+            180deg,
+            color-mix(in srgb, var(--crystal-color), white 52%),
+            color-mix(in srgb, var(--crystal-color), white 15%) 38%,
+            var(--crystal-color) 72%,
+            color-mix(in srgb, var(--crystal-color), #11001d 24%)
+        );
+}
+
+.crystal-variant-6 .facet-left {
+    clip-path: polygon(
+        7% 38%,
+        50% 0,
+        38% 70%,
+        50% 100%,
+        35% 91%,
+        15% 75%
+    );
+
+    background:
+        linear-gradient(
+            145deg,
+            color-mix(in srgb, var(--crystal-color), #050814 45%),
+            color-mix(in srgb, var(--crystal-color), #19102b 20%)
+        );
+}
+
+.crystal-variant-6 .facet-right {
+    clip-path: polygon(
+        50% 0,
+        91% 38%,
+        82% 76%,
+        63% 91%,
+        50% 100%,
+        62% 70%,
+        69% 25%
+    );
+
+    background:
+        linear-gradient(
+            155deg,
+            color-mix(in srgb, var(--crystal-color), white 34%),
+            color-mix(in srgb, var(--crystal-color), #37114d 20%)
+        );
+}
+
+.crystal-variant-6 .crystal-shine {
+    z-index: 5;
+
+    clip-path: polygon(
+        34% 16%,
+        48% 5%,
+        44% 56%,
+        31% 70%
+    );
+
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.85),
+            rgba(255, 255, 255, 0.18)
+        );
+
+    filter: blur(0.4px);
+
+    animation: crystal-6-shine 2.4s ease-in-out infinite;
+}
+
+.crystal-variant-6 .crystal-shadow {
+    left: 8%;
+    right: 8%;
+    bottom: 2px;
+
+    height: 30px;
+
+    background:
+        radial-gradient(
+            ellipse,
+            color-mix(in srgb, var(--crystal-color), white 18%),
+            color-mix(in srgb, var(--crystal-color), transparent 45%) 45%,
+            transparent 75%
+        );
+
+    filter: blur(10px);
+
+    animation: crystal-6-shadow 3.2s ease-in-out infinite;
+}
+
+@keyframes crystal-6-ring {
+    from {
+        transform:
+            translate(-50%, -52%)
+            rotate(0deg);
+    }
+
+    to {
+        transform:
+            translate(-50%, -52%)
+            rotate(360deg);
+    }
+}
+
+@keyframes crystal-6-aura {
+    0%,
+    100% {
+        opacity: 0.48;
+        transform:
+            translate(-50%, -52%)
+            scale(0.92);
+    }
+
+    50% {
+        opacity: 0.9;
+        transform:
+            translate(-50%, -52%)
+            scale(1.08);
+    }
+}
+
+@keyframes crystal-6-float {
+    0%,
+    100% {
+        transform:
+            translateY(2px)
+            scale(1);
+    }
+
+    50% {
+        transform:
+            translateY(-5px)
+            scale(1.025);
+    }
+}
+
+@keyframes crystal-6-shadow {
+    0%,
+    100% {
+        opacity: 0.55;
+        transform: scaleX(0.86);
+    }
+
+    50% {
+        opacity: 0.92;
+        transform: scaleX(1.08);
+    }
+}
+
+@keyframes crystal-6-shine {
+    0%,
+    100% {
+        opacity: 0.38;
+        transform: translate(-4px, 3px);
+    }
+
+    50% {
+        opacity: 0.95;
+        transform: translate(4px, -3px);
+    }
+}
+
 .facet-left {
     clip-path: polygon(0 25%, 50% 0, 40% 65%, 50% 100%, 20% 82%);
     background: color-mix(in srgb, var(--crystal-color), #07142e 42%);

@@ -157,7 +157,7 @@ onBeforeUnmount(() => {
             <article v-for="task in autocasters.tasks" :key="task.id" class="autocaster-task-slot" :class="{ occupied: task.casters.length > 0 }" :data-autocaster-task="task.id">
                 <button class="autocaster-settings-button" type="button" aria-label="Auto-caster settings" @click="toggleSettings(task)">⚙︎</button>
                 <button class="autocaster-help" type="button" :data-tooltip="taskTooltip(task)" :aria-label="taskTooltip(task)">?</button>
-                <strong>{{ task.action }}</strong><small>Tier {{ task.minimumTier }}+ · {{ task.effectiveCooldown }}s</small>
+                <strong>{{ task.action }}</strong><small>Tier {{ task.minimumTier }}+ · {{ task.effectiveCooldown.toFixed(3) }}s</small>
                 <div v-if="task.casters.length" class="assigned-caster-list">
                     <div
                         v-for="caster in task.casters"

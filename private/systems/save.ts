@@ -446,36 +446,23 @@ const savedFields025: readonly SaveField[] = [
     ...Array.from({ length: REMEMBRANCE_UPGRADE_COUNT }, (_, index) => booleanSaveField(
         () => hasRemembranceUpgrade(index),
         (purchased) => setRemembranceUpgrade(index, purchased),
+// LILY REMEMBER TO MAKE NEXT STUFF IN SAVEDFIELDS 026!!!! >:(
     )),
+// LILY REMEMBER TO MAKE NEXT STUFF IN SAVEDFIELDS 026!!!! >:(
+// LILY REMEMBER TO MAKE NEXT STUFF IN SAVEDFIELDS 026!!!! >:(
 ];
-const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
-    savedFields001,
-    savedFields002,
-    savedFields003,
-    savedFields004,
-    savedFields005,
-    savedFields006,
-    savedFields007,
-    savedFields008,
-    savedFields009,
-    savedFields010,
-    savedFields011,
-    savedFields012,
-    savedFields013,
-    savedFields014,
-    savedFields015,
-    savedFields016,
-    savedFields017,
-    savedFields018,
-    savedFields019,
-    savedFields020,
-    savedFields021,
-    savedFields022,
-    savedFields023,
-    savedFields024,
-    savedFields025,
+// LILY REMEMBER TO MAKE NEXT STUFF IN SAVEDFIELDS 026!!!! >:(
+// LILY REMEMBER TO MAKE NEXT STUFF IN SAVEDFIELDS 026!!!! >:(
 
-    // temp
+const savedFieldsByVersion: readonly (readonly SaveField[])[] = [
+    savedFields001, savedFields002, savedFields003,
+    savedFields004, savedFields005, savedFields006,
+    savedFields007, savedFields008, savedFields009,
+    savedFields010, savedFields011, savedFields012,
+    savedFields013, savedFields014, savedFields015,
+    savedFields016, savedFields017, savedFields018,
+    savedFields019, savedFields020, savedFields021,
+    savedFields022, savedFields023, savedFields024,
     savedFields025,
 ];
 

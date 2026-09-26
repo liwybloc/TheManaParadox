@@ -17,6 +17,16 @@ export const TABS = [
         ],
     },
     {
+        id: "abyss",
+        label: "Abyss",
+        icon: "꩜",
+        requiresAbyss: true,
+        subtabs: [
+            { id: "depths", label: "The Depths" },
+            { id: "abyss-resonance", label: "Resonance" },
+        ]
+    },
+    {
         id: "manacircle",
         label: "Mana Circles",
         icon: "⭕",

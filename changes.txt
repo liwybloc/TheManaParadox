@@ -1,9 +1,14 @@
-v0.0.13
-- added options to disable the news ticker and message ticker particles
-- improved UI and game performance
-- added more message tickers
-- adjusted progression goals, condensed upgrade costs, and quest rewards
-- added Guild rank progression gates
-- fixed producer affordability progress bars
-- fixed enemy health after the performance refactor
-- fixed save compatibility when adding message tickers
+v0.0.14
+- most stuff mentioned in comments is fixed now!!
+- added sell spare equipment button
+- added Crystals 6 through 15
+- added more Memory milestones and improved Focus
+- added Memorials and the Remembrance upgrade tree, unlocked at 500 Memories
+- added the Abyss and Abyssal Resonance tabs (wip)
+- added five new achievements and achievement images
+- added the option to pause and resume autocasters
+- made assigning multiple autocasters to the same task reduce its cooldown by 2x each time
+- added a Purify Meridians keybind and a reset button for Crystal challenges
+- improved Crystal navigation, displays, and completion updates
+- added game time spent in the current Condense to statistics
+- balance changes, optimizations, and bug fixes
